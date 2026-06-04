@@ -1,9 +1,13 @@
+@php($brand = \App\Models\BrandSetting::current())
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Administracion') | Overshark</title>
+    @if ($brand->iconUrl())
+        <link rel="icon" href="{{ $brand->iconUrl() }}">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
@@ -14,8 +18,12 @@
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 font-black tracking-[0.2em] text-slate-950">
-                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500 text-sm text-slate-950">OS</span>
-                    <span>OVERSHARK</span>
+                    @if ($brand->logoUrl())
+                        <img src="{{ $brand->logoUrl() }}" alt="Overshark" class="h-9 max-w-44 object-contain object-left">
+                    @else
+                        <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500 text-sm text-slate-950">OS</span>
+                        <span>OVERSHARK</span>
+                    @endif
                 </a>
             </div>
             <div class="flex items-center gap-3">
@@ -42,6 +50,8 @@
                 ['admin.productos.index', 'Productos'],
                 ['admin.medios-pago.index', 'Medios de Pago'],
                 ['admin.banners.index', 'Banners'],
+                ['admin.combos.index', 'Combos'],
+                ['admin.brand.edit', 'Logo e Icono'],
             ] as [$routeName, $label])
                 <a href="{{ route($routeName) }}" @class([
                     'admin-nav-link',

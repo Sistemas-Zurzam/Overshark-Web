@@ -8,10 +8,15 @@ class BannerPortada extends Model
 {
     protected $table = 'banners_portada';
 
-    protected $fillable = ['name', 'status', 'time', 'modo'];
+    protected $fillable = ['name', 'image_path', 'status', 'time', 'modo'];
 
     protected function casts(): array
     {
         return ['status' => 'boolean'];
+    }
+
+    public function imageUrl(): ?string
+    {
+        return $this->image_path ? '/storage/'.ltrim($this->image_path, '/') : null;
     }
 }

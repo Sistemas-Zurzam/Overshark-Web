@@ -19,11 +19,11 @@ class DatabaseSeeder extends Seeder
         $adminRole = Role::query()->firstOrCreate(['name' => 'admin']);
 
         User::query()->updateOrCreate([
-            'email' => 'admin@overshark.test',
+            'email' => 'admin@overshark.com',
         ], [
             'role_id' => $adminRole->id,
             'name' => 'Administrador',
-            'password' => 'password',
+            'password' => '123456789',
             'status' => true,
         ]);
     }
