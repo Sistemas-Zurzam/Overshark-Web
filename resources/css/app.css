@@ -18,31 +18,57 @@
     .combo-trigger {
         position: relative;
         isolation: isolate;
-        transition: transform 250ms ease, box-shadow 250ms ease, color 250ms ease;
-        animation: combo-pulse 2.4s ease-in-out infinite;
+        box-shadow: 0 5px 18px rgb(37 99 235 / 25%);
+        transition: transform 300ms cubic-bezier(.22, 1, .36, 1), box-shadow 300ms ease, color 300ms ease;
+        animation: combo-float 2.8s ease-in-out infinite;
     }
 
     .combo-trigger::before {
         position: absolute;
-        inset: -5px;
+        inset: -9px;
         z-index: -1;
         border-radius: 9999px;
-        background: linear-gradient(90deg, rgb(6 182 212 / 45%), rgb(37 99 235 / 45%));
+        background: radial-gradient(ellipse, rgb(56 189 248 / 48%) 0%, rgb(37 99 235 / 22%) 48%, transparent 75%);
+        content: '';
+        opacity: .72;
+        filter: blur(10px);
+        transform: scale(.92);
+        animation: combo-glow 2.8s ease-in-out infinite;
+        transition: opacity 300ms ease, transform 300ms ease;
+    }
+
+    .combo-trigger::after {
+        position: absolute;
+        inset: -2px;
+        z-index: -1;
+        border: 1px solid rgb(125 211 252 / 42%);
+        border-radius: 9999px;
         content: '';
         opacity: 0;
-        filter: blur(8px);
-        transition: opacity 250ms ease;
+        transform: scale(1);
+        animation: combo-ring 2.8s ease-out infinite;
     }
 
     .combo-trigger:hover::before,
     .combo-trigger[aria-expanded='true']::before {
         opacity: 1;
+        transform: scale(1.12);
+    }
+
+    .combo-trigger:hover {
+        transform: translateY(-3px) scale(1.03);
+        box-shadow: 0 12px 32px rgb(14 165 233 / 32%);
     }
 
     .combo-trigger[aria-expanded='true'] {
-        transform: translateY(-2px) scale(1.04);
-        box-shadow: 0 12px 30px rgb(6 182 212 / 30%);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 14px 36px rgb(6 182 212 / 38%);
         color: rgb(8 145 178);
+    }
+
+    .combo-trigger [data-combo-flame] {
+        transform-origin: 50% 80%;
+        animation: combo-flame 1.4s ease-in-out infinite;
     }
 
     .combos-panel {
@@ -72,8 +98,33 @@
         transform: translateY(0);
     }
 
-    @keyframes combo-pulse {
-        0%, 100% { box-shadow: 0 3px 14px rgb(37 99 235 / 28%); }
-        50% { box-shadow: 0 5px 24px rgb(6 182 212 / 45%); }
+    @keyframes combo-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+    }
+
+    @keyframes combo-glow {
+        0%, 100% { opacity: .58; transform: scale(.9); }
+        50% { opacity: .95; transform: scale(1.08); }
+    }
+
+    @keyframes combo-ring {
+        0%, 35% { opacity: 0; transform: scale(1); }
+        50% { opacity: .55; }
+        85%, 100% { opacity: 0; transform: scale(1.2); }
+    }
+
+    @keyframes combo-flame {
+        0%, 100% { transform: translateY(0) rotate(-3deg) scale(1); }
+        50% { transform: translateY(-2px) rotate(3deg) scale(1.08); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .combo-trigger,
+        .combo-trigger::before,
+        .combo-trigger::after,
+        .combo-trigger [data-combo-flame] {
+            animation: none;
+        }
     }
 }
