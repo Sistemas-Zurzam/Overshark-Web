@@ -6,11 +6,34 @@ use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
-    protected $fillable = ['categoria_id', 'name', 'stock', 'price', 'imagen'];
+    protected $fillable = [
+        'categoria_id',
+        'odoo_product_id',
+        'odoo_template_id',
+        'default_code',
+        'name',
+        'variant_values',
+        'color',
+        'talla',
+        'stock',
+        'price',
+        'standard_price',
+        'qty_available',
+        'imagen',
+        'odoo_synced_at',
+    ];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2'];
+        return [
+            'variant_values' => 'array',
+            'odoo_product_id' => 'integer',
+            'odoo_template_id' => 'integer',
+            'price' => 'decimal:2',
+            'standard_price' => 'decimal:2',
+            'qty_available' => 'decimal:2',
+            'odoo_synced_at' => 'datetime',
+        ];
     }
 
     public function categoria()
@@ -26,5 +49,10 @@ class Producto extends Model
     public function combos()
     {
         return $this->belongsToMany(Combo::class, 'combo_producto')->withPivot('cantidad');
+    }
+
+    public function imageUrl(): ?string
+    {
+        return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
     }
 }

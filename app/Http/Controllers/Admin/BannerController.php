@@ -39,6 +39,36 @@ class BannerController extends Controller
         return back()->with('status', 'Banner guardado correctamente.');
     }
 
+    public function update(Request $request, BannerPortada $banner): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+            'time' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'modo' => ['required', 'in:cover,contain'],
+            'status' => ['nullable', 'boolean'],
+        ]);
+
+        $data = [
+            'name' => $validated['name'],
+            'time' => $validated['time'] ?? 5,
+            'modo' => $validated['modo'],
+            'status' => $request->boolean('status'),
+        ];
+
+        if ($request->hasFile('image')) {
+            if ($banner->image_path) {
+                Storage::disk('public')->delete($banner->image_path);
+            }
+
+            $data['image_path'] = $request->file('image')->store('banners', 'public');
+        }
+
+        $banner->update($data);
+
+        return back()->with('status', 'Banner actualizado correctamente.');
+    }
+
     public function toggle(BannerPortada $banner): RedirectResponse
     {
         $banner->update(['status' => ! $banner->status]);

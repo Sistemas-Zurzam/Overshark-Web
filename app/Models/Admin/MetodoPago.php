@@ -8,7 +8,17 @@ class MetodoPago extends Model
 {
     protected $table = 'metodos_pago';
 
-    protected $fillable = ['name', 'imagen'];
+    protected $fillable = ['name', 'imagen', 'status'];
+
+    protected function casts(): array
+    {
+        return ['status' => 'boolean'];
+    }
+
+    public function imageUrl(): ?string
+    {
+        return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
+    }
 
     public function orders()
     {

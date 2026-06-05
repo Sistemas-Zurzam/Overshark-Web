@@ -8,67 +8,268 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-black: #111111;
+    --color-brand-blue: #0078d7;
+    --color-brand-hero: #f1f2f4;
+    --color-brand-text: #3a3a3a;
+    --color-brand-line: #a2a2a2;
+    --color-brand-white: #ffffff;
+
+    --color-slate-50: #f1f2f4;
+    --color-slate-100: #f1f2f4;
+    --color-slate-200: #a2a2a2;
+    --color-slate-300: #a2a2a2;
+    --color-slate-400: #a2a2a2;
+    --color-slate-500: #3a3a3a;
+    --color-slate-600: #3a3a3a;
+    --color-slate-700: #3a3a3a;
+    --color-slate-800: #111111;
+    --color-slate-900: #111111;
+    --color-slate-950: #111111;
+
+    --color-cyan-50: #f1f2f4;
+    --color-cyan-100: #dbeeff;
+    --color-cyan-200: #b8dcfb;
+    --color-cyan-300: #80bef0;
+    --color-cyan-400: #3294e0;
+    --color-cyan-500: #0078d7;
+    --color-cyan-600: #0078d7;
+    --color-cyan-700: #0078d7;
+    --color-cyan-800: #005fa8;
+    --color-cyan-900: #004f8a;
+
+    --color-blue-100: #dbeeff;
+    --color-blue-500: #0078d7;
+    --color-blue-600: #0078d7;
+    --color-blue-700: #005fa8;
+
+    --color-black: #111111;
+    --color-white: #ffffff;
+}
+
+@layer base {
+    body {
+        background: #f1f2f4;
+        color: #111111;
+    }
+
+    ::selection {
+        background: #0078d7;
+        color: #ffffff;
+    }
+}
+
+@property --combo-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: -5deg;
 }
 
 @layer components {
+    .heading-primary {
+        color: #111111;
+        font-weight: 900;
+    }
+
+    .accent-heading {
+        color: #0078d7;
+        font-weight: 800;
+    }
+
+    .body-secondary {
+        color: #3a3a3a;
+        font-weight: 400;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: .5rem;
+        background: #111111;
+        color: #ffffff;
+        font-size: .875rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .btn-primary:hover {
+        background: #0078d7;
+        box-shadow: 0 14px 30px rgb(0 120 215 / 20%);
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #a2a2a2;
+        border-radius: .5rem;
+        background: #ffffff;
+        color: #3a3a3a;
+        font-size: .875rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+    }
+
+    .btn-secondary:hover {
+        border-color: #0078d7;
+        color: #0078d7;
+        transform: translateY(-1px);
+    }
+
+    .slider-dot {
+        width: .625rem;
+        height: .625rem;
+        border: 1px solid #a2a2a2;
+        border-radius: 9999px;
+        background: #dbdbdb;
+    }
+
+    .slider-dot.is-active {
+        border-color: #111111;
+        background: #111111;
+    }
+
+    .fabric-texture {
+        position: relative;
+        overflow: hidden;
+        background-color: #a2a2a2;
+    }
+
+    .fabric-texture::before,
+    .fabric-texture::after {
+        position: absolute;
+        inset: 0;
+        content: '';
+    }
+
+    .fabric-pique {
+        background-color: #283456;
+    }
+
+    .fabric-pique::before {
+        background:
+            repeating-linear-gradient(84deg, rgb(255 255 255 / 10%) 0 1px, transparent 1px 8px),
+            repeating-linear-gradient(174deg, rgb(0 0 0 / 18%) 0 2px, transparent 2px 7px);
+    }
+
+    .fabric-pique::after {
+        background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 12%) 0 1px, transparent 2px);
+        background-size: 9px 9px;
+        opacity: .75;
+    }
+
+    .fabric-waffle {
+        background-color: #75addb;
+    }
+
+    .fabric-waffle::before {
+        background:
+            repeating-linear-gradient(0deg, rgb(255 255 255 / 22%) 0 2px, transparent 2px 10px),
+            repeating-linear-gradient(90deg, rgb(17 17 17 / 12%) 0 2px, transparent 2px 10px);
+    }
+
+    .fabric-waffle::after {
+        background: radial-gradient(circle, rgb(255 255 255 / 18%) 0 1px, transparent 2px);
+        background-size: 10px 10px;
+    }
+
+    .fabric-jersey {
+        background-color: #b28b7d;
+    }
+
+    .fabric-jersey::before {
+        background:
+            repeating-linear-gradient(103deg, rgb(255 255 255 / 16%) 0 1px, transparent 1px 6px),
+            repeating-linear-gradient(13deg, rgb(17 17 17 / 12%) 0 1px, transparent 1px 7px);
+    }
+
+    .fabric-jersey::after {
+        background: linear-gradient(90deg, rgb(255 255 255 / 10%), transparent 40%, rgb(17 17 17 / 10%));
+    }
+
     .admin-nav-link {
         @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-cyan-700;
     }
 
     .combo-trigger {
         position: relative;
+        box-sizing: border-box;
+        display: flex;
+        width: 145px;
+        height: 50px;
+        padding: 4px;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
         isolation: isolate;
-        box-shadow: 0 5px 18px rgb(37 99 235 / 25%);
+        border: 0;
+        border-radius: 28px;
+        background: #ffffff;
+        box-shadow: 0 5px 18px rgb(0 120 215 / 22%);
         transition: transform 300ms cubic-bezier(.22, 1, .36, 1), box-shadow 300ms ease, color 300ms ease;
         animation: combo-float 2.8s ease-in-out infinite;
     }
 
     .combo-trigger::before {
         position: absolute;
-        inset: -9px;
+        inset: 0;
         z-index: -1;
-        border-radius: 9999px;
-        background: radial-gradient(ellipse, rgb(56 189 248 / 48%) 0%, rgb(37 99 235 / 22%) 48%, transparent 75%);
+        padding: 3px;
+        border-radius: inherit;
+        background: conic-gradient(from var(--combo-angle), transparent 0deg, transparent 245deg, #0078d7 286deg, #0078d7 330deg, transparent 360deg);
         content: '';
-        opacity: .72;
-        filter: blur(10px);
-        transform: scale(.92);
-        animation: combo-glow 2.8s ease-in-out infinite;
-        transition: opacity 300ms ease, transform 300ms ease;
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: combo-border-spin 1.8s linear infinite;
+        pointer-events: none;
     }
 
     .combo-trigger::after {
         position: absolute;
-        inset: -2px;
+        inset: -5px;
         z-index: -1;
-        border: 1px solid rgb(125 211 252 / 42%);
-        border-radius: 9999px;
+        border-radius: inherit;
+        background: conic-gradient(from var(--combo-angle), transparent 0deg, transparent 245deg, rgb(0 120 215 / 38%) 286deg, rgb(0 120 215 / 32%) 330deg, transparent 360deg);
         content: '';
-        opacity: 0;
-        transform: scale(1);
-        animation: combo-ring 2.8s ease-out infinite;
+        opacity: .72;
+        filter: blur(8px);
+        animation: combo-border-spin 1.8s linear infinite;
+        pointer-events: none;
     }
 
     .combo-trigger:hover::before,
     .combo-trigger[aria-expanded='true']::before {
-        opacity: 1;
-        transform: scale(1.12);
+        padding: 4px;
     }
 
     .combo-trigger:hover {
         transform: translateY(-3px) scale(1.03);
-        box-shadow: 0 12px 32px rgb(14 165 233 / 32%);
+        box-shadow: 0 12px 32px rgb(0 120 215 / 32%);
     }
 
     .combo-trigger[aria-expanded='true'] {
         transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 14px 36px rgb(6 182 212 / 38%);
-        color: rgb(8 145 178);
+        box-shadow: 0 14px 36px rgb(0 120 215 / 38%);
+        color: #0078d7;
     }
 
     .combo-trigger [data-combo-flame] {
         transform-origin: 50% 80%;
         animation: combo-flame 1.4s ease-in-out infinite;
+    }
+
+    .combo-fire-icon {
+        width: 23px;
+        height: 22px;
+        aspect-ratio: 23 / 22;
+        flex: 0 0 auto;
     }
 
     .combos-panel {
@@ -101,6 +302,10 @@
     @keyframes combo-float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-2px); }
+    }
+
+    @keyframes combo-border-spin {
+        to { --combo-angle: 355deg; }
     }
 
     @keyframes combo-glow {

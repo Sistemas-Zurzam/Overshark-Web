@@ -103,6 +103,9 @@
                                 <p class="mt-1 text-sm text-slate-500">{{ $banner->time ?? 5 }} segundos · {{ $banner->modo === 'contain' ? 'Imagen completa' : 'Cubrir espacio' }}</p>
                             </div>
                             <div class="flex gap-2">
+                                <button type="button" data-banner-edit-toggle="banner-edit-{{ $banner->id }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-cyan-300 hover:text-cyan-700">
+                                    Editar
+                                </button>
                                 <form action="{{ route('admin.banners.toggle', $banner) }}" method="POST">
                                     @csrf
                                     @method('PATCH')
@@ -119,6 +122,54 @@
                                 </form>
                             </div>
                         </div>
+                        <form id="banner-edit-{{ $banner->id }}" action="{{ route('admin.banners.update', $banner) }}" method="POST" enctype="multipart/form-data" class="hidden border-t border-slate-200 bg-slate-50 p-5">
+                            @csrf
+                            @method('PATCH')
+
+                            <div class="grid gap-4 lg:grid-cols-2">
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-bold text-slate-700">Nombre</span>
+                                    <input type="text" name="name" value="{{ old('name', $banner->name) }}" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                                    @error('name') <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span> @enderror
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-bold text-slate-700">Cambiar imagen</span>
+                                    <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" class="block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
+                                    <span class="mt-2 block text-xs font-semibold text-slate-500">Deja este campo vacio para conservar la imagen actual.</span>
+                                    @error('image') <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span> @enderror
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-bold text-slate-700">Duracion en segundos</span>
+                                    <input type="number" name="time" value="{{ old('time', $banner->time ?? 5) }}" min="1" max="60" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                                    @error('time') <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span> @enderror
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-bold text-slate-700">Ajuste de imagen</span>
+                                    <select name="modo" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                                        <option value="cover" @selected(old('modo', $banner->modo) === 'cover')>Cubrir todo el espacio</option>
+                                        <option value="contain" @selected(old('modo', $banner->modo) === 'contain')>Mostrar imagen completa</option>
+                                    </select>
+                                </label>
+
+                                <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                    <input type="hidden" name="status" value="0">
+                                    <input type="checkbox" name="status" value="1" @checked(old('status', $banner->status)) class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                                    Mostrar banner en la portada
+                                </label>
+
+                                <div class="flex items-center gap-3 lg:justify-end">
+                                    <button type="button" data-banner-edit-toggle="banner-edit-{{ $banner->id }}" class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 hover:border-slate-400">
+                                        Cancelar
+                                    </button>
+                                    <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">
+                                        Actualizar banner
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </article>
                 @endforeach
             </div>
