@@ -21,7 +21,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/productos/odoo/sync', [ProductoController::class, 'sync'])->name('productos.odoo.sync');
     Route::post('/productos/odoo/auto-sync', [ProductoController::class, 'toggleAutoSync'])->name('productos.odoo.auto-sync');
     Route::get('/productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
+    Route::patch('/productos/{producto}/detalle', [ProductoController::class, 'updateDetails'])->name('productos.details');
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');
+    Route::post('/productos/{producto}/guia-tallas', [ProductoController::class, 'updateSizeGuideImage'])->name('productos.size-guide');
     Route::post('/productos/{producto}/imagenes-color', [ProductoController::class, 'updateColorImages'])->name('productos.color-images');
     Route::get('/medios-pago', [MetodoPagoController::class, 'index'])->name('medios-pago.index');
     Route::post('/medios-pago', [MetodoPagoController::class, 'store'])->name('medios-pago.store');

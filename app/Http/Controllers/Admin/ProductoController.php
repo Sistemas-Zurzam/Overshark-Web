@@ -90,6 +90,38 @@ class ProductoController extends Controller
         return back()->with('status', 'Imagen principal del producto actualizada.');
     }
 
+    public function updateDetails(Request $request, Producto $producto): RedirectResponse
+    {
+        $validated = $request->validate([
+            'descripcion' => ['nullable', 'string', 'max:5000'],
+            'composicion' => ['nullable', 'string', 'max:5000'],
+            'cuidados' => ['nullable', 'string', 'max:5000'],
+            'material' => ['nullable', 'string', 'max:255'],
+            'fit' => ['nullable', 'string', 'max:255'],
+            'sensacion' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->variantsFor($producto)->update($validated);
+
+        return back()->with('status', 'Informacion del producto actualizada.');
+    }
+
+    public function updateSizeGuideImage(Request $request, Producto $producto): RedirectResponse
+    {
+        $validated = $request->validate([
+            'guia_tallas_imagen' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+        ]);
+
+        $variants = $this->variantsFor($producto)->get();
+        $oldImages = $variants->pluck('guia_tallas_imagen')->filter()->unique();
+        $path = $validated['guia_tallas_imagen']->store('productos/guias-tallas', 'public');
+
+        $this->variantsFor($producto)->update(['guia_tallas_imagen' => $path]);
+        $oldImages->each(fn (string $oldPath) => Storage::disk('public')->delete($oldPath));
+
+        return back()->with('status', 'Guia de tallas actualizada.');
+    }
+
     public function updateColorImages(Request $request, Producto $producto): RedirectResponse
     {
         $validated = $request->validate([

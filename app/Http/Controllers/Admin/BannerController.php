@@ -26,6 +26,17 @@ class BannerController extends Controller
             'time' => ['nullable', 'integer', 'min:1', 'max:60'],
             'modo' => ['required', 'in:cover,contain'],
             'status' => ['nullable', 'boolean'],
+            'buttons_position' => ['required', 'in:center-left,center,bottom-left,bottom-center,bottom-right'],
+            'buttons' => ['nullable', 'array', 'max:2'],
+            'buttons.*.enabled' => ['nullable', 'boolean'],
+            'buttons.*.text' => ['nullable', 'string', 'max:40'],
+            'buttons.*.url' => ['nullable', 'string', 'max:255'],
+            'buttons.*.bg_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'buttons.*.text_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'buttons.*.shape' => ['nullable', 'in:square,rounded,pill'],
+            'buttons.*.x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'buttons.*.y' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'buttons.*.size' => ['nullable', 'in:sm,md,lg,xl'],
         ]);
 
         BannerPortada::query()->create([
@@ -34,6 +45,8 @@ class BannerController extends Controller
             'time' => $validated['time'] ?? 5,
             'modo' => $validated['modo'],
             'status' => $request->boolean('status'),
+            'buttons' => $this->bannerButtons($request),
+            'buttons_position' => $validated['buttons_position'],
         ]);
 
         return back()->with('status', 'Banner guardado correctamente.');
@@ -47,6 +60,17 @@ class BannerController extends Controller
             'time' => ['nullable', 'integer', 'min:1', 'max:60'],
             'modo' => ['required', 'in:cover,contain'],
             'status' => ['nullable', 'boolean'],
+            'buttons_position' => ['required', 'in:center-left,center,bottom-left,bottom-center,bottom-right'],
+            'buttons' => ['nullable', 'array', 'max:2'],
+            'buttons.*.enabled' => ['nullable', 'boolean'],
+            'buttons.*.text' => ['nullable', 'string', 'max:40'],
+            'buttons.*.url' => ['nullable', 'string', 'max:255'],
+            'buttons.*.bg_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'buttons.*.text_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'buttons.*.shape' => ['nullable', 'in:square,rounded,pill'],
+            'buttons.*.x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'buttons.*.y' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'buttons.*.size' => ['nullable', 'in:sm,md,lg,xl'],
         ]);
 
         $data = [
@@ -54,6 +78,8 @@ class BannerController extends Controller
             'time' => $validated['time'] ?? 5,
             'modo' => $validated['modo'],
             'status' => $request->boolean('status'),
+            'buttons' => $this->bannerButtons($request),
+            'buttons_position' => $validated['buttons_position'],
         ];
 
         if ($request->hasFile('image')) {
@@ -85,5 +111,24 @@ class BannerController extends Controller
         $banner->delete();
 
         return back()->with('status', 'Banner eliminado correctamente.');
+    }
+
+    private function bannerButtons(Request $request): array
+    {
+        return collect($request->input('buttons', []))
+            ->take(2)
+            ->filter(fn (array $button) => isset($button['enabled']) && filled($button['text'] ?? null))
+            ->map(fn (array $button) => [
+                'text' => $button['text'],
+                'url' => $button['url'] ?: '#productos',
+                'bg_color' => $button['bg_color'] ?: '#111111',
+                'text_color' => $button['text_color'] ?: '#ffffff',
+                'shape' => $button['shape'] ?: 'rounded',
+                'x' => (float) ($button['x'] ?? 20),
+                'y' => (float) ($button['y'] ?? 50),
+                'size' => $button['size'] ?: 'md',
+            ])
+            ->values()
+            ->all();
     }
 }

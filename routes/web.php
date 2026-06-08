@@ -5,7 +5,83 @@ use App\Models\Admin\Combo;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/carrito', function (Request $request) {
+    $validated = $request->validate([
+        'producto_id' => ['required', 'integer', 'exists:productos,id'],
+        'color' => ['required', 'string', 'max:255'],
+        'talla' => ['required', 'string', 'max:255'],
+        'qty' => ['required', 'integer', 'min:1', 'max:99'],
+    ]);
+
+    $producto = Producto::query()->findOrFail($validated['producto_id']);
+    $variant = Producto::query()
+        ->where('odoo_template_id', $producto->odoo_template_id)
+        ->where('color', $validated['color'])
+        ->where('talla', $validated['talla'])
+        ->where('price', '>', 0)
+        ->where('qty_available', '>', 0)
+        ->firstOrFail();
+
+    $maxQty = max(1, (int) floor((float) $variant->qty_available));
+    $qty = min((int) $validated['qty'], $maxQty);
+    $galleryImages = ProductoColorImage::query()
+        ->where('odoo_template_id', $variant->odoo_template_id)
+        ->where('color', $variant->color)
+        ->first()
+        ?->imageUrls() ?? [];
+    $image = $galleryImages[0] ?? $variant->imageUrl() ?? $producto->imageUrl() ?? asset('images/default-hero-banner.png');
+    $items = session('cart.items', []);
+    $key = (string) $variant->id;
+    $newQty = min(($items[$key]['qty'] ?? 0) + $qty, $maxQty);
+
+    $items[$key] = [
+        'producto_id' => $producto->id,
+        'variant_id' => $variant->id,
+        'producto' => $variant->name,
+        'qty' => $newQty,
+        'price' => (float) $variant->price,
+        'color' => $variant->color,
+        'talla' => $variant->talla,
+        'image' => $image,
+    ];
+
+    session(['cart.items' => $items]);
+
+    return back()
+        ->with('status', 'Producto agregado al carrito.')
+        ->with('cart_open', true);
+})->name('web.cart.store');
+
+Route::patch('/carrito/{variantId}', function (Request $request, int $variantId) {
+    $validated = $request->validate([
+        'action' => ['required', 'in:increment,decrement'],
+    ]);
+    $items = session('cart.items', []);
+    $key = (string) $variantId;
+
+    abort_if(! isset($items[$key]), 404);
+
+    $items[$key]['qty'] += $validated['action'] === 'increment' ? 1 : -1;
+
+    if ($items[$key]['qty'] <= 0) {
+        unset($items[$key]);
+    }
+
+    session(['cart.items' => $items]);
+
+    return back()->with('cart_open', true);
+})->name('web.cart.update');
+
+Route::delete('/carrito/{variantId}', function (int $variantId) {
+    $items = session('cart.items', []);
+    unset($items[(string) $variantId]);
+    session(['cart.items' => $items]);
+
+    return back()->with('cart_open', true);
+})->name('web.cart.destroy');
 
 Route::get('/productos/{producto}', function (Producto $producto) {
     $fallbackImage = asset('images/default-hero-banner.png');
@@ -37,6 +113,25 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         })
         ->values();
     $mainImages = $colorOptions->first()['images'] ?? [$producto->imageUrl() ?? $fallbackImage];
+    $recommendedProductsQuery = Producto::query()
+        ->selectRaw('MIN(id) as id, odoo_template_id, categoria_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+        ->whereNotNull('odoo_template_id')
+        ->where('price', '>', 0)
+        ->where('qty_available', '>', 0)
+        ->where('odoo_template_id', '!=', $producto->odoo_template_id);
+
+    if ($producto->categoria_id) {
+        $recommendedProductsQuery->where('categoria_id', $producto->categoria_id);
+    }
+
+    $recommendedProducts = productCards(
+        $recommendedProductsQuery
+            ->groupBy('odoo_template_id', 'categoria_id', 'name')
+            ->orderByDesc('total_stock')
+            ->limit(3)
+            ->get(),
+        $fallbackImage,
+    );
 
     return view('web.product-show', [
         'producto' => $producto,
@@ -49,8 +144,41 @@ Route::get('/productos/{producto}', function (Producto $producto) {
             ->where('status', true)
             ->latest()
             ->get(),
+        'recommendedProducts' => $recommendedProducts,
     ]);
 })->name('web.products.show');
+
+Route::get('/buscar', function (Request $request) {
+    $fallbackImage = asset('images/default-hero-banner.png');
+    $search = trim((string) $request->query('q', ''));
+    $products = collect();
+
+    if ($search !== '') {
+        $products = productCards(
+            Producto::query()
+                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->whereNotNull('odoo_template_id')
+                ->where('price', '>', 0)
+                ->where('qty_available', '>', 0)
+                ->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('default_code', 'like', "%{$search}%")
+                        ->orWhere('color', 'like', "%{$search}%")
+                        ->orWhere('talla', 'like', "%{$search}%");
+                })
+                ->groupBy('odoo_template_id', 'name')
+                ->orderByDesc('total_stock')
+                ->limit(24)
+                ->get(),
+            $fallbackImage,
+        );
+    }
+
+    return view('web.search', [
+        'products' => $products,
+        'search' => $search,
+    ]);
+})->name('web.products.search');
 
 Route::get('/', function () {
     $fallbackImage = asset('images/default-hero-banner.png');

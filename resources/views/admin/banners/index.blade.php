@@ -58,6 +58,45 @@
                 </select>
             </label>
 
+            <label class="block">
+                <span class="mb-2 block text-sm font-bold text-slate-700">Posicion de botones</span>
+                <select name="buttons_position" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                    <option value="center-left" @selected(old('buttons_position', 'center-left') === 'center-left')>Centro izquierda</option>
+                    <option value="center" @selected(old('buttons_position') === 'center')>Centro</option>
+                    <option value="bottom-left" @selected(old('buttons_position') === 'bottom-left')>Abajo izquierda</option>
+                    <option value="bottom-center" @selected(old('buttons_position') === 'bottom-center')>Abajo centro</option>
+                    <option value="bottom-right" @selected(old('buttons_position') === 'bottom-right')>Abajo derecha</option>
+                </select>
+            </label>
+
+            <div class="lg:col-span-2 grid gap-4 lg:grid-cols-2">
+                @for ($index = 0; $index < 2; $index++)
+                    <fieldset class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
+                            <input type="checkbox" name="buttons[{{ $index }}][enabled]" value="1" @checked(old("buttons.$index.enabled", $index === 0)) class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                            Boton {{ $index + 1 }}
+                        </label>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <input type="text" name="buttons[{{ $index }}][text]" value="{{ old("buttons.$index.text", $index === 0 ? 'Comprar ahora' : 'Ver catalogo') }}" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="Texto">
+                            <input type="text" name="buttons[{{ $index }}][url]" value="{{ old("buttons.$index.url", $index === 0 ? '#productos' : '#combos') }}" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="URL o #seccion">
+                            <input type="color" name="buttons[{{ $index }}][bg_color]" value="{{ old("buttons.$index.bg_color", $index === 0 ? '#111111' : '#ffffff') }}" class="h-12 w-full rounded-xl border border-slate-200 bg-white p-1">
+                            <input type="color" name="buttons[{{ $index }}][text_color]" value="{{ old("buttons.$index.text_color", $index === 0 ? '#ffffff' : '#111111') }}" class="h-12 w-full rounded-xl border border-slate-200 bg-white p-1">
+                            <select name="buttons[{{ $index }}][shape]" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 sm:col-span-2">
+                                <option value="square" @selected(old("buttons.$index.shape") === 'square')>Cuadrado</option>
+                                <option value="rounded" @selected(old("buttons.$index.shape", 'rounded') === 'rounded')>Borde redondeado</option>
+                                <option value="pill" @selected(old("buttons.$index.shape") === 'pill')>Pastilla</option>
+                            </select>
+                            <select name="buttons[{{ $index }}][size]" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 sm:col-span-2">
+                                <option value="sm" @selected(old("buttons.$index.size") === 'sm')>Pequeno</option>
+                                <option value="md" @selected(old("buttons.$index.size", 'md') === 'md')>Mediano</option>
+                                <option value="lg" @selected(old("buttons.$index.size") === 'lg')>Grande</option>
+                                <option value="xl" @selected(old("buttons.$index.size") === 'xl')>Extra grande</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                @endfor
+            </div>
+
             <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
                 <input type="hidden" name="status" value="0">
                 <input type="checkbox" name="status" value="1" @checked(old('status', true)) class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
@@ -87,8 +126,26 @@
             <div class="grid gap-5 xl:grid-cols-2">
                 @foreach ($banners as $banner)
                     <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                        <div class="aspect-[16/7] bg-slate-100">
+                        <div class="relative aspect-[16/7] bg-slate-100" data-banner-button-preview>
                             <img src="{{ $banner->imageUrl() }}" alt="{{ $banner->name }}" class="h-full w-full object-{{ $banner->modo === 'contain' ? 'contain' : 'cover' }}">
+                            @foreach ($banner->buttons ?? [] as $index => $button)
+                                @php
+                                    $radiusClass = [
+                                        'square' => 'rounded-none',
+                                        'rounded' => 'rounded-lg',
+                                        'pill' => 'rounded-full',
+                                    ][$button['shape'] ?? 'rounded'] ?? 'rounded-lg';
+                                    $sizeClass = [
+                                        'sm' => 'px-3 py-1.5 text-[10px]',
+                                        'md' => 'px-5 py-2 text-xs',
+                                        'lg' => 'px-7 py-3 text-sm',
+                                        'xl' => 'px-10 py-4 text-base',
+                                    ][$button['size'] ?? 'md'] ?? 'px-5 py-2 text-xs';
+                                @endphp
+                                <button type="button" data-banner-button-drag="{{ $index }}" class="absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-move {{ $radiusClass }} {{ $sizeClass }} font-black uppercase shadow-lg" style="left: {{ $button['x'] ?? 20 }}%; top: {{ $button['y'] ?? 50 }}%; background-color: {{ $button['bg_color'] ?? '#111111' }}; color: {{ $button['text_color'] ?? '#ffffff' }};">
+                                    {{ $button['text'] ?? 'Boton' }}
+                                </button>
+                            @endforeach
                         </div>
                         <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -153,6 +210,48 @@
                                         <option value="contain" @selected(old('modo', $banner->modo) === 'contain')>Mostrar imagen completa</option>
                                     </select>
                                 </label>
+
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-bold text-slate-700">Posicion de botones</span>
+                                    <select name="buttons_position" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                                        <option value="center-left" @selected(old('buttons_position', $banner->buttons_position) === 'center-left')>Centro izquierda</option>
+                                        <option value="center" @selected(old('buttons_position', $banner->buttons_position) === 'center')>Centro</option>
+                                        <option value="bottom-left" @selected(old('buttons_position', $banner->buttons_position) === 'bottom-left')>Abajo izquierda</option>
+                                        <option value="bottom-center" @selected(old('buttons_position', $banner->buttons_position) === 'bottom-center')>Abajo centro</option>
+                                        <option value="bottom-right" @selected(old('buttons_position', $banner->buttons_position) === 'bottom-right')>Abajo derecha</option>
+                                    </select>
+                                </label>
+
+                                <div class="lg:col-span-2 grid gap-4 lg:grid-cols-2">
+                                    @for ($index = 0; $index < 2; $index++)
+                                        @php $button = $banner->buttons[$index] ?? []; @endphp
+                                        <fieldset class="rounded-2xl border border-slate-200 bg-white p-4">
+                                            <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                                <input type="checkbox" name="buttons[{{ $index }}][enabled]" value="1" @checked(old("buttons.$index.enabled", ! empty($button))) class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                                                Boton {{ $index + 1 }}
+                                            </label>
+                                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                                <input type="text" name="buttons[{{ $index }}][text]" value="{{ old("buttons.$index.text", $button['text'] ?? '') }}" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="Texto">
+                                                <input type="text" name="buttons[{{ $index }}][url]" value="{{ old("buttons.$index.url", $button['url'] ?? '#productos') }}" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="URL o #seccion">
+                                                <input type="color" name="buttons[{{ $index }}][bg_color]" value="{{ old("buttons.$index.bg_color", $button['bg_color'] ?? '#111111') }}" class="h-12 w-full rounded-xl border border-slate-200 bg-white p-1">
+                                                <input type="color" name="buttons[{{ $index }}][text_color]" value="{{ old("buttons.$index.text_color", $button['text_color'] ?? '#ffffff') }}" class="h-12 w-full rounded-xl border border-slate-200 bg-white p-1">
+                                                <input type="hidden" name="buttons[{{ $index }}][x]" value="{{ old("buttons.$index.x", $button['x'] ?? 20) }}" data-banner-button-x="{{ $index }}">
+                                                <input type="hidden" name="buttons[{{ $index }}][y]" value="{{ old("buttons.$index.y", $button['y'] ?? 50) }}" data-banner-button-y="{{ $index }}">
+                                                <select name="buttons[{{ $index }}][shape]" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 sm:col-span-2">
+                                                    <option value="square" @selected(old("buttons.$index.shape", $button['shape'] ?? 'rounded') === 'square')>Cuadrado</option>
+                                                    <option value="rounded" @selected(old("buttons.$index.shape", $button['shape'] ?? 'rounded') === 'rounded')>Borde redondeado</option>
+                                                    <option value="pill" @selected(old("buttons.$index.shape", $button['shape'] ?? 'rounded') === 'pill')>Pastilla</option>
+                                                </select>
+                                                <select name="buttons[{{ $index }}][size]" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 sm:col-span-2">
+                                                    <option value="sm" @selected(old("buttons.$index.size", $button['size'] ?? 'md') === 'sm')>Pequeno</option>
+                                                    <option value="md" @selected(old("buttons.$index.size", $button['size'] ?? 'md') === 'md')>Mediano</option>
+                                                    <option value="lg" @selected(old("buttons.$index.size", $button['size'] ?? 'md') === 'lg')>Grande</option>
+                                                    <option value="xl" @selected(old("buttons.$index.size", $button['size'] ?? 'md') === 'xl')>Extra grande</option>
+                                                </select>
+                                            </div>
+                                        </fieldset>
+                                    @endfor
+                                </div>
 
                                 <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
                                     <input type="hidden" name="status" value="0">

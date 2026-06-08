@@ -62,9 +62,71 @@
                     <button type="submit" class="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700">Guardar imagenes del color</button>
                 </form>
             </section>
+
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 class="text-lg font-black text-slate-950">Guia de tallas</h2>
+                <p class="mt-1 text-sm text-slate-500">Sube una imagen para mostrarla al hacer click en Guia de tallas.</p>
+
+                <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                    @if ($producto->sizeGuideImageUrl())
+                        <img src="{{ $producto->sizeGuideImageUrl() }}" alt="Guia de tallas {{ $producto->name }}" class="h-auto w-full object-contain">
+                    @else
+                        <div class="grid min-h-40 place-items-center px-6 text-center text-sm font-semibold text-slate-400">Sin guia de tallas</div>
+                    @endif
+                </div>
+
+                <form action="{{ route('admin.productos.size-guide', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3">
+                    @csrf
+                    <input type="file" name="guia_tallas_imagen" accept=".png,.jpg,.jpeg,.webp" required class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
+                    <button type="submit" class="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700">Guardar guia de tallas</button>
+                </form>
+            </section>
         </aside>
 
         <main class="space-y-6">
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+                <h2 class="text-lg font-black text-slate-950">Detalle comercial</h2>
+                <p class="mt-1 text-sm text-slate-500">Estos textos se muestran en la pagina del producto y se aplican a todas sus variantes.</p>
+
+                <form action="{{ route('admin.productos.details', $producto) }}" method="POST" class="mt-5 space-y-4">
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="grid gap-4 lg:grid-cols-3">
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Material</span>
+                            <input type="text" name="material" value="{{ old('material', $producto->material) }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                        </label>
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Fit</span>
+                            <input type="text" name="fit" value="{{ old('fit', $producto->fit) }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                        </label>
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Sensacion</span>
+                            <input type="text" name="sensacion" value="{{ old('sensacion', $producto->sensacion) }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                        </label>
+                    </div>
+
+                    <label class="block">
+                        <span class="text-sm font-bold text-slate-700">Descripcion</span>
+                        <textarea name="descripcion" rows="4" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">{{ old('descripcion', $producto->descripcion) }}</textarea>
+                    </label>
+
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Composicion</span>
+                            <textarea name="composicion" rows="4" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">{{ old('composicion', $producto->composicion) }}</textarea>
+                        </label>
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Cuidados</span>
+                            <textarea name="cuidados" rows="4" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">{{ old('cuidados', $producto->cuidados) }}</textarea>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">Guardar detalle comercial</button>
+                </form>
+            </section>
+
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
                 <h2 class="text-lg font-black text-slate-950">Variantes</h2>
                 <div class="mt-5 space-y-6">

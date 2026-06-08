@@ -20,6 +20,13 @@ class Producto extends Model
         'standard_price',
         'qty_available',
         'imagen',
+        'descripcion',
+        'composicion',
+        'cuidados',
+        'material',
+        'fit',
+        'sensacion',
+        'guia_tallas_imagen',
         'odoo_synced_at',
     ];
 
@@ -54,5 +61,10 @@ class Producto extends Model
     public function imageUrl(): ?string
     {
         return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
+    }
+
+    public function sizeGuideImageUrl(): ?string
+    {
+        return $this->guia_tallas_imagen ? '/storage/'.ltrim($this->guia_tallas_imagen, '/') : null;
     }
 }
