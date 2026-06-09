@@ -328,9 +328,68 @@
         </div>
     </section>
 
-    <section id="calidad" class="bg-white px-5 pb-14 pt-0 lg:px-8">
-        <div class="mx-auto max-w-[1500px]">
-            <img src="{{ asset('images/section/section.jpg') }}" alt="Calidad Overshark" class="h-auto w-full rounded-lg object-contain">
+    <section id="calidad" class="bg-white px-5 py-12 text-slate-950 sm:py-16 lg:px-8">
+        <div class="mx-auto max-w-7xl rounded-lg bg-white px-7 py-12 shadow-[0_18px_55px_rgba(17,17,17,0.06)] sm:px-12 lg:px-20 lg:py-20">
+            <div class="grid items-center gap-12 lg:grid-cols-[1fr_1.05fr]">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-600">"Por que elegir Overshark"</p>
+                    <h2 class="mt-5 max-w-xl text-3xl font-black leading-tight tracking-normal sm:text-4xl lg:text-5xl">
+                        Calidad que se nota,<br class="hidden sm:block">
+                        comodidad que se siente
+                    </h2>
+                    <div class="mt-6 h-0.5 w-14 bg-amber-400"></div>
+                    <p class="mt-8 max-w-lg text-base leading-8 text-slate-500 sm:text-lg">
+                        Polos disenados para el uso diario con materiales que garantizan durabilidad, frescura y confort.
+                    </p>
+                </div>
+
+                <div class="grid gap-8 sm:grid-cols-3">
+                    @foreach ([
+                        [
+                            'title' => 'No destine',
+                            'copy' => 'Mantiene su color lavado tras lavado.',
+                            'icon' => 'drop',
+                        ],
+                        [
+                            'title' => 'No encoge',
+                            'copy' => 'Conserva su forma original siempre.',
+                            'icon' => 'shirt',
+                        ],
+                        [
+                            'title' => 'No hace bolitas',
+                            'copy' => 'Mayor durabilidad en el uso diario.',
+                            'icon' => 'no-pilling',
+                        ],
+                    ] as $benefit)
+                        <article class="text-center">
+                            <div class="relative mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#F7F7F7]">
+                                <span class="absolute -right-0.5 top-0 h-9 w-9 rounded-full border-r-2 border-t-2 border-cyan-600"></span>
+                                @if ($benefit['icon'] === 'drop')
+                                    <svg class="h-10 w-10 text-slate-700" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M24 5C18 14 12 21.5 12 30a12 12 0 0 0 24 0C36 21.5 30 14 24 5Z"/>
+                                        <path d="M18 31c1.2 4 4.2 6 8.8 5.7"/>
+                                    </svg>
+                                @elseif ($benefit['icon'] === 'shirt')
+                                    <svg class="h-10 w-10 text-slate-700" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M17 8l7 4 7-4 9 5-5 10-4-2v19H17V21l-4 2-5-10 9-5Z"/>
+                                        <path d="M20 9c.8 2.8 2.2 4.2 4 4.2S27.2 11.8 28 9"/>
+                                        <path d="M19 20h10"/>
+                                    </svg>
+                                @else
+                                    <svg class="h-10 w-10 text-slate-700" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <circle cx="24" cy="24" r="15"/>
+                                        <path d="M13 35 35 13"/>
+                                        <path d="M17 22c3-2 7-2 11 0 2.4 1.2 4.2 1.2 6 0"/>
+                                        <path d="M16 29c2.4-1.6 5.2-1.6 8.4 0 2.2 1.1 4.6 1.1 7.2 0"/>
+                                    </svg>
+                                @endif
+                            </div>
+                            <h3 class="mt-6 text-base font-black">{{ $benefit['title'] }}</h3>
+                            <p class="mx-auto mt-4 max-w-[150px] text-sm leading-6 text-slate-500">{{ $benefit['copy'] }}</p>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </section>
 
