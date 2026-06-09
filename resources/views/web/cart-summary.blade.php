@@ -9,7 +9,7 @@
 
             <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div>
-                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] xl:items-center">
+                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(320px,1fr)_170px_170px_170px_44px] xl:items-center">
                         <span>Producto</span>
                         <span class="text-center">Precio</span>
                         <span class="text-center">Cantidad</span>
@@ -27,7 +27,7 @@
                                 $lineTotal = $price * $qty;
                                 $oldLineTotal = $oldPrice * $qty;
                             @endphp
-                            <article class="grid gap-5 py-5 xl:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] xl:items-center">
+                            <article class="grid gap-5 py-5 xl:grid-cols-[minmax(320px,1fr)_170px_170px_170px_44px] xl:items-center">
                                 <div class="grid grid-cols-[88px_1fr] items-center gap-4 sm:grid-cols-[108px_1fr]">
                                     <div class="h-[110px] w-[88px] overflow-hidden rounded-md bg-slate-50 sm:h-[135px] sm:w-[108px]">
                                         <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
@@ -39,7 +39,7 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between xl:block xl:text-center">
+                                <div class="flex items-baseline justify-between xl:flex xl:min-h-[135px] xl:items-center xl:justify-center xl:text-center">
                                     <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Precio</span>
                                     <div>
                                         <p class="text-xl font-black sm:text-2xl">S/ {{ number_format($price, 2) }}</p>
@@ -49,7 +49,7 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-center justify-between xl:justify-center">
+                                <div class="flex items-center justify-between xl:min-h-[135px] xl:justify-center">
                                     <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Cantidad</span>
                                     <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
                                         <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
@@ -68,7 +68,7 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between xl:block xl:text-center">
+                                <div class="flex items-baseline justify-between xl:flex xl:min-h-[135px] xl:items-center xl:justify-center xl:text-center">
                                     <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Subtotal</span>
                                     <div>
                                         <p class="text-xl font-black sm:text-2xl">S/ {{ number_format($lineTotal, 2) }}</p>
@@ -98,54 +98,56 @@
                     </div>
                 </div>
 
-                <aside class="h-fit border border-slate-200 bg-white lg:sticky lg:top-28">
-                    <div class="p-6">
-                        <h2 class="text-xl font-black">Resumen de compra</h2>
+                <aside class="h-fit lg:sticky lg:top-28">
+                    <div class="border border-slate-200 bg-white">
+                        <div class="p-6">
+                            <h2 class="text-xl font-black">Resumen de compra</h2>
 
-                        <div class="mt-7 space-y-5 border-b border-slate-100 pb-6 text-base">
-                            <div class="flex items-center justify-between">
-                                <span class="font-medium text-slate-700">Subtotal</span>
-                                <span class="font-semibold">S/{{ number_format($subtotal, 2) }}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="font-medium text-slate-700">IGV (18%)</span>
-                                <span class="font-semibold">S/{{ number_format($igv, 2) }}</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between py-6">
-                            <span class="text-xl font-black text-slate-700">Total</span>
-                            <span class="text-lg font-black">S/{{ number_format($total, 2) }}</span>
-                        </div>
-
-                        <button type="button" class="flex w-full items-center justify-between border border-slate-200 px-3 py-3 text-sm font-semibold transition hover:border-slate-950">
-                            <span class="inline-flex items-center gap-3">
-                                <img src="{{ asset('images/iconos/Ticket.svg') }}" alt="" class="h-5 w-5 object-contain" aria-hidden="true">
-                                Tienes un cupon?
-                            </span>
-                            <span class="text-2xl leading-none">+</span>
-                        </button>
-
-                        <button type="button" class="btn-primary mt-6 w-full justify-between px-5 py-4">
-                            Finalizar compra
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </button>
-                    </div>
-
-                    <div class="border-t border-slate-200 p-4">
-                        <p class="text-base font-semibold">Aceptamos</p>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            @forelse ($paymentMethods as $method)
-                                <div class="grid h-10 min-w-12 place-items-center rounded bg-slate-50 px-2">
-                                    @if ($method->imageUrl())
-                                        <img src="{{ $method->imageUrl() }}" alt="{{ $method->name }}" class="h-7 w-12 object-contain">
-                                    @else
-                                        <span class="text-[11px] font-black">{{ $method->name }}</span>
-                                    @endif
+                            <div class="mt-7 space-y-5 border-b border-slate-100 pb-6 text-base">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-slate-700">Subtotal</span>
+                                    <span class="font-semibold">S/{{ number_format($subtotal, 2) }}</span>
                                 </div>
-                            @empty
-                                <span class="rounded bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Sin metodos activos</span>
-                            @endforelse
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-slate-700">IGV (18%)</span>
+                                    <span class="font-semibold">S/{{ number_format($igv, 2) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between py-6">
+                                <span class="text-xl font-black text-slate-700">Total</span>
+                                <span class="text-lg font-black">S/{{ number_format($total, 2) }}</span>
+                            </div>
+
+                            <button type="button" class="flex w-full items-center justify-between border border-slate-200 px-3 py-3 text-sm font-semibold transition hover:border-slate-950">
+                                <span class="inline-flex items-center gap-3">
+                                    <img src="{{ asset('images/iconos/Ticket.svg') }}" alt="" class="h-5 w-5 object-contain" aria-hidden="true">
+                                    Tienes un cupon?
+                                </span>
+                                <span class="text-2xl leading-none">+</span>
+                            </button>
+
+                            <button type="button" class="btn-primary mt-6 w-full justify-between px-5 py-4">
+                                Finalizar compra
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="border-t border-slate-200 p-4">
+                            <p class="text-base font-semibold">Aceptamos</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                @forelse ($paymentMethods as $method)
+                                    <div class="grid h-10 min-w-12 place-items-center rounded bg-slate-50 px-2">
+                                        @if ($method->imageUrl())
+                                            <img src="{{ $method->imageUrl() }}" alt="{{ $method->name }}" class="h-7 w-12 object-contain">
+                                        @else
+                                            <span class="text-[11px] font-black">{{ $method->name }}</span>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <span class="rounded bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Sin metodos activos</span>
+                                @endforelse
+                            </div>
                         </div>
                     </div>
 
