@@ -34,7 +34,7 @@
                         @endforeach
                     </div>
 
-                    <div data-product-zoom-frame class="order-1 relative aspect-[4/5] w-full self-start overflow-hidden rounded-3xl bg-[#F7F7F7] sm:order-2 lg:h-[680px] lg:aspect-auto xl:h-[720px]">
+                    <div data-product-zoom-frame class="order-1 relative aspect-[4/5] w-full self-start overflow-hidden rounded-3xl bg-[#F7F7F7] sm:order-2 lg:h-[740px] lg:aspect-auto xl:h-[800px]">
                         <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $producto->name }}" class="h-full w-full origin-center object-contain object-center transition-transform duration-200">
                         <button type="button" data-product-lens-toggle class="absolute bottom-5 right-5 grid h-12 w-12 place-items-center rounded-full bg-white text-slate-950 shadow-lg transition hover:scale-105" aria-label="Activar zoom de imagen" aria-pressed="false">
                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/><path d="M10.5 7.5v6M7.5 10.5h6"/></svg>
