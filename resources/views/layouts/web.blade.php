@@ -204,10 +204,10 @@
                     <span>Total</span>
                     <span>S/ {{ number_format($cartTotal, 2) }}</span>
                 </div>
-                <button type="button" class="btn-primary w-full gap-2 px-5 py-4">
+                <a href="{{ route('web.cart.index') }}" class="btn-primary w-full gap-2 px-5 py-4">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
                     Comprar ahora
-                </button>
+                </a>
             @endif
             <button type="button" data-cart-close class="btn-secondary mt-3 w-full px-5 py-4">Seguir comprando</button>
         </div>

@@ -187,7 +187,7 @@
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
                         Agregar al carrito
                     </button>
-                    <button type="button" class="btn-secondary w-full px-5 py-4">Comprar ahora</button>
+                    <button type="submit" name="checkout" value="1" class="btn-secondary w-full px-5 py-4">Comprar ahora</button>
                 </form>
 
                 <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">

@@ -9,6 +9,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/carrito', function () {
+    $items = collect(session('cart.items', []));
+    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
+    $shipping = $items->isEmpty() ? 0 : 8.90;
+    $igv = $items->isEmpty() ? 0 : $subtotal * 0.18;
+
+    return view('web.cart-summary', [
+        'items' => $items,
+        'itemCount' => $items->sum('qty'),
+        'subtotal' => $subtotal,
+        'shipping' => $shipping,
+        'igv' => $igv,
+        'total' => $subtotal + $shipping + $igv,
+        'paymentMethods' => MetodoPago::active(),
+    ]);
+})->name('web.cart.index');
+
 Route::post('/carrito', function (Request $request) {
     $validated = $request->validate([
         'producto_id' => ['required', 'integer', 'exists:productos,id'],
@@ -50,6 +67,10 @@ Route::post('/carrito', function (Request $request) {
     ];
 
     session(['cart.items' => $items]);
+
+    if ($request->boolean('checkout')) {
+        return redirect()->route('web.cart.index');
+    }
 
     return back()
         ->with('status', 'Producto agregado al carrito.')
