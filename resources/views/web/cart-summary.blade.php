@@ -5,11 +5,11 @@
 @section('content')
     <section class="bg-white px-5 py-10 text-slate-950 lg:px-8">
         <div class="mx-auto max-w-7xl">
-            <h1 class="text-3xl font-black">Mi carrito ({{ $itemCount }})</h1>
+            <h1 class="text-center text-3xl font-black">Mi carrito ({{ $itemCount }})</h1>
 
-            <div class="mt-7 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div>
-                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 lg:grid lg:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] lg:items-center">
+                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] xl:items-center">
                         <span>Producto</span>
                         <span class="text-center">Precio</span>
                         <span class="text-center">Cantidad</span>
@@ -27,9 +27,9 @@
                                 $lineTotal = $price * $qty;
                                 $oldLineTotal = $oldPrice * $qty;
                             @endphp
-                            <article class="grid gap-5 py-5 lg:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] lg:items-center">
-                                <div class="grid grid-cols-[108px_1fr] items-center gap-4">
-                                    <div class="h-[135px] w-[108px] overflow-hidden rounded-md bg-slate-50">
+                            <article class="grid gap-5 py-5 xl:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] xl:items-center">
+                                <div class="grid grid-cols-[88px_1fr] items-center gap-4 sm:grid-cols-[108px_1fr]">
+                                    <div class="h-[110px] w-[88px] overflow-hidden rounded-md bg-slate-50 sm:h-[135px] sm:w-[108px]">
                                         <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
                                     </div>
                                     <div class="min-w-0">
@@ -39,18 +39,18 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between lg:block lg:text-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Precio</span>
+                                <div class="flex items-baseline justify-between xl:block xl:text-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Precio</span>
                                     <div>
-                                        <p class="text-2xl font-black">S/ {{ number_format($price, 2) }}</p>
+                                        <p class="text-xl font-black sm:text-2xl">S/ {{ number_format($price, 2) }}</p>
                                         @if ($oldPrice > 0)
                                             <p class="mt-1 text-base text-slate-400 line-through">S/ {{ number_format($oldPrice, 2) }}</p>
                                         @endif
                                     </div>
                                 </div>
 
-                                <div class="flex items-center justify-between lg:justify-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Cantidad</span>
+                                <div class="flex items-center justify-between xl:justify-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Cantidad</span>
                                     <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
                                         <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
                                             @csrf
@@ -68,17 +68,17 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between lg:block lg:text-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Subtotal</span>
+                                <div class="flex items-baseline justify-between xl:block xl:text-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 xl:hidden">Subtotal</span>
                                     <div>
-                                        <p class="text-2xl font-black">S/ {{ number_format($lineTotal, 2) }}</p>
+                                        <p class="text-xl font-black sm:text-2xl">S/ {{ number_format($lineTotal, 2) }}</p>
                                         @if ($oldLineTotal > 0)
                                             <p class="mt-1 text-base text-slate-400 line-through">S/ {{ number_format($oldLineTotal, 2) }}</p>
                                         @endif
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('web.cart.destroy', $variantId) }}" class="justify-self-end lg:justify-self-center">
+                                <form method="POST" action="{{ route('web.cart.destroy', $variantId) }}" class="justify-self-end xl:justify-self-center">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="grid h-10 w-10 place-items-center text-slate-400 transition hover:text-red-600" aria-label="Eliminar producto">
@@ -120,7 +120,7 @@
 
                         <button type="button" class="flex w-full items-center justify-between border border-slate-200 px-3 py-3 text-sm font-semibold transition hover:border-slate-950">
                             <span class="inline-flex items-center gap-3">
-                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 12v7a1 1 0 0 1-1 1h-7L4 12l8-8h7a1 1 0 0 1 1 1v7Z"/><circle cx="15" cy="9" r="1"/></svg>
+                                <img src="{{ asset('images/iconos/Ticket.svg') }}" alt="" class="h-5 w-5 object-contain" aria-hidden="true">
                                 Tienes un cupon?
                             </span>
                             <span class="text-2xl leading-none">+</span>
@@ -149,8 +149,8 @@
                         </div>
                     </div>
 
-                    <div class="mx-0 mt-3 flex gap-3 rounded-lg bg-slate-50 px-5 py-4 text-center text-sm font-medium leading-5 text-slate-600">
-                        <svg class="mt-0.5 h-6 w-6 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h11v9H4z"/><path d="M15 10h4l2 3v3h-6z"/><circle cx="8" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+                    <div class="mx-0 mt-3 flex items-center gap-3 rounded-lg bg-slate-50 px-5 py-4 text-left text-sm font-medium leading-5 text-slate-600">
+                        <img src="{{ asset('images/iconos/Truck.svg') }}" alt="" class="mt-0.5 h-6 w-6 shrink-0 object-contain" aria-hidden="true">
                         <p>El costo de envio se calculara en el siguiente paso.</p>
                     </div>
 

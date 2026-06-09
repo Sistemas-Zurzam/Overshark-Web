@@ -19,7 +19,7 @@
 </head>
 <body class="min-h-screen bg-slate-950 text-white antialiased">
     <header class="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 text-slate-950 shadow-sm backdrop-blur">
-        <div class="relative mx-auto flex h-[84px] max-w-[1440px] items-center justify-between px-5 lg:px-12">
+        <div class="relative mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-3 sm:h-[84px] sm:px-5 lg:px-12">
             <div class="flex items-center gap-8">
                 <button type="button" data-combos-toggle class="combo-trigger group hidden text-base font-semibold sm:flex" aria-expanded="false" aria-controls="combos-menu">
                     <img data-combo-flame class="combo-fire-icon" src="{{ asset('images/iconos/fuego_combo.svg') }}" alt="" aria-hidden="true">
@@ -36,15 +36,15 @@
                 </nav>
             </div>
 
-            <a href="{{ route('web.home') }}" class="absolute left-1/2 flex h-[76px] w-56 -translate-x-1/2 items-center justify-center overflow-hidden text-2xl font-black tracking-[-0.07em] sm:w-72 sm:text-3xl" aria-label="Overshark inicio">
+            <a href="{{ route('web.home') }}" class="absolute left-1/2 flex h-[70px] w-40 -translate-x-1/2 items-center justify-center overflow-hidden text-xl font-black tracking-normal sm:h-[76px] sm:w-56 sm:text-2xl lg:w-72 lg:text-3xl" aria-label="Overshark inicio">
                 @if ($brand->logoUrl())
-                    <img src="{{ $brand->logoUrl() }}" alt="Overshark" class="h-16 w-full scale-125 object-contain sm:h-20 sm:scale-150">
+                    <img src="{{ $brand->logoUrl() }}" alt="Overshark" class="h-14 w-full object-contain sm:h-16 sm:scale-125 lg:h-20 lg:scale-150">
                 @else
                     OVER<span class="text-cyan-600">SHARK</span>
                 @endif
             </a>
 
-            <div class="flex items-center gap-1 sm:gap-3">
+            <div class="flex items-center gap-0.5 sm:gap-3">
                 <form action="{{ route('web.products.search') }}" method="GET" class="hidden w-64 items-center gap-2 xl:flex">
                     <label for="product-search" class="sr-only">Buscar productos</label>
                     <div class="relative w-full">
@@ -110,11 +110,11 @@
         </nav>
     </header>
 
-    <main class="pt-[84px]">@yield('content')</main>
+    <main class="pt-[76px] sm:pt-[84px]">@yield('content')</main>
 
     <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-black/45" aria-hidden="true"></div>
-    <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-[390px] translate-x-full flex-col bg-white text-slate-950 shadow-2xl transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
-        <div class="flex h-[84px] items-center justify-between border-b border-slate-100 px-6">
+    <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-full translate-x-full flex-col bg-white text-slate-950 shadow-2xl transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
+        <div class="flex h-[76px] items-center justify-between border-b border-slate-100 px-5 sm:h-[84px] sm:px-6">
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Tu carrito</p>
                 <h2 class="text-xl font-black">{{ $cartCount }} producto{{ $cartCount === 1 ? '' : 's' }}</h2>
@@ -124,7 +124,7 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-6 py-5">
+        <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
             @forelse ($cartItems as $item)
                 @php
                     $variantId = $item['variant_id'] ?? 0;
@@ -132,8 +132,8 @@
                     $price = (float) ($item['price'] ?? 0);
                     $oldPrice = $price > 0 ? $price / 0.8 : 0;
                 @endphp
-                <div class="grid grid-cols-[84px_1fr] gap-4 border-b border-blue-500 py-4 last:border-b-0">
-                    <div class="h-[122px] w-[84px] overflow-hidden rounded-lg bg-slate-50">
+                <div class="grid grid-cols-[76px_1fr] gap-3 border-b border-blue-500 py-4 last:border-b-0 sm:grid-cols-[84px_1fr] sm:gap-4">
+                    <div class="h-[110px] w-[76px] overflow-hidden rounded-lg bg-slate-50 sm:h-[122px] sm:w-[84px]">
                         <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
                     </div>
                     <div class="min-w-0">
@@ -151,7 +151,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 flex items-center justify-between gap-3">
+                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
                                 <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
                                     @csrf
@@ -189,7 +189,7 @@
             @endforelse
         </div>
 
-        <div class="border-t border-slate-100 bg-white px-6 py-5">
+        <div class="border-t border-slate-100 bg-white px-4 py-5 sm:px-6">
             @if ($cartItems->isNotEmpty())
                 <div class="mb-5 rounded-2xl bg-white px-4 py-4 shadow-[0_12px_35px_rgba(17,17,17,0.08)]">
                     <div class="flex gap-3">

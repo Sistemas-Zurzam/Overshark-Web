@@ -22,8 +22,8 @@
         ];
     @endphp
 
-    <section class="bg-white px-5 py-8 text-slate-950 lg:px-8">
-        <article class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.8fr)]">
+    <section class="bg-white px-4 py-6 text-slate-950 sm:px-5 sm:py-8 lg:px-8">
+        <article class="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.8fr)] xl:gap-10">
             <div class="space-y-8">
                 <div class="grid gap-4 sm:grid-cols-[92px_1fr]">
                     <div data-product-thumbnails class="order-2 flex gap-3 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
@@ -34,7 +34,7 @@
                         @endforeach
                     </div>
 
-                    <div data-product-zoom-frame class="order-1 relative aspect-[4/5] w-full self-start overflow-hidden rounded-3xl bg-[#F7F7F7] sm:order-2 lg:h-[720px] lg:aspect-auto">
+                    <div data-product-zoom-frame class="order-1 relative aspect-[4/5] w-full self-start overflow-hidden rounded-3xl bg-[#F7F7F7] sm:order-2 lg:h-[680px] lg:aspect-auto xl:h-[720px]">
                         <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $producto->name }}" class="h-full w-full origin-center object-contain object-center transition-transform duration-200">
                         <button type="button" data-product-lens-toggle class="absolute bottom-5 right-5 grid h-12 w-12 place-items-center rounded-full bg-white text-slate-950 shadow-lg transition hover:scale-105" aria-label="Activar zoom de imagen" aria-pressed="false">
                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/><path d="M10.5 7.5v6M7.5 10.5h6"/></svg>
@@ -92,7 +92,7 @@
                 </section>
             </div>
 
-            <div class="lg:pt-1">
+            <div class="xl:pt-1">
                 @if (session('status'))
                     <div class="mb-5 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-800">
                         {{ session('status') }}
@@ -102,8 +102,8 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h1 class="text-2xl font-black text-slate-950">{{ $producto->name }}</h1>
-                        <div class="mt-1 flex items-center gap-3">
-                            <p class="text-5xl font-black leading-none">S/ {{ number_format($price, 2) }}</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-3">
+                            <p class="text-4xl font-black leading-none sm:text-5xl">S/ {{ number_format($price, 2) }}</p>
                             <span class="rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-600">-20%</span>
                             @if ($oldPrice > 0)
                                 <span class="text-sm text-slate-400 line-through">S/ {{ number_format($oldPrice, 2) }}</span>
@@ -120,12 +120,12 @@
                     </div>
                     <div class="mt-4 space-y-3">
                         @foreach ([['3 por S/ 49.00', 'Equivale a S/ 16.33 c/u', 'Ahorra S/ 10.70'], ['3 por S/ 49.00', 'Equivale a S/ 16.33 c/u', 'Ahorra S/ 10.70']] as [$pack, $equiv, $save])
-                            <button type="button" class="flex w-full items-center justify-between rounded-xl border border-red-200 px-4 py-3 text-left transition hover:border-red-400">
+                            <button type="button" class="flex w-full flex-col gap-3 rounded-xl border border-red-200 px-4 py-3 text-left transition hover:border-red-400 sm:flex-row sm:items-center sm:justify-between">
                                 <span>
                                     <span class="block text-lg font-black">{{ $pack }}</span>
                                     <span class="mt-1 block text-sm text-slate-500">{{ $equiv }}</span>
                                 </span>
-                                <span class="rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-600">{{ $save }}</span>
+                                <span class="w-fit rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-600">{{ $save }}</span>
                             </button>
                         @endforeach
                     </div>
@@ -260,7 +260,7 @@
                     <p class="mt-2 text-sm text-slate-500">Tambien podrian interesarte.</p>
                 </div>
 
-                <div class="grid gap-6 md:grid-cols-3">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($recommendedProducts as $recommended)
                         @php
                             $displayColors = collect($recommended->display_colors ?? []);

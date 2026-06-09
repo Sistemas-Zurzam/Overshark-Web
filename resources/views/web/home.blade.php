@@ -250,7 +250,7 @@
                 <p class="mt-2 text-sm text-slate-500">Polos frescos y versatiles para todos los dias.</p>
             </div>
 
-            <div class="grid gap-6 md:grid-cols-3">
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @if ($shortSleeveProducts->isNotEmpty())
                     @foreach ($shortSleeveProducts as $product)
                     @php
@@ -329,7 +329,7 @@
     </section>
 
     <section id="calidad" class="bg-white py-12 text-slate-950 sm:py-16">
-        <div class="w-full bg-white px-7 py-12 shadow-[0_18px_55px_rgba(17,17,17,0.06)] sm:px-12 lg:px-24 lg:py-20 xl:px-36 2xl:px-48">
+        <div class="w-full bg-white px-5 py-10 shadow-[0_18px_55px_rgba(17,17,17,0.06)] sm:px-12 sm:py-12 lg:px-24 lg:py-20 xl:px-36 2xl:px-48">
             <div class="grid w-full items-center gap-12 lg:grid-cols-[1fr_1.05fr]">
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-600">"Por que elegir Overshark"</p>
@@ -343,7 +343,7 @@
                     </p>
                 </div>
 
-                <div class="grid gap-8 sm:grid-cols-3">
+                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ([
                         [
                             'title' => 'No destine',
