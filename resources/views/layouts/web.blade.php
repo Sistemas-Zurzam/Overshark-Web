@@ -133,8 +133,8 @@
                     $oldPrice = $price > 0 ? $price / 0.8 : 0;
                 @endphp
                 <div class="grid grid-cols-[84px_1fr] gap-4 border-b border-blue-500 py-4 last:border-b-0">
-                    <div class="overflow-hidden rounded-lg bg-slate-50">
-                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="aspect-[3/4] h-full w-full object-cover">
+                    <div class="h-[122px] w-[84px] overflow-hidden rounded-lg bg-slate-50">
+                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-start justify-between gap-3">

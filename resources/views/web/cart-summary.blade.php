@@ -29,8 +29,8 @@
                             @endphp
                             <article class="grid gap-5 py-5 lg:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] lg:items-center">
                                 <div class="grid grid-cols-[108px_1fr] items-center gap-4">
-                                    <div class="overflow-hidden rounded-md bg-slate-50">
-                                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="aspect-[4/5] h-full w-full object-cover">
+                                    <div class="h-[135px] w-[108px] overflow-hidden rounded-md bg-slate-50">
+                                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
                                     </div>
                                     <div class="min-w-0">
                                         <h2 class="text-base font-semibold">{{ $item['producto'] ?? 'Producto' }}</h2>
