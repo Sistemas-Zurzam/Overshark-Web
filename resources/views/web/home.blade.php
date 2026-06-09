@@ -363,7 +363,6 @@
                     ] as $benefit)
                         <article class="text-center">
                             <div class="relative mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#F7F7F7]">
-                                <span class="absolute -right-0.5 top-0 h-9 w-9 rounded-full border-r-2 border-t-2 border-cyan-600"></span>
                                 <img src="{{ asset('images/iconos/'.$benefit['icon']) }}" alt="" class="h-10 w-10 object-contain" aria-hidden="true">
                             </div>
                             <h3 class="mt-6 text-base font-black">{{ $benefit['title'] }}</h3>
@@ -379,32 +378,12 @@
         <div class="mx-auto max-w-7xl">
             <div class="grid gap-5 lg:grid-cols-3">
                 @foreach ([
-                    ['name' => 'Pique', 'texture' => 'fabric-pique', 'icon' => 'waves'],
-                    ['name' => 'Waffle', 'texture' => 'fabric-waffle', 'icon' => null],
-                    ['name' => 'Jersey', 'texture' => 'fabric-jersey', 'icon' => 'feather'],
+                    ['name' => 'Pique', 'image' => 'Frame 859.jpg'],
+                    ['name' => 'Waffle', 'image' => 'Frame 858.jpg'],
+                    ['name' => 'Jersey', 'image' => 'Frame 857.jpg'],
                 ] as $fabric)
-                    <article class="grid min-h-[360px] overflow-hidden rounded-lg bg-white shadow-xl shadow-slate-200/70 sm:grid-cols-[1.25fr_1fr]">
-                        <div class="flex flex-col items-center justify-center p-8 text-center">
-                            @if ($fabric['icon'])
-                                <div class="mb-10 grid h-16 w-16 place-items-center rounded-full border border-slate-200 bg-white">
-                                    @if ($fabric['icon'] === 'waves')
-                                        <svg class="h-8 w-8 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                                            <path d="M4 8c2 0 2-1.2 4-1.2S10 8 12 8s2-1.2 4-1.2S18 8 20 8"/>
-                                            <path d="M4 12c2 0 2-1.2 4-1.2S10 12 12 12s2-1.2 4-1.2S18 12 20 12"/>
-                                            <path d="M4 16c2 0 2-1.2 4-1.2S10 16 12 16s2-1.2 4-1.2S18 16 20 16"/>
-                                        </svg>
-                                    @else
-                                        <svg class="h-8 w-8 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                                            <path d="M20 4C12 4 6 9.5 5 20"/>
-                                            <path d="M20 4c-1 8-6.5 13-15 16"/>
-                                            <path d="M8 15c2.2-.3 4.2-1 6-2.4"/>
-                                        </svg>
-                                    @endif
-                                </div>
-                            @endif
-                            <h2 class="text-xl font-black uppercase tracking-tight">{{ $fabric['name'] }}</h2>
-                        </div>
-                        <div class="fabric-texture {{ $fabric['texture'] }} min-h-[220px]"></div>
+                    <article>
+                        <img src="{{ asset('images/tela/'.$fabric['image']) }}" alt="Tela {{ $fabric['name'] }}" class="h-auto w-full object-contain">
                     </article>
                 @endforeach
             </div>
