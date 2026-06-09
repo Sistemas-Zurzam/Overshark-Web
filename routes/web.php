@@ -259,7 +259,7 @@ if (! function_exists('productCards')) {
                 })
                 ->values();
 
-            $product->setAttribute('display_colors', $colors->take(8)->values());
+            $product->setAttribute('display_colors', $colors);
             $product->setAttribute('display_image', $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage);
         });
 

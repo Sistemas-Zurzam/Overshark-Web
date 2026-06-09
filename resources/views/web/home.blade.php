@@ -212,11 +212,20 @@
                                         type="button"
                                         data-product-color
                                         data-image="{{ $color['image'] }}"
-                                        class="h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300"
+                                        @class([
+                                            'h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300',
+                                            'hidden' => $loop->iteration > 8,
+                                        ])
+                                        @if ($loop->iteration > 8) data-extra-product-color @endif
                                         style="background-color: {{ $swatchColor }}"
                                         aria-label="Ver color {{ $color['name'] }}"
                                     ></button>
                                 @endforeach
+                                @if ($displayColors->count() > 8)
+                                    <button type="button" data-product-colors-expand class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar {{ $displayColors->count() - 8 }} colores mas">
+                                        +{{ $displayColors->count() - 8 }}
+                                    </button>
+                                @endif
 
                             </div>
                         </div>
@@ -288,11 +297,20 @@
                                         type="button"
                                         data-product-color
                                         data-image="{{ $color['image'] }}"
-                                        class="h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300"
+                                        @class([
+                                            'h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300',
+                                            'hidden' => $loop->iteration > 8,
+                                        ])
+                                        @if ($loop->iteration > 8) data-extra-product-color @endif
                                         style="background-color: {{ $swatchColor }}"
                                         aria-label="Ver color {{ $color['name'] }}"
                                     ></button>
                                 @endforeach
+                                @if ($displayColors->count() > 8)
+                                    <button type="button" data-product-colors-expand class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar {{ $displayColors->count() - 8 }} colores mas">
+                                        +{{ $displayColors->count() - 8 }}
+                                    </button>
+                                @endif
 
                             </div>
                         </div>

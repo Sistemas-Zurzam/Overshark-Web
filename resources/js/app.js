@@ -165,6 +165,18 @@ document.querySelectorAll('[data-product-color]').forEach((button) => {
     });
 });
 
+document.querySelectorAll('[data-product-colors-expand]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const card = button.closest('article');
+
+        card?.querySelectorAll('[data-extra-product-color]').forEach((swatch) => {
+            swatch.classList.remove('hidden');
+        });
+
+        button.classList.add('hidden');
+    });
+});
+
 const parseAvailableSizes = (button) => {
     try {
         return JSON.parse(button.dataset.sizes || '[]');
