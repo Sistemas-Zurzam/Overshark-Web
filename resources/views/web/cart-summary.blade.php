@@ -9,7 +9,7 @@
 
             <div class="mt-7 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div>
-                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] md:items-center">
+                    <div class="hidden border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-wide text-slate-500 lg:grid lg:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] lg:items-center">
                         <span>Producto</span>
                         <span class="text-center">Precio</span>
                         <span class="text-center">Cantidad</span>
@@ -27,7 +27,7 @@
                                 $lineTotal = $price * $qty;
                                 $oldLineTotal = $oldPrice * $qty;
                             @endphp
-                            <article class="grid gap-5 py-5 md:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] md:items-center">
+                            <article class="grid gap-5 py-5 lg:grid-cols-[minmax(260px,1.2fr)_150px_150px_150px_44px] lg:items-center">
                                 <div class="grid grid-cols-[108px_1fr] items-center gap-4">
                                     <div class="overflow-hidden rounded-md bg-slate-50">
                                         <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="aspect-[4/5] h-full w-full object-cover">
@@ -39,8 +39,8 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between md:block md:text-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 md:hidden">Precio</span>
+                                <div class="flex items-baseline justify-between lg:block lg:text-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Precio</span>
                                     <div>
                                         <p class="text-2xl font-black">S/ {{ number_format($price, 2) }}</p>
                                         @if ($oldPrice > 0)
@@ -49,8 +49,8 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-center justify-between md:justify-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 md:hidden">Cantidad</span>
+                                <div class="flex items-center justify-between lg:justify-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Cantidad</span>
                                     <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
                                         <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
                                             @csrf
@@ -68,8 +68,8 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-baseline justify-between md:block md:text-center">
-                                    <span class="text-xs font-bold uppercase text-slate-400 md:hidden">Subtotal</span>
+                                <div class="flex items-baseline justify-between lg:block lg:text-center">
+                                    <span class="text-xs font-bold uppercase text-slate-400 lg:hidden">Subtotal</span>
                                     <div>
                                         <p class="text-2xl font-black">S/ {{ number_format($lineTotal, 2) }}</p>
                                         @if ($oldLineTotal > 0)
@@ -78,7 +78,7 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('web.cart.destroy', $variantId) }}" class="justify-self-end md:justify-self-center">
+                                <form method="POST" action="{{ route('web.cart.destroy', $variantId) }}" class="justify-self-end lg:justify-self-center">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="grid h-10 w-10 place-items-center text-slate-400 transition hover:text-red-600" aria-label="Eliminar producto">
