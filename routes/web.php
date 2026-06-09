@@ -12,16 +12,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/carrito', function () {
     $items = collect(session('cart.items', []));
     $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $shipping = $items->isEmpty() ? 0 : 8.90;
     $igv = $items->isEmpty() ? 0 : $subtotal * 0.18;
 
     return view('web.cart-summary', [
         'items' => $items,
         'itemCount' => $items->sum('qty'),
         'subtotal' => $subtotal,
-        'shipping' => $shipping,
         'igv' => $igv,
-        'total' => $subtotal + $shipping + $igv,
+        'total' => $subtotal + $igv,
         'paymentMethods' => MetodoPago::active(),
     ]);
 })->name('web.cart.index');
