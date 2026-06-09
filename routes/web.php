@@ -6,6 +6,7 @@ use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/carrito', function (Request $request) {
@@ -140,10 +141,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         'sizes' => $variants->pluck('talla')->filter()->unique()->values(),
         'mainImages' => $mainImages,
         'price' => (float) $variants->min('price') ?: (float) $producto->price,
-        'paymentMethods' => MetodoPago::query()
-            ->where('status', true)
-            ->latest()
-            ->get(),
+        'paymentMethods' => MetodoPago::active(),
         'recommendedProducts' => $recommendedProducts,
     ]);
 })->name('web.products.show');
@@ -182,51 +180,48 @@ Route::get('/buscar', function (Request $request) {
 
 Route::get('/', function () {
     $fallbackImage = asset('images/default-hero-banner.png');
-    $bestSellingProducts = productCards(
-        Producto::query()
-            ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-            ->whereNotNull('odoo_template_id')
-            ->where('price', '>', 0)
-            ->where('qty_available', '>', 0)
-            ->groupBy('odoo_template_id', 'name')
-            ->orderByDesc('total_stock')
-            ->limit(4)
-            ->get(),
-        $fallbackImage,
+    $productCacheVersion = Producto::cacheVersion();
+    $bestSellingProducts = Cache::remember(
+        "home.best_selling_products.{$productCacheVersion}",
+        now()->addMinutes(30),
+        fn () => productCards(
+            Producto::query()
+                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->whereNotNull('odoo_template_id')
+                ->where('price', '>', 0)
+                ->where('qty_available', '>', 0)
+                ->groupBy('odoo_template_id', 'name')
+                ->orderByDesc('total_stock')
+                ->limit(4)
+                ->get(),
+            $fallbackImage,
+        ),
     );
-    $shortSleeveProducts = productCards(
-        Producto::query()
-            ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-            ->whereNotNull('odoo_template_id')
-            ->where('price', '>', 0)
-            ->where('qty_available', '>', 0)
-            ->where(function ($query) {
-                $query->where('name', 'like', '%MANGA CORTA%')
-                    ->orWhere('name', 'like', '%CLASICO%')
-                    ->orWhere('name', 'like', '%WAFFLE%');
-            })
-            ->groupBy('odoo_template_id', 'name')
-            ->orderByDesc('total_stock')
-            ->limit(3)
-            ->get(),
-        $fallbackImage,
-    );
+    $shortSleeveProducts = Cache::remember("home.short_sleeve_products.{$productCacheVersion}", now()->addMinutes(30), function () use ($bestSellingProducts, $fallbackImage) {
+        $products = productCards(
+            Producto::query()
+                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->whereNotNull('odoo_template_id')
+                ->where('price', '>', 0)
+                ->where('qty_available', '>', 0)
+                ->where(function ($query) {
+                    $query->where('name', 'like', '%MANGA CORTA%')
+                        ->orWhere('name', 'like', '%CLASICO%')
+                        ->orWhere('name', 'like', '%WAFFLE%');
+                })
+                ->groupBy('odoo_template_id', 'name')
+                ->orderByDesc('total_stock')
+                ->limit(3)
+                ->get(),
+            $fallbackImage,
+        );
 
-    if ($shortSleeveProducts->isEmpty()) {
-        $shortSleeveProducts = $bestSellingProducts->take(3);
-    }
+        return $products->isEmpty() ? $bestSellingProducts->take(3) : $products;
+    });
 
     return view('web.home', [
-        'banners' => BannerPortada::query()
-            ->where('status', true)
-            ->whereNotNull('image_path')
-            ->latest()
-            ->get(),
-        'combos' => Combo::query()
-            ->where('status', true)
-            ->whereNotNull('imagen')
-            ->latest()
-            ->get(),
+        'banners' => BannerPortada::activeForHome(),
+        'combos' => Combo::activeForMenu(),
         'bestSellingProducts' => $bestSellingProducts,
         'shortSleeveProducts' => $shortSleeveProducts,
     ]);

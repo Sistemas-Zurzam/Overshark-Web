@@ -3,9 +3,12 @@
 namespace App\Models\Admin;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Producto extends Model
 {
+    private const CACHE_VERSION_KEY = 'productos.cache_version';
+
     protected $fillable = [
         'categoria_id',
         'odoo_product_id',
@@ -41,6 +44,22 @@ class Producto extends Model
             'qty_available' => 'decimal:2',
             'odoo_synced_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => self::refreshCacheVersion());
+        static::deleted(fn () => self::refreshCacheVersion());
+    }
+
+    public static function cacheVersion(): int
+    {
+        return (int) Cache::rememberForever(self::CACHE_VERSION_KEY, fn () => time());
+    }
+
+    public static function refreshCacheVersion(): void
+    {
+        Cache::forever(self::CACHE_VERSION_KEY, time());
     }
 
     public function categoria()

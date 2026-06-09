@@ -1,10 +1,6 @@
 @php
     $brand = \App\Models\BrandSetting::current();
-    $menuCombos = \App\Models\Admin\Combo::query()
-        ->where('status', true)
-        ->whereNotNull('imagen')
-        ->latest()
-        ->get();
+    $menuCombos = \App\Models\Admin\Combo::activeForMenu();
     $cartItems = collect(session('cart.items', []));
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));

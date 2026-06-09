@@ -85,6 +85,7 @@ class ProductoController extends Controller
         $path = $validated['image']->store('productos', 'public');
 
         $this->variantsFor($producto)->update(['imagen' => $path]);
+        Producto::refreshCacheVersion();
         $oldImages->each(fn (string $oldPath) => Storage::disk('public')->delete($oldPath));
 
         return back()->with('status', 'Imagen principal del producto actualizada.');
@@ -102,6 +103,7 @@ class ProductoController extends Controller
         ]);
 
         $this->variantsFor($producto)->update($validated);
+        Producto::refreshCacheVersion();
 
         return back()->with('status', 'Informacion del producto actualizada.');
     }
@@ -117,6 +119,7 @@ class ProductoController extends Controller
         $path = $validated['guia_tallas_imagen']->store('productos/guias-tallas', 'public');
 
         $this->variantsFor($producto)->update(['guia_tallas_imagen' => $path]);
+        Producto::refreshCacheVersion();
         $oldImages->each(fn (string $oldPath) => Storage::disk('public')->delete($oldPath));
 
         return back()->with('status', 'Guia de tallas actualizada.');
