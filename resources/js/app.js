@@ -168,12 +168,15 @@ document.querySelectorAll('[data-product-color]').forEach((button) => {
 document.querySelectorAll('[data-product-colors-expand]').forEach((button) => {
     button.addEventListener('click', () => {
         const card = button.closest('article');
+        const expanded = button.getAttribute('aria-expanded') === 'true';
 
         card?.querySelectorAll('[data-extra-product-color]').forEach((swatch) => {
-            swatch.classList.remove('hidden');
+            swatch.classList.toggle('hidden', expanded);
         });
 
-        button.classList.add('hidden');
+        button.textContent = expanded ? button.dataset.collapsedLabel : button.dataset.expandedLabel;
+        button.setAttribute('aria-expanded', String(!expanded));
+        button.setAttribute('aria-label', expanded ? 'Mostrar colores extra' : 'Ocultar colores extra');
     });
 });
 

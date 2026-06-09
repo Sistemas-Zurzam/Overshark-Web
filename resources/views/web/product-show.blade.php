@@ -282,12 +282,17 @@
                                         <p class="text-sm text-slate-400 line-through">S/ {{ number_format($recommendedOldPrice, 2) }}</p>
                                     @endif
                                 </div>
-                                <div class="mt-4 flex flex-wrap items-center gap-2">
+                                <div class="mt-4 flex flex-wrap items-center gap-1.5">
                                     @foreach ($displayColors as $color)
                                         @php
                                             $colorName = mb_strtolower($color['name']);
                                             $swatchColor = $swatches[$colorName] ?? '#b8b8bd';
-                                    @endphp
+                                        @endphp
+                                        @if ($loop->iteration === 9 && $displayColors->count() > 8)
+                                            <button type="button" data-product-colors-expand data-collapsed-label="+{{ $displayColors->count() - 8 }}" data-expanded-label="-" class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar colores extra" aria-expanded="false">
+                                                +{{ $displayColors->count() - 8 }}
+                                            </button>
+                                        @endif
                                     <button
                                         type="button"
                                         data-product-color
@@ -301,11 +306,6 @@
                                         aria-label="Ver color {{ $color['name'] }}"
                                     ></button>
                                 @endforeach
-                                @if ($displayColors->count() > 8)
-                                    <button type="button" data-product-colors-expand class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar {{ $displayColors->count() - 8 }} colores mas">
-                                        +{{ $displayColors->count() - 8 }}
-                                    </button>
-                                @endif
 
                             </div>
                         </div>
