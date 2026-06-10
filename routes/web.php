@@ -5,6 +5,7 @@ use App\Models\Admin\Combo;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
+use App\Http\Controllers\LibroReclamacionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
@@ -102,6 +103,9 @@ Route::delete('/carrito/{variantId}', function (int $variantId) {
 
     return back()->with('cart_open', true);
 })->name('web.cart.destroy');
+
+Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
+Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
 
 Route::get('/productos/{producto}', function (Producto $producto) {
     $fallbackImage = asset('images/default-hero-banner.png');

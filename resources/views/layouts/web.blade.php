@@ -265,7 +265,9 @@
                     <p>Provincia: agencia</p>
                     <p class="mt-3 w-fit rounded-full bg-blue-100 px-4 py-1.5 font-bold text-blue-700">S/14 costo único</p>
                 </div>
-                <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="Libro de reclamaciones" class="mt-5 h-auto w-44">
+                <a href="{{ route('web.claims.create') }}" class="mt-5 block w-fit transition hover:opacity-80" aria-label="Abrir libro de reclamaciones">
+                    <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="Libro de reclamaciones" class="h-auto w-44">
+                </a>
             </section>
         </div>
 
