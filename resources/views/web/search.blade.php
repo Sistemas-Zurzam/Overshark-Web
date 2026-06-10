@@ -58,13 +58,13 @@
                     </div>
                 </div>
             @else
-                <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
                     @foreach ($products as $product)
                         @php
                             $displayColors = collect($product->display_colors ?? []);
                             $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
                         @endphp
-                        <article class="group rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
+                        <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
                             <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
                                 <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
                                 <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>

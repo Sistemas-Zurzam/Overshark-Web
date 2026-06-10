@@ -11,25 +11,25 @@
 @endphp
 
 @section('content')
-    <section class="bg-white px-5 py-10 text-slate-950 sm:py-14 lg:px-8">
+    <section class="bg-white px-4 py-12 text-slate-950 sm:px-5 sm:py-14 lg:px-8">
         <div class="mx-auto max-w-5xl">
             <div class="text-center">
-                <h1 class="text-4xl font-black tracking-normal sm:text-5xl">Libro de reclamaciones</h1>
-                <p class="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                <h1 class="text-3xl font-black leading-tight tracking-normal sm:text-5xl">Libro de reclamaciones</h1>
+                <p class="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
                     Queremos ayudarte a resolver cualquier inconveniente. Completa el formulario y te atenderemos en
                     brevedad.
                 </p>
             </div>
 
             <div class="mt-10" data-claim-wizard data-initial-step="{{ $initialStep }}">
-                <ol class="grid grid-cols-4 items-start gap-2 text-center text-xs font-semibold text-slate-500 sm:text-sm">
+                <ol class="-mx-4 flex snap-x snap-mandatory items-start gap-5 overflow-x-auto px-4 pb-3 text-center text-xs font-semibold text-slate-500 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 sm:text-sm">
                     @foreach ([
             1 => 'Datos personales',
             2 => 'Datos del pedido',
             3 => 'Detalle del reclamo',
             4 => 'Confirmacion',
         ] as $step => $label)
-                        <li class="relative">
+                        <li class="relative min-w-[78px] snap-start sm:min-w-0">
                             @if ($step < 4)
                                 <span class="absolute left-1/2 top-4 hidden h-px w-full bg-slate-200 sm:block"></span>
                             @endif
@@ -42,7 +42,7 @@
                 </ol>
 
                 <div
-                    class="mx-auto mt-8 max-w-4xl rounded-2xl bg-white px-5 py-8 shadow-[0_20px_65px_rgba(17,17,17,0.07)] sm:px-8 lg:px-12">
+                    class="mx-auto mt-6 max-w-4xl rounded-2xl bg-white px-4 py-7 shadow-[0_20px_65px_rgba(17,17,17,0.07)] sm:mt-8 sm:px-8 sm:py-8 lg:px-12">
                     @if ($errors->any())
                         <div
                             class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -80,7 +80,7 @@
                             @csrf
 
                             <div data-claim-step="1">
-                                <h2 class="text-2xl font-black">1. Datos personales del consumidor</h2>
+                                <h2 class="text-xl font-black leading-tight sm:text-2xl">1. Datos personales del consumidor</h2>
                                 <div class="mt-6 grid gap-6 md:grid-cols-2">
                                     <div>
                                         <label for="consumer_name" class="{{ $labelClass }}">Nombres y apellidos <span
@@ -196,7 +196,7 @@
                             </div>
 
                             <div data-claim-step="2" class="hidden">
-                                <h2 class="text-2xl font-black">2. Datos del pedido o servicio</h2>
+                                <h2 class="text-xl font-black leading-tight sm:text-2xl">2. Datos del pedido o servicio</h2>
                                 <div class="mt-6 grid gap-6 md:grid-cols-2">
                                     <div>
                                         <label class="{{ $labelClass }}">Tipo de comprobante <span
@@ -265,7 +265,7 @@
                             </div>
 
                             <div data-claim-step="3" class="hidden">
-                                <h2 class="text-2xl font-black">3. Detalle del reclamo o queja</h2>
+                                <h2 class="text-xl font-black leading-tight sm:text-2xl">3. Detalle del reclamo o queja</h2>
                                 <fieldset class="mt-6 grid gap-4 md:grid-cols-2">
                                     <label class="rounded-lg border border-slate-200 p-5 transition hover:border-cyan-600">
                                         <span class="flex items-start gap-3">

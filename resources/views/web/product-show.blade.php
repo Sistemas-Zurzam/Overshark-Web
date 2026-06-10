@@ -260,13 +260,13 @@
                     <p class="mt-2 text-sm text-slate-500">Tambien podrian interesarte.</p>
                 </div>
 
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
                     @foreach ($recommendedProducts as $recommended)
                         @php
                             $displayColors = collect($recommended->display_colors ?? []);
                             $recommendedOldPrice = (float) $recommended->min_price > 0 ? ((float) $recommended->min_price / 0.8) : 0;
                         @endphp
-                        <article class="group rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
+                        <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
                             <a href="{{ route('web.products.show', $recommended->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
                                 <img data-product-card-image src="{{ $recommended->display_image }}" alt="{{ $recommended->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
                                 <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>

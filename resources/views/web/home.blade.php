@@ -100,9 +100,9 @@
                     </div>
                 </div>
             @else
-                <div class="grid gap-6 lg:grid-cols-2">
+                <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 lg:pb-0">
                     @foreach ($combos as $combo)
-                        <article class="group relative min-h-[390px] overflow-hidden rounded-3xl border border-slate-200 bg-[#F1F2F4] shadow-lg shadow-slate-200/60">
+                        <article class="group relative min-h-[390px] basis-[86vw] shrink-0 snap-start overflow-hidden rounded-3xl border border-slate-200 bg-[#F1F2F4] shadow-lg shadow-slate-200/60 lg:basis-auto">
                             <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105">
                             <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 via-42% to-transparent"></div>
                             <div class="relative flex min-h-[390px] max-w-sm flex-col justify-center p-7 sm:p-10">
@@ -130,13 +130,13 @@
                 <p class="mt-2 text-sm text-slate-500">Elige el fit, cuello y tela ideal para ti.</p>
             </div>
 
-            <div class="grid gap-5 lg:grid-cols-3">
+            <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
                 @foreach ([
                     ['tag' => 'Imprescindible', 'title' => 'Polos', 'type' => 'Clasicos', 'copy' => 'El basico de todos los dias.', 'position' => 'object-[32%_center]'],
                     ['tag' => 'Elegante', 'title' => 'Polos', 'type' => 'Camiseros', 'copy' => 'Mas elegante y versatil.', 'position' => 'object-[52%_center]'],
                     ['tag' => 'Moderno', 'title' => 'Polos', 'type' => 'Notch', 'copy' => 'Cuello abierto y moderno.', 'position' => 'object-[72%_center]'],
                 ] as $style)
-                    <article class="group relative min-h-[370px] overflow-hidden rounded-lg bg-white shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
+                    <article class="group relative min-h-[370px] basis-[82vw] shrink-0 snap-start overflow-hidden rounded-lg bg-white shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 lg:basis-auto">
                         <img src="{{ asset('images/default-hero-banner.png') }}" alt="{{ $style['title'] }} {{ $style['type'] }}" class="absolute inset-0 h-full w-full object-cover {{ $style['position'] }} transition duration-700 group-hover:scale-105">
                         <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 via-45% to-white/10"></div>
                         <div class="relative flex min-h-[370px] max-w-[210px] flex-col justify-center p-8">
@@ -168,7 +168,7 @@
                 </a>
             </div>
 
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
                 @if ($bestSellingProducts->isNotEmpty())
                     @foreach ($bestSellingProducts as $product)
                     @php
@@ -189,7 +189,7 @@
                         $displayColors = collect($product->display_colors ?? []);
                         $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
                     @endphp
-                    <article class="group rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
+                    <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
                         <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
                             <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
                             <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
@@ -232,7 +232,7 @@
                     </article>
                     @endforeach
                 @else
-                    <div class="col-span-full grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
                         <div>
                             <p class="text-lg font-black text-slate-700">Sin productos sincronizados</p>
                             <p class="mt-1 text-sm text-slate-400">Sincroniza Odoo para mostrar los mas vendidos.</p>
@@ -250,7 +250,7 @@
                 <p class="mt-2 text-sm text-slate-500">Polos frescos y versatiles para todos los dias.</p>
             </div>
 
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
                 @if ($shortSleeveProducts->isNotEmpty())
                     @foreach ($shortSleeveProducts as $product)
                     @php
@@ -271,7 +271,7 @@
                         $displayColors = collect($product->display_colors ?? []);
                         $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
                     @endphp
-                    <article class="group rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
+                    <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
                         <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
                             <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
                             <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
@@ -317,7 +317,7 @@
                     </article>
                     @endforeach
                 @else
-                    <div class="col-span-full grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
                         <div>
                             <p class="text-lg font-black text-slate-700">Sin productos de manga corta</p>
                             <p class="mt-1 text-sm text-slate-400">Sincroniza Odoo para mostrar esta seccion.</p>
@@ -343,7 +343,7 @@
                     </p>
                 </div>
 
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
                     @foreach ([
                         [
                             'title' => 'No destine',
@@ -361,7 +361,7 @@
                             'icon' => 'bolitas.svg',
                         ],
                     ] as $benefit)
-                        <article class="text-center">
+                        <article class="basis-[54vw] shrink-0 snap-start text-center sm:basis-auto">
                             <div class="relative mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#F7F7F7]">
                                 <img src="{{ asset('images/iconos/'.$benefit['icon']) }}" alt="" class="h-10 w-10 object-contain" aria-hidden="true">
                             </div>
@@ -376,13 +376,13 @@
 
     <section id="telas" class="bg-white px-5 pb-24 text-slate-950 lg:px-8">
         <div class="mx-auto max-w-7xl">
-            <div class="grid gap-5 lg:grid-cols-3">
+            <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
                 @foreach ([
                     ['name' => 'Pique', 'image' => 'Frame 859.jpg'],
                     ['name' => 'Waffle', 'image' => 'Frame 858.jpg'],
                     ['name' => 'Jersey', 'image' => 'Frame 857.jpg'],
                 ] as $fabric)
-                    <article>
+                    <article class="basis-[82vw] shrink-0 snap-start lg:basis-auto">
                         <img src="{{ asset('images/tela/'.$fabric['image']) }}" alt="Tela {{ $fabric['name'] }}" class="h-auto w-full object-contain">
                     </article>
                 @endforeach
