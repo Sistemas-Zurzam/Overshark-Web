@@ -224,7 +224,7 @@
             </a>
         </div>
 
-        <div class="mx-auto grid max-w-7xl gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
+        <div class="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-6 py-12 lg:grid-cols-4 lg:px-8">
             <section>
                 <h2 class="text-lg font-black">Comprar</h2>
                 <nav class="mt-5 flex flex-col gap-3 text-sm text-slate-600">
