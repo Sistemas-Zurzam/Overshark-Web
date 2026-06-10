@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BrandSettingController;
 use App\Http\Controllers\Admin\ComboController;
+use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Admin\ProductoController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::view('/', 'admin.dashboard')->name('dashboard');
     Route::view('/pedidos', 'admin.pedidos.index')->name('pedidos.index');
     Route::view('/clientes', 'admin.clientes.index')->name('clientes.index');
+    Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
     Route::view('/usuarios', 'admin.usuarios.index')->name('usuarios.index');
     Route::view('/bodegas', 'admin.bodegas.index')->name('bodegas.index');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');

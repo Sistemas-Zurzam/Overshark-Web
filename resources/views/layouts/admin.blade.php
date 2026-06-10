@@ -45,6 +45,7 @@
                 ['admin.dashboard', 'Dashboard'],
                 ['admin.pedidos.index', 'Pedidos'],
                 ['admin.clientes.index', 'Clientes'],
+                ['admin.reclamos.index', 'Reclamos'],
                 ['admin.usuarios.index', 'Usuarios'],
                 ['admin.bodegas.index', 'Bodegas'],
                 ['admin.productos.index', 'Productos'],

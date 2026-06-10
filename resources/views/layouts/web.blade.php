@@ -232,11 +232,11 @@
                     <a href="#productos" class="transition hover:text-cyan-700">Medias</a>
                     <a href="#combos" class="flex items-center gap-2 transition hover:text-cyan-700">
                         Combos
-                        <svg class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 1.8c.7 4.4-2.2 5.8-2.2 8.7 0 1.2.7 2.1 1.7 2.1 1.6 0 2.5-1.5 2.1-3.5 2.6 2 4 4.4 4 7.1a7.1 7.1 0 0 1-14.2 0c0-3.8 2-7.3 5.8-10.5-.2 2.6.5 4.1 1.5 4.1 1.4 0 2.3-2.7 1.3-8Z"/></svg>
+                        <img src="{{ asset('images/iconos/Fire.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
                     </a>
                     <a href="#productos" class="flex items-center gap-2 transition hover:text-cyan-700">
                         Para ellas
-                        <svg class="h-4 w-4 text-pink-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-8-4.8-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.2-8 11-8 11Z"/></svg>
+                        <img src="{{ asset('images/iconos/Heart.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
                     </a>
                 </nav>
             </section>
@@ -275,12 +275,13 @@
             <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-6 py-6 text-sm text-slate-500 sm:flex-row lg:px-8">
                 <div class="flex items-center gap-4">
                     @foreach ([
-                        ['Facebook', 'M7 9h3V7c0-2.8 1.7-4.5 4.4-4.5 1.2 0 2.3.1 2.6.3v3h-1.8c-1.4 0-1.7.7-1.7 1.7V9H18l-.6 3h-2.9v9H10v-9H7Z'],
-                        ['Instagram', 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm6-1.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z'],
-                        ['WhatsApp', 'M20.5 3.5A10 10 0 0 0 4.8 15.6L3.5 21l5.6-1.3A10 10 0 1 0 20.5 3.5Zm-4 13.2c-.4.9-2 1.7-2.8 1.8-.8.1-1.8.1-2.9-.3-2.5-.9-5.4-3.3-6.3-6-.3-.8-.1-1.8.4-2.3.4-.4.8-.5 1.2-.5h.6c.2 0 .5 0 .7.5l1 2.3c.1.3.1.6-.1.8l-.8 1c-.2.2-.2.4 0 .7.7 1.2 1.7 2.1 2.9 2.7.3.2.6.1.8-.1l1-1.2c.2-.3.5-.3.8-.2l2.4 1.1c.3.2.6.3.7.5.2.2.2.8-.1 1.2Z'],
-                    ] as [$social, $path])
+                        ['Facebook', 'facebook.svg'],
+                        ['Instagram', 'instagram.svg'],
+                        ['TikTok', 'tiktok.svg'],
+                        ['WhatsApp', 'whatsapp.svg'],
+                    ] as [$social, $icon])
                         <a href="#" class="grid h-9 w-9 place-items-center rounded-full bg-slate-600 text-white transition hover:-translate-y-0.5 hover:bg-cyan-600" aria-label="{{ $social }}">
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ $path }}"/></svg>
+                            <img src="{{ asset('images/iconos/'.$icon) }}" alt="" class="h-5 w-5 object-contain brightness-0 invert" aria-hidden="true">
                         </a>
                     @endforeach
                 </div>
