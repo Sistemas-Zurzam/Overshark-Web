@@ -127,10 +127,10 @@
                                 <span class="text-2xl leading-none">+</span>
                             </button>
 
-                            <button type="button" class="btn-primary mt-6 w-full justify-between px-5 py-4">
+                            <a href="{{ route('web.checkout.personal') }}" class="btn-primary mt-6 w-full justify-between px-5 py-4">
                                 Finalizar compra
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                            </button>
+                            </a>
                         </div>
 
                         <div class="border-t border-slate-200 p-4">

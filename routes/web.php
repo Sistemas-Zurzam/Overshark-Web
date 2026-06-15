@@ -2,9 +2,11 @@
 
 use App\Models\Admin\BannerPortada;
 use App\Models\Admin\Combo;
+use App\Models\Admin\Departamento;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
+use App\Models\Admin\TipoDocumento;
 use App\Http\Controllers\LibroReclamacionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -103,6 +105,35 @@ Route::delete('/carrito/{variantId}', function (int $variantId) {
 
     return back()->with('cart_open', true);
 })->name('web.cart.destroy');
+
+Route::get('/checkout/datos-personales', function () {
+    $items = collect(session('cart.items', []));
+
+    if ($items->isEmpty()) {
+        return redirect()->route('web.cart.index');
+    }
+
+    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
+    $igv = $subtotal * 0.18;
+
+    $departamentos = Departamento::query()->with('provincias.distritos')->orderBy('name')->get();
+    $provincias = $departamentos->flatMap(fn ($departamento) => $departamento->provincias)->sortBy('name')->values();
+    $distritos = $provincias->flatMap(fn ($provincia) => $provincia->distritos)->sortBy('name')->values();
+
+    return view('web.checkout-personal', [
+        'items' => $items,
+        'itemCount' => $items->sum('qty'),
+        'subtotal' => $subtotal,
+        'igv' => $igv,
+        'shipping' => 14,
+        'total' => $subtotal + $igv + 14,
+        'documentTypes' => TipoDocumento::query()->orderBy('name')->get(),
+        'departamentos' => $departamentos,
+        'provincias' => $provincias,
+        'distritos' => $distritos,
+        'paymentMethods' => MetodoPago::active(),
+    ]);
+})->name('web.checkout.personal');
 
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
