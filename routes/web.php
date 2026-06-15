@@ -135,6 +135,28 @@ Route::get('/checkout/datos-personales', function () {
     ]);
 })->name('web.checkout.personal');
 
+Route::get('/checkout/entrega-y-pago', function () {
+    $items = collect(session('cart.items', []));
+
+    if ($items->isEmpty()) {
+        return redirect()->route('web.cart.index');
+    }
+
+    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
+    $igv = $subtotal * 0.18;
+    $shipping = 12;
+
+    return view('web.checkout-delivery', [
+        'items' => $items,
+        'itemCount' => $items->sum('qty'),
+        'subtotal' => $subtotal,
+        'igv' => $igv,
+        'shipping' => $shipping,
+        'total' => $subtotal + $igv + $shipping,
+        'paymentMethods' => MetodoPago::active(),
+    ]);
+})->name('web.checkout.delivery');
+
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
 

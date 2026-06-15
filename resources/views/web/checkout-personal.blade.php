@@ -135,10 +135,10 @@
                         <span>Acepto los <a href="#" class="font-bold underline">Terminos y Condiciones</a> y la <a href="#" class="font-bold underline">Politica de Privacidad</a></span>
                     </label>
 
-                    <button type="button" class="inline-flex h-12 w-full items-center justify-center gap-4 rounded-md bg-[#111] px-5 text-sm font-black uppercase tracking-normal text-white transition hover:bg-[#2f6fbd]">
+                    <a href="{{ route('web.checkout.delivery') }}" class="inline-flex h-12 w-full items-center justify-center gap-4 rounded-md bg-[#111] px-5 text-sm font-black uppercase tracking-normal text-white transition hover:bg-[#2f6fbd]">
                         Continuar
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    </button>
+                    </a>
                 </form>
             </div>
 
