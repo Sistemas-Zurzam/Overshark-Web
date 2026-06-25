@@ -278,12 +278,17 @@ const selectedLocationLat = document.querySelector('[data-selected-location-lat]
 const selectedLocationLng = document.querySelector('[data-selected-location-lng]');
 const locationMapElement = document.querySelector('[data-location-map]');
 const locationMapLoading = document.querySelector('[data-location-map-loading]');
+const checkoutAddressInput = document.querySelector('input[name="address"]');
+const checkoutDepartmentSelect = document.querySelector('select[name="departamento_id"]');
+const checkoutProvinceSelect = document.querySelector('select[name="provincia_id"]');
+const checkoutDistrictSelect = document.querySelector('select[name="distrito_id"]');
 let isProductLensActive = false;
 let checkoutLocationMap = null;
 let checkoutLocationMarker = null;
 let checkoutLocationGeocoder = null;
 let checkoutLocationAutocomplete = null;
 let checkoutLocationPosition = { lat: -11.9635, lng: -77.0736 };
+let checkoutLocationAddressComponents = [];
 
 const closeProductZoom = () => {
     productZoomModal?.classList.add('hidden');
@@ -305,11 +310,103 @@ const normalizeMapPosition = (position) => ({
     lng: typeof position.lng === 'function' ? position.lng() : position.lng,
 });
 
-const setSelectedLocation = (position, address) => {
+const normalizeLocationName = (value = '') => value
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(provincia|province|region|department|departamento|district|distrito|peru)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const cleanLocationName = (value = '') => value
+    .toString()
+    .replace(/\b(Province|Region|Department|Provincia|Departamento|Distrito)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const getAddressComponent = (components, types) => {
+    const component = components.find((item) => types.some((type) => item.types.includes(type)));
+
+    return component?.long_name || '';
+};
+
+const findSelectOptionByText = (select, candidates, predicate = null) => {
+    if (!select) {
+        return null;
+    }
+
+    const normalizedCandidates = candidates
+        .map(cleanLocationName)
+        .map(normalizeLocationName)
+        .filter(Boolean);
+
+    return Array.from(select.options).find((option) => {
+        if (!option.value || (predicate && !predicate(option))) {
+            return false;
+        }
+
+        return normalizedCandidates.includes(normalizeLocationName(option.textContent));
+    }) || null;
+};
+
+const setSelectValueFromOption = (select, option) => {
+    if (!select || !option) {
+        return false;
+    }
+
+    select.value = option.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+    return true;
+};
+
+const fillCheckoutLocationFields = () => {
+    const address = selectedLocationLabel?.textContent?.trim() || '';
+
+    if (checkoutAddressInput && address) {
+        checkoutAddressInput.value = address;
+        checkoutAddressInput.dispatchEvent(new Event('input', { bubbles: true }));
+        checkoutAddressInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const components = checkoutLocationAddressComponents || [];
+    const departmentName = getAddressComponent(components, ['administrative_area_level_1']);
+    const provinceName = getAddressComponent(components, ['administrative_area_level_2']);
+    const districtCandidates = [
+        getAddressComponent(components, ['locality']),
+        getAddressComponent(components, ['administrative_area_level_3']),
+        getAddressComponent(components, ['sublocality_level_1']),
+        getAddressComponent(components, ['sublocality']),
+    ];
+
+    const departmentOption = findSelectOptionByText(checkoutDepartmentSelect, [departmentName, provinceName]);
+    setSelectValueFromOption(checkoutDepartmentSelect, departmentOption);
+
+    const provinceOption = findSelectOptionByText(
+        checkoutProvinceSelect,
+        [provinceName, departmentName],
+        (option) => !departmentOption || option.dataset.departamentoId === departmentOption.value,
+    );
+    setSelectValueFromOption(checkoutProvinceSelect, provinceOption);
+
+    const districtOption = findSelectOptionByText(
+        checkoutDistrictSelect,
+        districtCandidates,
+        (option) => !provinceOption || option.dataset.provinciaId === provinceOption.value,
+    );
+    setSelectValueFromOption(checkoutDistrictSelect, districtOption);
+};
+
+const setSelectedLocation = (position, address, components = null) => {
     checkoutLocationPosition = normalizeMapPosition(position);
 
     if (address && selectedLocationLabel) {
         selectedLocationLabel.textContent = address;
+    }
+
+    if (components) {
+        checkoutLocationAddressComponents = components;
     }
 
     if (selectedLocationLat) {
@@ -332,18 +429,18 @@ const reverseGeocodeLocation = (position) => {
             ? results[0].formatted_address
             : `${checkoutLocationPosition.lat.toFixed(6)}, ${checkoutLocationPosition.lng.toFixed(6)}`;
 
-        setSelectedLocation(position, address);
+        setSelectedLocation(position, address, results?.[0]?.address_components || []);
     });
 };
 
-const moveCheckoutLocationMarker = (position, address = null) => {
+const moveCheckoutLocationMarker = (position, address = null, components = null) => {
     const normalizedPosition = normalizeMapPosition(position);
 
     checkoutLocationMarker?.setPosition(normalizedPosition);
     checkoutLocationMap?.panTo(normalizedPosition);
 
     if (address) {
-        setSelectedLocation(normalizedPosition, address);
+        setSelectedLocation(normalizedPosition, address, components);
     } else {
         reverseGeocodeLocation(normalizedPosition);
     }
@@ -379,7 +476,7 @@ const initCheckoutLocationMap = () => {
     if (locationSearch && window.google.maps.places) {
         checkoutLocationAutocomplete = new window.google.maps.places.Autocomplete(locationSearch, {
             componentRestrictions: { country: 'pe' },
-            fields: ['formatted_address', 'geometry', 'name'],
+            fields: ['address_components', 'formatted_address', 'geometry', 'name'],
         });
 
         checkoutLocationAutocomplete.addListener('place_changed', () => {
@@ -389,7 +486,11 @@ const initCheckoutLocationMap = () => {
                 return;
             }
 
-            moveCheckoutLocationMarker(place.geometry.location, place.formatted_address || place.name);
+            moveCheckoutLocationMarker(
+                place.geometry.location,
+                place.formatted_address || place.name,
+                place.address_components || [],
+            );
             checkoutLocationMap.setZoom(17);
         });
     }
@@ -479,6 +580,7 @@ locationConfirm?.addEventListener('click', () => {
         selectedLocationValue.value = selectedLocationLabel.textContent.trim();
     }
 
+    fillCheckoutLocationFields();
     closeLocationModal();
 });
 

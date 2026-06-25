@@ -89,8 +89,9 @@
                             <label class="block text-sm font-medium">
                                 Provincia <span class="text-red-500">*</span>
                                 <select name="provincia_id" required class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100">
+                                    <option value="">Seleccionar</option>
                                     @foreach ($provincias as $provincia)
-                                        <option value="{{ $provincia->id }}">{{ $provincia->name }}</option>
+                                        <option value="{{ $provincia->id }}" data-departamento-id="{{ $provincia->departamento_id }}">{{ $provincia->name }}</option>
                                     @endforeach
                                 </select>
                             </label>
@@ -98,8 +99,9 @@
                             <label class="block text-sm font-medium">
                                 Distrito <span class="text-red-500">*</span>
                                 <select name="distrito_id" required class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100">
+                                    <option value="">Seleccionar</option>
                                     @foreach ($distritos as $distrito)
-                                        <option value="{{ $distrito->id }}">{{ $distrito->name }}</option>
+                                        <option value="{{ $distrito->id }}" data-provincia-id="{{ $distrito->provincia_id }}">{{ $distrito->name }}</option>
                                     @endforeach
                                 </select>
                             </label>
