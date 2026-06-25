@@ -266,7 +266,24 @@ const productLensToggle = document.querySelector('[data-product-lens-toggle]');
 const sizeGuideModal = document.querySelector('[data-size-guide-modal]');
 const sizeGuideOpen = document.querySelector('[data-size-guide-open]');
 const sizeGuideClose = document.querySelector('[data-size-guide-close]');
+const locationModal = document.querySelector('[data-location-modal]');
+const locationOpen = document.querySelector('[data-location-modal-open]');
+const locationCloseButtons = document.querySelectorAll('[data-location-modal-close]');
+const locationSearch = document.querySelector('[data-location-search]');
+const locationSearchClear = document.querySelector('[data-location-search-clear]');
+const locationConfirm = document.querySelector('[data-location-confirm]');
+const selectedLocationLabel = document.querySelector('[data-selected-location-label]');
+const selectedLocationValue = document.querySelector('[data-selected-location-value]');
+const selectedLocationLat = document.querySelector('[data-selected-location-lat]');
+const selectedLocationLng = document.querySelector('[data-selected-location-lng]');
+const locationMapElement = document.querySelector('[data-location-map]');
+const locationMapLoading = document.querySelector('[data-location-map-loading]');
 let isProductLensActive = false;
+let checkoutLocationMap = null;
+let checkoutLocationMarker = null;
+let checkoutLocationGeocoder = null;
+let checkoutLocationAutocomplete = null;
+let checkoutLocationPosition = { lat: -11.9635, lng: -77.0736 };
 
 const closeProductZoom = () => {
     productZoomModal?.classList.add('hidden');
@@ -276,6 +293,106 @@ const closeProductZoom = () => {
 const closeSizeGuide = () => {
     sizeGuideModal?.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
+};
+
+const closeLocationModal = () => {
+    locationModal?.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+};
+
+const normalizeMapPosition = (position) => ({
+    lat: typeof position.lat === 'function' ? position.lat() : position.lat,
+    lng: typeof position.lng === 'function' ? position.lng() : position.lng,
+});
+
+const setSelectedLocation = (position, address) => {
+    checkoutLocationPosition = normalizeMapPosition(position);
+
+    if (address && selectedLocationLabel) {
+        selectedLocationLabel.textContent = address;
+    }
+
+    if (selectedLocationLat) {
+        selectedLocationLat.value = checkoutLocationPosition.lat.toFixed(7);
+    }
+
+    if (selectedLocationLng) {
+        selectedLocationLng.value = checkoutLocationPosition.lng.toFixed(7);
+    }
+};
+
+const reverseGeocodeLocation = (position) => {
+    if (!checkoutLocationGeocoder) {
+        setSelectedLocation(position);
+        return;
+    }
+
+    checkoutLocationGeocoder.geocode({ location: normalizeMapPosition(position) }, (results, status) => {
+        const address = status === 'OK' && results?.[0]?.formatted_address
+            ? results[0].formatted_address
+            : `${checkoutLocationPosition.lat.toFixed(6)}, ${checkoutLocationPosition.lng.toFixed(6)}`;
+
+        setSelectedLocation(position, address);
+    });
+};
+
+const moveCheckoutLocationMarker = (position, address = null) => {
+    const normalizedPosition = normalizeMapPosition(position);
+
+    checkoutLocationMarker?.setPosition(normalizedPosition);
+    checkoutLocationMap?.panTo(normalizedPosition);
+
+    if (address) {
+        setSelectedLocation(normalizedPosition, address);
+    } else {
+        reverseGeocodeLocation(normalizedPosition);
+    }
+};
+
+const initCheckoutLocationMap = () => {
+    if (!locationMapElement || checkoutLocationMap || !window.google?.maps) {
+        return;
+    }
+
+    locationMapLoading?.classList.add('hidden');
+    checkoutLocationGeocoder = new window.google.maps.Geocoder();
+    checkoutLocationMap = new window.google.maps.Map(locationMapElement, {
+        center: checkoutLocationPosition,
+        zoom: 16,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+    });
+
+    checkoutLocationMarker = new window.google.maps.Marker({
+        position: checkoutLocationPosition,
+        map: checkoutLocationMap,
+        draggable: true,
+        title: 'Ubicacion de entrega',
+    });
+
+    setSelectedLocation(checkoutLocationPosition, selectedLocationLabel?.textContent?.trim() || 'Akpana 1261, Lima 15427');
+
+    checkoutLocationMap.addListener('click', (event) => moveCheckoutLocationMarker(event.latLng));
+    checkoutLocationMarker.addListener('dragend', (event) => moveCheckoutLocationMarker(event.latLng));
+
+    if (locationSearch && window.google.maps.places) {
+        checkoutLocationAutocomplete = new window.google.maps.places.Autocomplete(locationSearch, {
+            componentRestrictions: { country: 'pe' },
+            fields: ['formatted_address', 'geometry', 'name'],
+        });
+
+        checkoutLocationAutocomplete.addListener('place_changed', () => {
+            const place = checkoutLocationAutocomplete.getPlace();
+
+            if (!place.geometry?.location) {
+                return;
+            }
+
+            moveCheckoutLocationMarker(place.geometry.location, place.formatted_address || place.name);
+            checkoutLocationMap.setZoom(17);
+        });
+    }
 };
 
 productZoomOpen?.addEventListener('click', () => {
@@ -335,6 +452,38 @@ sizeGuideOpen?.addEventListener('click', () => {
 });
 sizeGuideClose?.addEventListener('click', closeSizeGuide);
 
+locationOpen?.addEventListener('click', () => {
+    locationModal?.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    initCheckoutLocationMap();
+
+    if (checkoutLocationMap) {
+        window.google.maps.event.trigger(checkoutLocationMap, 'resize');
+        checkoutLocationMap.setCenter(checkoutLocationPosition);
+    }
+
+    window.setTimeout(() => locationSearch?.focus(), 80);
+});
+
+locationCloseButtons.forEach((button) => button.addEventListener('click', closeLocationModal));
+
+locationSearchClear?.addEventListener('click', () => {
+    if (locationSearch) {
+        locationSearch.value = '';
+        locationSearch.focus();
+    }
+});
+
+locationConfirm?.addEventListener('click', () => {
+    if (selectedLocationValue && selectedLocationLabel) {
+        selectedLocationValue.value = selectedLocationLabel.textContent.trim();
+    }
+
+    closeLocationModal();
+});
+
+window.addEventListener('checkout-location-map-ready', initCheckoutLocationMap);
+
 productZoomModal?.addEventListener('click', (event) => {
     if (event.target === productZoomModal) {
         closeProductZoom();
@@ -347,10 +496,17 @@ sizeGuideModal?.addEventListener('click', (event) => {
     }
 });
 
+locationModal?.addEventListener('click', (event) => {
+    if (event.target === locationModal) {
+        closeLocationModal();
+    }
+});
+
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         closeProductZoom();
         closeSizeGuide();
+        closeLocationModal();
         closeCart();
     }
 });

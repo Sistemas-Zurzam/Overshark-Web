@@ -289,5 +289,6 @@
             </div>
         </div>
     </footer>
+    @yield('scripts')
 </body>
 </html>
