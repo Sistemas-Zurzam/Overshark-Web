@@ -10,6 +10,7 @@ use App\Models\Admin\TipoDocumento;
 use App\Http\Controllers\LibroReclamacionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/carrito', function () {
@@ -156,6 +157,81 @@ Route::get('/checkout/entrega-y-pago', function () {
         'paymentMethods' => MetodoPago::active(),
     ]);
 })->name('web.checkout.delivery');
+
+Route::get('/checkout/courier-agencies', function (Request $request) {
+    $normalize = function (?string $value): string {
+        $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $value);
+
+        return trim(preg_replace('/\s+/', ' ', strtolower($value ?: '')));
+    };
+
+    $department = $normalize($request->query('departamento'));
+    $province = $normalize($request->query('provincia'));
+    $district = $normalize($request->query('distrito'));
+    $address = $normalize($request->query('address'));
+    $search = $normalize($request->query('q'));
+    $terms = collect(explode(' ', "{$district} {$province} {$department} {$address} {$search}"))
+        ->map(fn ($term) => trim($term))
+        ->filter(fn ($term) => strlen($term) >= 3)
+        ->unique()
+        ->values();
+
+    $agencies = DB::table('courier')
+        ->select('id', 'ter_id', 'direccion', 'zona', 'provincia', 'departamento', 'lugar_over')
+        ->whereNotNull('direccion')
+        ->whereNotNull('lugar_over')
+        ->get()
+        ->map(function ($agency) use ($normalize, $department, $province, $district, $search, $terms) {
+            $agencyDepartment = $normalize($agency->departamento);
+            $agencyProvince = $normalize($agency->provincia);
+            $agencyZone = $normalize($agency->zona);
+            $agencyAddress = $normalize($agency->direccion);
+            $agencyName = $normalize($agency->lugar_over);
+            $haystack = "{$agencyName} {$agencyAddress} {$agencyZone} {$agencyProvince} {$agencyDepartment}";
+            $score = 0;
+
+            if ($department !== '' && $agencyDepartment === $department) {
+                $score += 80;
+            }
+
+            if ($province !== '' && $agencyProvince === $province) {
+                $score += 70;
+            }
+
+            if ($district !== '' && ($agencyZone === $district || str_contains($agencyName, $district) || str_contains($agencyAddress, $district))) {
+                $score += 90;
+            }
+
+            if ($search !== '' && str_contains($haystack, $search)) {
+                $score += 100;
+            }
+
+            foreach ($terms as $term) {
+                if (str_contains($haystack, $term)) {
+                    $score += 8;
+                }
+            }
+
+            $agency->score = $score;
+
+            return $agency;
+        })
+        ->sortByDesc(fn ($agency) => [$agency->score, $agency->departamento, $agency->provincia, $agency->zona])
+        ->take(10)
+        ->values()
+        ->map(fn ($agency, int $index) => [
+            'id' => $agency->id,
+            'ter_id' => $agency->ter_id,
+            'name' => $agency->lugar_over,
+            'address' => $agency->direccion,
+            'zone' => $agency->zona,
+            'province' => $agency->provincia,
+            'department' => $agency->departamento,
+            'badge' => $index === 0 ? 'Mas cercana a tu direccion' : null,
+        ]);
+
+    return response()->json(['agencies' => $agencies]);
+})->name('web.checkout.courier-agencies');
 
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');

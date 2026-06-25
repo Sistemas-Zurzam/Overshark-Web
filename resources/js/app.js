@@ -288,7 +288,7 @@ const shalomAgencyCloseButtons = document.querySelectorAll('[data-shalom-agency-
 const shalomAgencySearch = document.querySelector('[data-shalom-agency-search]');
 const shalomAgencySearchClear = document.querySelector('[data-shalom-agency-search-clear]');
 const shalomAgencyConfirm = document.querySelector('[data-shalom-agency-confirm]');
-const shalomAgencyOptions = document.querySelectorAll('[data-shalom-agency-option]');
+const shalomAgencyList = document.querySelector('[data-shalom-agency-list]');
 const shalomAgencyMapElement = document.querySelector('[data-shalom-agency-map]');
 const shalomAgencyMapLoading = document.querySelector('[data-shalom-agency-map-loading]');
 const shalomSelectedName = document.querySelector('[data-shalom-selected-name]');
@@ -303,6 +303,8 @@ let checkoutLocationAddressComponents = [];
 let shalomAgencyMap = null;
 let shalomAgencyMarker = null;
 let selectedShalomAgency = null;
+let shalomAgencyGeocoder = null;
+let shalomAgenciesLoaded = false;
 
 const closeProductZoom = () => {
     productZoomModal?.classList.add('hidden');
@@ -415,6 +417,15 @@ const fillCheckoutLocationFields = () => {
         (option) => !provinceOption || option.dataset.provinciaId === provinceOption.value,
     );
     setSelectValueFromOption(checkoutDistrictSelect, districtOption);
+
+    window.localStorage.setItem('checkoutLocation', JSON.stringify({
+        address,
+        lat: checkoutLocationPosition.lat,
+        lng: checkoutLocationPosition.lng,
+        departamento: departmentOption?.textContent?.trim() || '',
+        provincia: provinceOption?.textContent?.trim() || '',
+        distrito: districtOption?.textContent?.trim() || districtCandidates.find(Boolean) || '',
+    }));
 };
 
 const setSelectedLocation = (position, address, components = null) => {
@@ -518,9 +529,49 @@ const initCheckoutLocationMap = () => {
 const getShalomAgencyData = (option) => ({
     name: option?.dataset.name || '',
     address: option?.dataset.address || '',
-    lat: Number(option?.dataset.lat || -12.0346),
-    lng: Number(option?.dataset.lng || -77.0290),
+    zone: option?.dataset.zone || '',
+    province: option?.dataset.province || '',
+    department: option?.dataset.department || '',
+    lat: Number(option?.dataset.lat || 0),
+    lng: Number(option?.dataset.lng || 0),
 });
+
+const getStoredCheckoutLocation = () => {
+    try {
+        return JSON.parse(window.localStorage.getItem('checkoutLocation') || '{}');
+    } catch {
+        return {};
+    }
+};
+
+const escapeHtml = (value = '') => value
+    .toString()
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const geocodeShalomAgency = (agency) => {
+    if (!shalomAgencyGeocoder || !shalomAgencyMap || !agency?.address) {
+        return;
+    }
+
+    const query = [agency.address, agency.zone, agency.province, agency.department, 'Peru']
+        .filter(Boolean)
+        .join(', ');
+
+    shalomAgencyGeocoder.geocode({ address: query }, (results, status) => {
+        if (status !== 'OK' || !results?.[0]?.geometry?.location) {
+            return;
+        }
+
+        const position = results[0].geometry.location;
+        shalomAgencyMarker?.setPosition(position);
+        shalomAgencyMap.panTo(position);
+        shalomAgencyMap.setZoom(15);
+    });
+};
 
 const selectShalomAgencyOption = (option) => {
     if (!option) {
@@ -529,7 +580,7 @@ const selectShalomAgencyOption = (option) => {
 
     selectedShalomAgency = getShalomAgencyData(option);
 
-    shalomAgencyOptions.forEach((item) => {
+    shalomAgencyList?.querySelectorAll('[data-shalom-agency-option]').forEach((item) => {
         const isSelected = item === option;
         item.setAttribute('aria-pressed', String(isSelected));
         item.classList.toggle('border-red-300', isSelected);
@@ -537,9 +588,90 @@ const selectShalomAgencyOption = (option) => {
         item.classList.toggle('border-slate-100', !isSelected);
     });
 
-    const position = { lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng };
-    shalomAgencyMarker?.setPosition(position);
-    shalomAgencyMap?.panTo(position);
+    geocodeShalomAgency(selectedShalomAgency);
+};
+
+const renderShalomAgencies = (agencies) => {
+    if (!shalomAgencyList) {
+        return;
+    }
+
+    if (!agencies.length) {
+        shalomAgencyList.innerHTML = `
+            <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+                No encontramos agencias para esta ubicacion.
+            </div>
+        `;
+        return;
+    }
+
+    shalomAgencyList.innerHTML = agencies.map((agency, index) => `
+        <button
+            type="button"
+            data-shalom-agency-option
+            data-name="${escapeHtml(agency.name || '')}"
+            data-address="${escapeHtml(agency.address || '')}"
+            data-zone="${escapeHtml(agency.zone || '')}"
+            data-province="${escapeHtml(agency.province || '')}"
+            data-department="${escapeHtml(agency.department || '')}"
+            class="flex w-full items-center gap-4 rounded-lg border bg-white px-4 py-4 text-left transition hover:border-red-300 ${index === 0 ? 'border-red-300 bg-red-50/30' : 'border-slate-100'}"
+            aria-pressed="${index === 0 ? 'true' : 'false'}"
+        >
+            <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-red-600 text-[10px] font-black italic text-white">SHALOM</span>
+            <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-3">
+                    <span class="block truncate text-sm font-black">${escapeHtml(agency.name || 'Agencia Shalom')}</span>
+                    ${agency.badge ? `<span class="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-black">${escapeHtml(agency.badge)}</span>` : ''}
+                </span>
+                <span class="mt-2 block truncate text-xs font-medium text-slate-600">${escapeHtml(agency.address || '')}</span>
+            </span>
+        </button>
+    `).join('');
+
+    shalomAgencyList.querySelectorAll('[data-shalom-agency-option]').forEach((option) => {
+        option.addEventListener('click', () => selectShalomAgencyOption(option));
+    });
+
+    selectShalomAgencyOption(shalomAgencyList.querySelector('[data-shalom-agency-option]'));
+};
+
+const fetchShalomAgencies = () => {
+    if (!shalomAgencyList?.dataset.url) {
+        return;
+    }
+
+    const location = getStoredCheckoutLocation();
+    const params = new URLSearchParams({
+        address: location.address || '',
+        departamento: location.departamento || '',
+        provincia: location.provincia || '',
+        distrito: location.distrito || '',
+        lat: location.lat || '',
+        lng: location.lng || '',
+        q: shalomAgencySearch?.value || '',
+    });
+
+    shalomAgencyList.innerHTML = `
+        <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+            Cargando agencias...
+        </div>
+    `;
+
+    window.fetch(`${shalomAgencyList.dataset.url}?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            shalomAgenciesLoaded = true;
+            renderShalomAgencies(data.agencies || []);
+        })
+        .catch(() => {
+            shalomAgencyList.innerHTML = `
+                <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+                    No se pudieron cargar las agencias.
+                </div>
+            `;
+        });
 };
 
 const initShalomAgencyMap = () => {
@@ -547,11 +679,14 @@ const initShalomAgencyMap = () => {
         return;
     }
 
-    const firstAgency = shalomAgencyOptions[0];
-    selectedShalomAgency = getShalomAgencyData(firstAgency);
-    const center = { lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng };
+    const location = getStoredCheckoutLocation();
+    const center = {
+        lat: Number(location.lat || -12.0464),
+        lng: Number(location.lng || -77.0428),
+    };
 
     shalomAgencyMapLoading?.classList.add('hidden');
+    shalomAgencyGeocoder = new window.google.maps.Geocoder();
     shalomAgencyMap = new window.google.maps.Map(shalomAgencyMapElement, {
         center,
         zoom: 15,
@@ -563,10 +698,8 @@ const initShalomAgencyMap = () => {
     shalomAgencyMarker = new window.google.maps.Marker({
         position: center,
         map: shalomAgencyMap,
-        title: selectedShalomAgency.name,
+        title: 'Agencia Shalom',
     });
-
-    selectShalomAgencyOption(firstAgency);
 };
 
 productZoomOpen?.addEventListener('click', () => {
@@ -651,14 +784,14 @@ shalomAgencyOpen?.addEventListener('click', () => {
         shalomAgencyMap.setCenter({ lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng });
     }
 
+    if (!shalomAgenciesLoaded) {
+        fetchShalomAgencies();
+    }
+
     window.setTimeout(() => shalomAgencySearch?.focus(), 80);
 });
 
 shalomAgencyCloseButtons.forEach((button) => button.addEventListener('click', closeShalomAgencyModal));
-
-shalomAgencyOptions.forEach((option) => {
-    option.addEventListener('click', () => selectShalomAgencyOption(option));
-});
 
 locationSearchClear?.addEventListener('click', () => {
     if (locationSearch) {
@@ -671,7 +804,13 @@ shalomAgencySearchClear?.addEventListener('click', () => {
     if (shalomAgencySearch) {
         shalomAgencySearch.value = '';
         shalomAgencySearch.focus();
+        fetchShalomAgencies();
     }
+});
+
+shalomAgencySearch?.addEventListener('input', () => {
+    window.clearTimeout(shalomAgencySearch.searchTimeout);
+    shalomAgencySearch.searchTimeout = window.setTimeout(fetchShalomAgencies, 250);
 });
 
 shalomAgencyConfirm?.addEventListener('click', () => {

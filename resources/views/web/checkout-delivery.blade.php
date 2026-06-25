@@ -358,36 +358,10 @@
                                 </button>
                             </label>
 
-                            <div class="mt-4 max-h-[376px] space-y-3 overflow-y-auto pr-1">
-                                @foreach ([
-                                    ['Shalom Rimac', 'Av. Amancaes 644, Lima 15094', '-12.0346', '-77.0290', '1.2 Km'],
-                                    ['Shalom Los Olivos', 'Av. Alfredo Mendiola 3698, Los Olivos', '-11.9687', '-77.0746', '2.6 Km'],
-                                    ['Shalom Comas', 'Av. Tupac Amaru 3205, Comas', '-11.9491', '-77.0584', '3.8 Km'],
-                                    ['Shalom Independencia', 'Av. Carlos Izaguirre 275, Independencia', '-11.9894', '-77.0615', '4.1 Km'],
-                                    ['Shalom San Martin', 'Av. Peru 3490, San Martin de Porres', '-12.0147', '-77.0782', '5.4 Km'],
-                                ] as $index => [$name, $address, $lat, $lng, $distance])
-                                    <button
-                                        type="button"
-                                        data-shalom-agency-option
-                                        data-name="{{ $name }}"
-                                        data-address="{{ $address }}"
-                                        data-lat="{{ $lat }}"
-                                        data-lng="{{ $lng }}"
-                                        class="flex w-full items-center gap-4 rounded-lg border bg-white px-4 py-4 text-left transition hover:border-red-300 {{ $index === 0 ? 'border-red-300 bg-red-50/30' : 'border-slate-100' }}"
-                                        aria-pressed="{{ $index === 0 ? 'true' : 'false' }}"
-                                    >
-                                        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-red-600 text-[10px] font-black italic text-white">SHALOM</span>
-                                        <span class="min-w-0 flex-1">
-                                            <span class="flex items-center gap-3">
-                                                <span class="block truncate text-sm font-black">{{ $name }}</span>
-                                                @if ($index === 0)
-                                                    <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-black">{{ $distance }}</span>
-                                                @endif
-                                            </span>
-                                            <span class="mt-2 block truncate text-xs font-medium text-slate-600">{{ $address }}</span>
-                                        </span>
-                                    </button>
-                                @endforeach
+                            <div data-shalom-agency-list data-url="{{ route('web.checkout.courier-agencies') }}" class="mt-4 max-h-[376px] space-y-3 overflow-y-auto pr-1">
+                                <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+                                    Cargando agencias...
+                                </div>
                             </div>
                         </div>
                     </div>
