@@ -11,7 +11,7 @@ class CourierSeeder extends Seeder
 {
     public function run(): void
     {
-        $path = env('COURIER_SQL_PATH', 'C:/Users/Drako/Downloads/courier.sql');
+        $path = env('COURIER_SQL_PATH', database_path('seeders/data/courier.sql'));
 
         if (! is_file($path)) {
             throw new RuntimeException("No se encontro el archivo courier.sql en: {$path}");
