@@ -282,6 +282,17 @@ const checkoutAddressInput = document.querySelector('input[name="address"]');
 const checkoutDepartmentSelect = document.querySelector('select[name="departamento_id"]');
 const checkoutProvinceSelect = document.querySelector('select[name="provincia_id"]');
 const checkoutDistrictSelect = document.querySelector('select[name="distrito_id"]');
+const shalomAgencyModal = document.querySelector('[data-shalom-agency-modal]');
+const shalomAgencyOpen = document.querySelector('[data-shalom-agency-modal-open]');
+const shalomAgencyCloseButtons = document.querySelectorAll('[data-shalom-agency-modal-close]');
+const shalomAgencySearch = document.querySelector('[data-shalom-agency-search]');
+const shalomAgencySearchClear = document.querySelector('[data-shalom-agency-search-clear]');
+const shalomAgencyConfirm = document.querySelector('[data-shalom-agency-confirm]');
+const shalomAgencyOptions = document.querySelectorAll('[data-shalom-agency-option]');
+const shalomAgencyMapElement = document.querySelector('[data-shalom-agency-map]');
+const shalomAgencyMapLoading = document.querySelector('[data-shalom-agency-map-loading]');
+const shalomSelectedName = document.querySelector('[data-shalom-selected-name]');
+const shalomSelectedAddress = document.querySelector('[data-shalom-selected-address]');
 let isProductLensActive = false;
 let checkoutLocationMap = null;
 let checkoutLocationMarker = null;
@@ -289,6 +300,9 @@ let checkoutLocationGeocoder = null;
 let checkoutLocationAutocomplete = null;
 let checkoutLocationPosition = { lat: -11.9635, lng: -77.0736 };
 let checkoutLocationAddressComponents = [];
+let shalomAgencyMap = null;
+let shalomAgencyMarker = null;
+let selectedShalomAgency = null;
 
 const closeProductZoom = () => {
     productZoomModal?.classList.add('hidden');
@@ -302,6 +316,11 @@ const closeSizeGuide = () => {
 
 const closeLocationModal = () => {
     locationModal?.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeShalomAgencyModal = () => {
+    shalomAgencyModal?.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
 };
 
@@ -496,6 +515,60 @@ const initCheckoutLocationMap = () => {
     }
 };
 
+const getShalomAgencyData = (option) => ({
+    name: option?.dataset.name || '',
+    address: option?.dataset.address || '',
+    lat: Number(option?.dataset.lat || -12.0346),
+    lng: Number(option?.dataset.lng || -77.0290),
+});
+
+const selectShalomAgencyOption = (option) => {
+    if (!option) {
+        return;
+    }
+
+    selectedShalomAgency = getShalomAgencyData(option);
+
+    shalomAgencyOptions.forEach((item) => {
+        const isSelected = item === option;
+        item.setAttribute('aria-pressed', String(isSelected));
+        item.classList.toggle('border-red-300', isSelected);
+        item.classList.toggle('bg-red-50/30', isSelected);
+        item.classList.toggle('border-slate-100', !isSelected);
+    });
+
+    const position = { lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng };
+    shalomAgencyMarker?.setPosition(position);
+    shalomAgencyMap?.panTo(position);
+};
+
+const initShalomAgencyMap = () => {
+    if (!shalomAgencyMapElement || shalomAgencyMap || !window.google?.maps) {
+        return;
+    }
+
+    const firstAgency = shalomAgencyOptions[0];
+    selectedShalomAgency = getShalomAgencyData(firstAgency);
+    const center = { lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng };
+
+    shalomAgencyMapLoading?.classList.add('hidden');
+    shalomAgencyMap = new window.google.maps.Map(shalomAgencyMapElement, {
+        center,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+    });
+
+    shalomAgencyMarker = new window.google.maps.Marker({
+        position: center,
+        map: shalomAgencyMap,
+        title: selectedShalomAgency.name,
+    });
+
+    selectShalomAgencyOption(firstAgency);
+};
+
 productZoomOpen?.addEventListener('click', () => {
     const currentImage = document.querySelector('[data-product-card-image]');
 
@@ -568,11 +641,51 @@ locationOpen?.addEventListener('click', () => {
 
 locationCloseButtons.forEach((button) => button.addEventListener('click', closeLocationModal));
 
+shalomAgencyOpen?.addEventListener('click', () => {
+    shalomAgencyModal?.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    initShalomAgencyMap();
+
+    if (shalomAgencyMap && selectedShalomAgency) {
+        window.google.maps.event.trigger(shalomAgencyMap, 'resize');
+        shalomAgencyMap.setCenter({ lat: selectedShalomAgency.lat, lng: selectedShalomAgency.lng });
+    }
+
+    window.setTimeout(() => shalomAgencySearch?.focus(), 80);
+});
+
+shalomAgencyCloseButtons.forEach((button) => button.addEventListener('click', closeShalomAgencyModal));
+
+shalomAgencyOptions.forEach((option) => {
+    option.addEventListener('click', () => selectShalomAgencyOption(option));
+});
+
 locationSearchClear?.addEventListener('click', () => {
     if (locationSearch) {
         locationSearch.value = '';
         locationSearch.focus();
     }
+});
+
+shalomAgencySearchClear?.addEventListener('click', () => {
+    if (shalomAgencySearch) {
+        shalomAgencySearch.value = '';
+        shalomAgencySearch.focus();
+    }
+});
+
+shalomAgencyConfirm?.addEventListener('click', () => {
+    if (selectedShalomAgency) {
+        if (shalomSelectedName) {
+            shalomSelectedName.textContent = selectedShalomAgency.name;
+        }
+
+        if (shalomSelectedAddress) {
+            shalomSelectedAddress.textContent = selectedShalomAgency.address;
+        }
+    }
+
+    closeShalomAgencyModal();
 });
 
 locationConfirm?.addEventListener('click', () => {
@@ -585,6 +698,7 @@ locationConfirm?.addEventListener('click', () => {
 });
 
 window.addEventListener('checkout-location-map-ready', initCheckoutLocationMap);
+window.addEventListener('checkout-agency-map-ready', initShalomAgencyMap);
 
 productZoomModal?.addEventListener('click', (event) => {
     if (event.target === productZoomModal) {
@@ -604,11 +718,18 @@ locationModal?.addEventListener('click', (event) => {
     }
 });
 
+shalomAgencyModal?.addEventListener('click', (event) => {
+    if (event.target === shalomAgencyModal) {
+        closeShalomAgencyModal();
+    }
+});
+
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         closeProductZoom();
         closeSizeGuide();
         closeLocationModal();
+        closeShalomAgencyModal();
         closeCart();
     }
 });
