@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/carrito', function () {
     $items = collect(session('cart.items', []));
@@ -181,6 +182,26 @@ Route::get('/checkout/pago', function () {
         'paymentMethods' => MetodoPago::active(),
     ]);
 })->name('web.checkout.payment');
+
+Route::post('/checkout/comprobante', function (Request $request) {
+    $validated = $request->validate([
+        'payment_receipt' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+    ]);
+
+    if ($previousPath = session('checkout.payment_receipt_path')) {
+        Storage::disk('public')->delete($previousPath);
+    }
+
+    $path = $validated['payment_receipt']->store('payment-receipts', 'public');
+    session(['checkout.payment_receipt_path' => $path]);
+
+    return response()->json([
+        'path' => $path,
+        'url' => Storage::disk('public')->url($path),
+        'name' => $validated['payment_receipt']->getClientOriginalName(),
+        'size' => $validated['payment_receipt']->getSize(),
+    ]);
+})->name('web.checkout.receipt');
 
 Route::get('/checkout/courier-agencies', function (Request $request) {
     $normalize = function (?string $value): string {

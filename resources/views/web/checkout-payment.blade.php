@@ -29,7 +29,10 @@
                     @endforeach
                 </div>
 
-                <form class="mt-8 rounded-2xl bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                <form class="mt-8 rounded-2xl bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)]" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="payment_receipt_path" data-payment-receipt-path value="{{ session('checkout.payment_receipt_path') }}">
+
                     <h1 class="text-base font-black">Realiza tu pago</h1>
                     <p class="mt-1 text-xs text-slate-500">Selecciona tu metodo de pago, y adjunta tu comprobante.</p>
 
@@ -118,29 +121,32 @@
                         <h2 class="text-sm font-black">3. Adjunta tu comprobante de pago</h2>
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <label class="grid min-h-44 cursor-pointer place-items-center rounded-lg border border-dashed border-slate-300 px-5 py-6 text-center transition hover:border-[#2f6fbd]">
-                                <input type="file" name="payment_receipt" class="sr-only" accept="image/*,.pdf">
+                                <input type="file" name="payment_receipt" data-payment-receipt-input class="sr-only" accept="image/png,image/jpeg,image/jpg,image/webp">
                                 <svg class="h-10 w-10 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 16v3h14v-3"/></svg>
                                 <span class="mt-3 text-xs text-slate-500">Arrastra tu comprobante aqui<br>o selecciona un archivo</span>
                                 <span class="mt-4 rounded-md bg-[#111] px-5 py-2 text-xs font-black text-white">Seleccionar archivo</span>
                             </label>
-                            <div class="rounded-lg border border-slate-100 px-5 py-6">
-                                <div class="flex items-center gap-3">
+                            <div class="rounded-lg border border-slate-100 px-5 py-6" data-payment-receipt-card>
+                                <div class="flex items-center gap-3" data-payment-receipt-meta>
                                     <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100">
                                         <svg class="h-6 w-6 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M7 3h7l4 4v14H7Z"/><path d="M14 3v5h5"/></svg>
                                     </span>
                                     <div class="min-w-0 text-xs">
-                                        <p class="truncate font-black">comprobante_yape.jpg</p>
-                                        <p class="mt-1 text-slate-500">1.2 MB</p>
+                                        <p class="truncate font-black" data-payment-receipt-name>Sin comprobante</p>
+                                        <p class="mt-1 text-slate-500" data-payment-receipt-size>Selecciona una imagen</p>
                                     </div>
                                 </div>
-                                <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                                    <div class="h-full w-2/3 rounded-full bg-[#2f6fbd]"></div>
+                                <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100" data-payment-receipt-progress-wrap>
+                                    <div class="h-full w-0 rounded-full bg-[#2f6fbd] transition-all" data-payment-receipt-progress></div>
                                 </div>
                                 <div class="mt-2 flex justify-between text-[11px] font-medium text-slate-500">
-                                    <span>Subiendo archivo...</span>
-                                    <span>65%</span>
+                                    <span data-payment-receipt-status>Esperando archivo</span>
+                                    <span data-payment-receipt-percent>0%</span>
                                 </div>
-                                <button type="button" class="mt-4 h-9 w-full rounded-md border border-slate-200 text-xs font-black uppercase transition hover:border-slate-950">Cancelar</button>
+                                <div data-payment-receipt-preview-wrap class="mt-4 hidden overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+                                    <img data-payment-receipt-preview src="" alt="Comprobante de pago" class="max-h-72 w-full object-contain">
+                                </div>
+                                <button type="button" data-payment-receipt-clear class="mt-4 h-9 w-full rounded-md border border-slate-200 text-xs font-black uppercase transition hover:border-slate-950">Cancelar</button>
                             </div>
                         </div>
                     </section>
@@ -272,6 +278,113 @@
             } catch {
                 event.currentTarget.textContent = number;
             }
+        });
+
+        const receiptInput = document.querySelector('[data-payment-receipt-input]');
+        const receiptPath = document.querySelector('[data-payment-receipt-path]');
+        const receiptName = document.querySelector('[data-payment-receipt-name]');
+        const receiptSize = document.querySelector('[data-payment-receipt-size]');
+        const receiptStatus = document.querySelector('[data-payment-receipt-status]');
+        const receiptPercent = document.querySelector('[data-payment-receipt-percent]');
+        const receiptProgress = document.querySelector('[data-payment-receipt-progress]');
+        const receiptPreview = document.querySelector('[data-payment-receipt-preview]');
+        const receiptPreviewWrap = document.querySelector('[data-payment-receipt-preview-wrap]');
+        const receiptClear = document.querySelector('[data-payment-receipt-clear]');
+
+        const formatFileSize = (bytes) => {
+            if (! bytes) {
+                return '0 KB';
+            }
+
+            if (bytes < 1024 * 1024) {
+                return `${Math.round(bytes / 1024)} KB`;
+            }
+
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        const updateReceiptProgress = (percent, status) => {
+            if (receiptProgress) {
+                receiptProgress.style.width = `${percent}%`;
+            }
+
+            if (receiptPercent) {
+                receiptPercent.textContent = `${percent}%`;
+            }
+
+            if (receiptStatus) {
+                receiptStatus.textContent = status;
+            }
+        };
+
+        receiptInput?.addEventListener('change', () => {
+            const file = receiptInput.files?.[0];
+
+            if (! file) {
+                return;
+            }
+
+            if (! file.type.startsWith('image/')) {
+                updateReceiptProgress(0, 'Selecciona una imagen valida');
+                return;
+            }
+
+            receiptName && (receiptName.textContent = file.name);
+            receiptSize && (receiptSize.textContent = formatFileSize(file.size));
+            receiptPreviewWrap?.classList.add('hidden');
+            updateReceiptProgress(5, 'Preparando imagen...');
+
+            const formData = new FormData();
+            formData.append('payment_receipt', file);
+
+            const request = new XMLHttpRequest();
+            request.open('POST', '{{ route('web.checkout.receipt') }}');
+            request.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+            request.setRequestHeader('Accept', 'application/json');
+
+            request.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    updateReceiptProgress(Math.min(95, Math.round((event.loaded / event.total) * 100)), 'Subiendo imagen...');
+                }
+            });
+
+            request.addEventListener('load', () => {
+                if (request.status < 200 || request.status >= 300) {
+                    updateReceiptProgress(0, 'No se pudo guardar la imagen');
+                    return;
+                }
+
+                const response = JSON.parse(request.responseText);
+                receiptPath && (receiptPath.value = response.path || '');
+                receiptName && (receiptName.textContent = response.name || file.name);
+                receiptSize && (receiptSize.textContent = formatFileSize(response.size || file.size));
+
+                if (receiptPreview && response.url) {
+                    receiptPreview.src = response.url;
+                    receiptPreviewWrap?.classList.remove('hidden');
+                }
+
+                updateReceiptProgress(100, 'Imagen guardada correctamente');
+            });
+
+            request.addEventListener('error', () => {
+                updateReceiptProgress(0, 'No se pudo guardar la imagen');
+            });
+
+            request.send(formData);
+        });
+
+        receiptClear?.addEventListener('click', () => {
+            if (receiptInput) {
+                receiptInput.value = '';
+            }
+
+            receiptPath && (receiptPath.value = '');
+            receiptName && (receiptName.textContent = 'Sin comprobante');
+            receiptSize && (receiptSize.textContent = 'Selecciona una imagen');
+            receiptPreview?.removeAttribute('src');
+            receiptPreviewWrap?.classList.add('hidden');
+            updateReceiptProgress(0, 'Esperando archivo');
         });
     </script>
 @endsection
