@@ -159,6 +159,29 @@ Route::get('/checkout/entrega-y-pago', function () {
     ]);
 })->name('web.checkout.delivery');
 
+Route::get('/checkout/pago', function () {
+    $items = collect(session('cart.items', []));
+
+    if ($items->isEmpty()) {
+        return redirect()->route('web.cart.index');
+    }
+
+    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
+    $igv = $subtotal * 0.18;
+    $shipping = 12;
+
+    return view('web.checkout-payment', [
+        'items' => $items,
+        'itemCount' => $items->sum('qty'),
+        'subtotal' => $subtotal,
+        'igv' => $igv,
+        'shipping' => $shipping,
+        'discount' => 0,
+        'total' => $subtotal + $igv + $shipping,
+        'paymentMethods' => MetodoPago::active(),
+    ]);
+})->name('web.checkout.payment');
+
 Route::get('/checkout/courier-agencies', function (Request $request) {
     $normalize = function (?string $value): string {
         $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $value);
