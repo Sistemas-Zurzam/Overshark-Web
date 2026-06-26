@@ -3,6 +3,10 @@
 @section('title', 'Pago | Overshark')
 
 @section('content')
+    @php
+        $initialPaymentMethod = $paymentMethods->first();
+    @endphp
+
     <section class="bg-[#fbfbfb] px-4 py-7 text-slate-950 sm:px-6 lg:px-8">
         <div class="mx-auto grid max-w-[980px] gap-10 lg:grid-cols-[minmax(0,620px)_270px] lg:items-start lg:justify-center">
             <div>
@@ -37,7 +41,12 @@
                                     'grid min-h-24 cursor-pointer place-items-center rounded-lg border bg-white px-4 py-4 text-center transition hover:border-[#2f6fbd]',
                                     'border-blue-200 ring-1 ring-blue-100' => $index === 0,
                                     'border-slate-100' => $index !== 0,
-                                ])>
+                                ])
+                                    data-payment-method
+                                    data-payment-name="{{ $method->name }}"
+                                    data-payment-logo="{{ $method->imageUrl() }}"
+                                    data-payment-qr="{{ $method->qrImageUrl() }}"
+                                >
                                     <input type="radio" name="payment_method_id" value="{{ $method->id }}" class="sr-only" @checked($index === 0)>
                                     @if ($method->imageUrl())
                                         <img src="{{ $method->imageUrl() }}" alt="{{ $method->name }}" class="h-12 w-20 object-contain">
@@ -66,24 +75,39 @@
                         <h2 class="text-sm font-black">2. Paga el costo total del pedido</h2>
                         <div class="mt-4 grid gap-5 rounded-lg border border-slate-100 px-5 py-5 sm:grid-cols-[1fr_180px] sm:items-center">
                             <div class="flex items-center gap-4">
-                                <div class="grid h-16 w-16 place-items-center rounded-lg bg-slate-50 text-xl font-black text-[#2f6fbd]">S/</div>
+                                <div class="grid h-16 w-16 place-items-center rounded-lg bg-slate-50 text-xl font-black text-[#2f6fbd]">
+                                    @if ($initialPaymentMethod?->imageUrl())
+                                        <img data-payment-logo-preview src="{{ $initialPaymentMethod->imageUrl() }}" alt="{{ $initialPaymentMethod->name }}" class="h-11 w-12 object-contain">
+                                    @else
+                                        <span data-payment-logo-fallback>S/</span>
+                                    @endif
+                                </div>
                                 <div class="text-xs">
                                     <p class="font-semibold text-slate-500">Titular</p>
                                     <p class="mt-1 font-black">Import Textil Maso E.I.R.L</p>
-                                    <p class="mt-4 font-semibold text-slate-500">Numero de Yape</p>
+                                    <p class="mt-4 font-semibold text-slate-500">Numero de <span data-payment-name>{{ $initialPaymentMethod?->name ?? 'Yape' }}</span></p>
                                     <p class="mt-1 text-xl font-black">987 654 321</p>
                                     <button type="button" class="mt-2 rounded border border-slate-200 px-3 py-1 text-[11px] font-semibold transition hover:border-slate-950">Copiar numero</button>
                                 </div>
                             </div>
                             <div class="text-center">
-                                <div class="mx-auto grid h-28 w-28 grid-cols-5 gap-1 bg-white p-2 shadow-inner">
-                                    @for ($i = 0; $i < 25; $i++)
-                                        <span @class(['bg-slate-950' => in_array($i % 7, [0, 2, 3], true), 'bg-slate-100' => ! in_array($i % 7, [0, 2, 3], true)])></span>
-                                    @endfor
+                                <div class="mx-auto grid h-28 w-28 place-items-center bg-white p-2 shadow-inner">
+                                    <img data-payment-qr-image src="{{ $initialPaymentMethod?->qrImageUrl() ?? '' }}" alt="{{ $initialPaymentMethod?->qrImageUrl() ? 'QR '.$initialPaymentMethod->name : '' }}" @class([
+                                        'h-full w-full object-contain',
+                                        'hidden' => ! $initialPaymentMethod?->qrImageUrl(),
+                                    ])>
+                                    <div data-payment-qr-fallback @class([
+                                        'grid h-full w-full grid-cols-5 gap-1',
+                                        'hidden' => $initialPaymentMethod?->qrImageUrl(),
+                                    ])>
+                                        @for ($i = 0; $i < 25; $i++)
+                                            <span @class(['bg-slate-950' => in_array($i % 7, [0, 2, 3], true), 'bg-slate-100' => ! in_array($i % 7, [0, 2, 3], true)])></span>
+                                        @endfor
+                                    </div>
                                 </div>
                                 <p class="mt-2 text-[11px] font-medium text-slate-500">Monto a pagar</p>
                                 <p class="text-xl font-black">S/{{ number_format($total, 2) }}</p>
-                                <p class="mt-2 rounded-md bg-blue-50 px-3 py-1 text-[11px] font-medium text-slate-500">Yapea este monto para validar tu pago.</p>
+                                <p class="mt-2 rounded-md bg-blue-50 px-3 py-1 text-[11px] font-medium text-slate-500">Paga este monto para validar tu compra.</p>
                             </div>
                         </div>
                     </section>
@@ -175,4 +199,43 @@
             </aside>
         </div>
     </section>
+@endsection
+
+@section('scripts')
+    <script>
+        document.querySelectorAll('[data-payment-method]').forEach((methodCard) => {
+            methodCard.addEventListener('click', () => {
+                const name = methodCard.dataset.paymentName || 'Yape';
+                const logo = methodCard.dataset.paymentLogo || '';
+                const qr = methodCard.dataset.paymentQr || '';
+                const nameTarget = document.querySelector('[data-payment-name]');
+                const logoPreview = document.querySelector('[data-payment-logo-preview]');
+                const logoFallback = document.querySelector('[data-payment-logo-fallback]');
+                const qrImage = document.querySelector('[data-payment-qr-image]');
+                const qrFallback = document.querySelector('[data-payment-qr-fallback]');
+
+                if (nameTarget) {
+                    nameTarget.textContent = name;
+                }
+
+                if (logoPreview && logo) {
+                    logoPreview.src = logo;
+                    logoPreview.alt = name;
+                    logoPreview.classList.remove('hidden');
+                    logoFallback?.classList.add('hidden');
+                }
+
+                if (qrImage && qr) {
+                    qrImage.src = qr;
+                    qrImage.alt = `QR ${name}`;
+                    qrImage.classList.remove('hidden');
+                    qrFallback?.classList.add('hidden');
+                } else if (qrImage) {
+                    qrImage.classList.add('hidden');
+                    qrImage.removeAttribute('src');
+                    qrFallback?.classList.remove('hidden');
+                }
+            });
+        });
+    </script>
 @endsection

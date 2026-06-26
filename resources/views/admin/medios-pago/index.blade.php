@@ -46,6 +46,12 @@
                 @error('image') <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span> @enderror
             </label>
 
+            <label class="block">
+                <span class="mb-2 block text-sm font-bold text-slate-700">Imagen QR</span>
+                <input type="file" name="image_qr" accept=".png,.jpg,.jpeg,.webp,.svg" class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
+                @error('image_qr') <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span> @enderror
+            </label>
+
             <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
                 <input type="hidden" name="status" value="0">
                 <input type="checkbox" name="status" value="1" @checked(old('status', true)) class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
@@ -80,6 +86,7 @@
                     <tr>
                         <th class="px-3 py-3">Nombre</th>
                         <th class="px-3 py-3">Imagen</th>
+                        <th class="px-3 py-3">QR</th>
                         <th class="px-3 py-3">Estado</th>
                         <th class="px-3 py-3">Fecha</th>
                         <th class="px-3 py-3 text-right">Acciones</th>
@@ -94,6 +101,13 @@
                                     <img src="{{ $metodoPago->imageUrl() }}" alt="{{ $metodoPago->name }}" class="h-12 w-16 rounded-lg border border-slate-200 object-contain p-1">
                                 @else
                                     <span class="text-sm text-slate-400">Sin imagen</span>
+                                @endif
+                            </td>
+                            <td class="px-3 py-4">
+                                @if ($metodoPago->qrImageUrl())
+                                    <img src="{{ $metodoPago->qrImageUrl() }}" alt="QR {{ $metodoPago->name }}" class="h-16 w-16 rounded-lg border border-slate-200 object-contain p-1">
+                                @else
+                                    <span class="text-sm text-slate-400">Sin QR</span>
                                 @endif
                             </td>
                             <td class="px-3 py-4">
@@ -125,7 +139,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-3 py-16 text-center text-slate-400">
+                            <td colspan="6" class="px-3 py-16 text-center text-slate-400">
                                 No hay medios de pago registrados.
                             </td>
                         </tr>

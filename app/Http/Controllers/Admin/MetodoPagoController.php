@@ -23,12 +23,14 @@ class MetodoPagoController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
+            'image_qr' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
             'status' => ['nullable', 'boolean'],
         ]);
 
         MetodoPago::query()->create([
             'name' => $validated['name'],
             'imagen' => $request->file('image')->store('metodos-pago', 'public'),
+            'imagen_qr' => $request->file('image_qr')?->store('metodos-pago/qr', 'public'),
             'status' => $request->boolean('status'),
         ]);
 
@@ -46,6 +48,10 @@ class MetodoPagoController extends Controller
     {
         if ($metodoPago->imagen) {
             Storage::disk('public')->delete($metodoPago->imagen);
+        }
+
+        if ($metodoPago->imagen_qr) {
+            Storage::disk('public')->delete($metodoPago->imagen_qr);
         }
 
         $metodoPago->delete();

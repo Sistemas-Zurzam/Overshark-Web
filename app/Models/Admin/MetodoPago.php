@@ -11,7 +11,7 @@ class MetodoPago extends Model
 
     protected $table = 'metodos_pago';
 
-    protected $fillable = ['name', 'imagen', 'status'];
+    protected $fillable = ['name', 'imagen', 'imagen_qr', 'status'];
 
     protected static function booted(): void
     {
@@ -35,6 +35,11 @@ class MetodoPago extends Model
     public function imageUrl(): ?string
     {
         return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
+    }
+
+    public function qrImageUrl(): ?string
+    {
+        return $this->imagen_qr ? '/storage/'.ltrim($this->imagen_qr, '/') : null;
     }
 
     public function orders()
