@@ -8,6 +8,7 @@ use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\TipoDocumento;
 use App\Http\Controllers\LibroReclamacionController;
+use App\Support\ProductCards;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -277,7 +278,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         $recommendedProductsQuery->where('categoria_id', $producto->categoria_id);
     }
 
-    $recommendedProducts = productCards(
+    $recommendedProducts = ProductCards::make(
         $recommendedProductsQuery
             ->groupBy('odoo_template_id', 'categoria_id', 'name')
             ->orderByDesc('total_stock')
@@ -304,7 +305,7 @@ Route::get('/buscar', function (Request $request) {
     $products = collect();
 
     if ($search !== '') {
-        $products = productCards(
+        $products = ProductCards::make(
             Producto::query()
                 ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->whereNotNull('odoo_template_id')
@@ -336,7 +337,7 @@ Route::get('/', function () {
     $bestSellingProducts = Cache::remember(
         "home.best_selling_products.{$productCacheVersion}",
         now()->addMinutes(30),
-        fn () => productCards(
+        fn () => ProductCards::make(
             Producto::query()
                 ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->whereNotNull('odoo_template_id')
@@ -350,7 +351,7 @@ Route::get('/', function () {
         ),
     );
     $shortSleeveProducts = Cache::remember("home.short_sleeve_products.{$productCacheVersion}", now()->addMinutes(30), function () use ($bestSellingProducts, $fallbackImage) {
-        $products = productCards(
+        $products = ProductCards::make(
             Producto::query()
                 ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->whereNotNull('odoo_template_id')
@@ -379,42 +380,3 @@ Route::get('/', function () {
     ]);
 })->name('web.home');
 
-if (! function_exists('productCards')) {
-    function productCards($products, string $fallbackImage)
-    {
-        $templateIds = $products->pluck('odoo_template_id')->filter()->all();
-        $variantsByTemplate = Producto::query()
-            ->whereIn('odoo_template_id', $templateIds)
-            ->whereNotNull('color')
-            ->where('price', '>', 0)
-            ->where('qty_available', '>', 0)
-            ->orderBy('color')
-            ->get()
-            ->groupBy('odoo_template_id');
-        $galleriesByTemplate = ProductoColorImage::query()
-            ->whereIn('odoo_template_id', $templateIds)
-            ->get()
-            ->groupBy('odoo_template_id');
-
-        $products->each(function (Producto $product) use ($variantsByTemplate, $galleriesByTemplate, $fallbackImage): void {
-            $galleries = $galleriesByTemplate->get($product->odoo_template_id, collect())->keyBy('color');
-            $colors = $variantsByTemplate->get($product->odoo_template_id, collect())
-                ->groupBy('color')
-                ->map(function ($variants, string $color) use ($galleries, $product, $fallbackImage) {
-                    $gallery = $galleries->get($color);
-                    $galleryImages = $gallery?->imageUrls() ?? [];
-
-                    return [
-                        'name' => $color,
-                        'image' => $galleryImages[0] ?? $product->imageUrl() ?? $fallbackImage,
-                    ];
-                })
-                ->values();
-
-            $product->setAttribute('display_colors', $colors);
-            $product->setAttribute('display_image', $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage);
-        });
-
-        return $products;
-    }
-}
