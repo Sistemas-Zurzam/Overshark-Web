@@ -29,6 +29,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/productos/{producto}/imagenes-color', [ProductoController::class, 'updateColorImages'])->name('productos.color-images');
     Route::get('/medios-pago', [MetodoPagoController::class, 'index'])->name('medios-pago.index');
     Route::post('/medios-pago', [MetodoPagoController::class, 'store'])->name('medios-pago.store');
+    Route::patch('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'update'])->name('medios-pago.update');
     Route::patch('/medios-pago/{metodoPago}/estado', [MetodoPagoController::class, 'toggle'])->name('medios-pago.toggle');
     Route::delete('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'destroy'])->name('medios-pago.destroy');
     Route::get('/banners', [BannerController::class, 'index'])->name('banners.index');

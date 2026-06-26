@@ -44,6 +44,8 @@
                                 ])
                                     data-payment-method
                                     data-payment-name="{{ $method->name }}"
+                                    data-payment-owner="{{ $method->titular ?: 'Import Textil Maso E.I.R.L' }}"
+                                    data-payment-number="{{ $method->numero ?: '987 654 321' }}"
                                     data-payment-logo="{{ $method->imageUrl() }}"
                                     data-payment-qr="{{ $method->qrImageUrl() }}"
                                 >
@@ -76,18 +78,18 @@
                         <div class="mt-4 grid gap-5 rounded-lg border border-slate-100 px-5 py-5 sm:grid-cols-[1fr_180px] sm:items-center">
                             <div class="flex items-center gap-4">
                                 <div class="grid h-16 w-16 place-items-center rounded-lg bg-slate-50 text-xl font-black text-[#2f6fbd]">
-                                    @if ($initialPaymentMethod?->imageUrl())
-                                        <img data-payment-logo-preview src="{{ $initialPaymentMethod->imageUrl() }}" alt="{{ $initialPaymentMethod->name }}" class="h-11 w-12 object-contain">
-                                    @else
-                                        <span data-payment-logo-fallback>S/</span>
-                                    @endif
+                                    <img data-payment-logo-preview src="{{ $initialPaymentMethod?->imageUrl() ?? '' }}" alt="{{ $initialPaymentMethod?->name ?? '' }}" @class([
+                                        'h-11 w-12 object-contain',
+                                        'hidden' => ! $initialPaymentMethod?->imageUrl(),
+                                    ])>
+                                    <span data-payment-logo-fallback @class(['hidden' => $initialPaymentMethod?->imageUrl()])>S/</span>
                                 </div>
                                 <div class="text-xs">
                                     <p class="font-semibold text-slate-500">Titular</p>
-                                    <p class="mt-1 font-black">Import Textil Maso E.I.R.L</p>
+                                    <p class="mt-1 font-black" data-payment-owner>{{ $initialPaymentMethod?->titular ?: 'Import Textil Maso E.I.R.L' }}</p>
                                     <p class="mt-4 font-semibold text-slate-500">Numero de <span data-payment-name>{{ $initialPaymentMethod?->name ?? 'Yape' }}</span></p>
-                                    <p class="mt-1 text-xl font-black">987 654 321</p>
-                                    <button type="button" class="mt-2 rounded border border-slate-200 px-3 py-1 text-[11px] font-semibold transition hover:border-slate-950">Copiar numero</button>
+                                    <p class="mt-1 text-xl font-black" data-payment-number>{{ $initialPaymentMethod?->numero ?: '987 654 321' }}</p>
+                                    <button type="button" data-copy-payment-number class="mt-2 rounded border border-slate-200 px-3 py-1 text-[11px] font-semibold transition hover:border-slate-950">Copiar numero</button>
                                 </div>
                             </div>
                             <div class="text-center">
@@ -206,9 +208,13 @@
         document.querySelectorAll('[data-payment-method]').forEach((methodCard) => {
             methodCard.addEventListener('click', () => {
                 const name = methodCard.dataset.paymentName || 'Yape';
+                const owner = methodCard.dataset.paymentOwner || 'Import Textil Maso E.I.R.L';
+                const number = methodCard.dataset.paymentNumber || '987 654 321';
                 const logo = methodCard.dataset.paymentLogo || '';
                 const qr = methodCard.dataset.paymentQr || '';
                 const nameTarget = document.querySelector('[data-payment-name]');
+                const ownerTarget = document.querySelector('[data-payment-owner]');
+                const numberTarget = document.querySelector('[data-payment-number]');
                 const logoPreview = document.querySelector('[data-payment-logo-preview]');
                 const logoFallback = document.querySelector('[data-payment-logo-fallback]');
                 const qrImage = document.querySelector('[data-payment-qr-image]');
@@ -218,11 +224,23 @@
                     nameTarget.textContent = name;
                 }
 
+                if (ownerTarget) {
+                    ownerTarget.textContent = owner;
+                }
+
+                if (numberTarget) {
+                    numberTarget.textContent = number;
+                }
+
                 if (logoPreview && logo) {
                     logoPreview.src = logo;
                     logoPreview.alt = name;
                     logoPreview.classList.remove('hidden');
                     logoFallback?.classList.add('hidden');
+                } else if (logoPreview) {
+                    logoPreview.classList.add('hidden');
+                    logoPreview.removeAttribute('src');
+                    logoFallback?.classList.remove('hidden');
                 }
 
                 if (qrImage && qr) {
@@ -236,6 +254,24 @@
                     qrFallback?.classList.remove('hidden');
                 }
             });
+        });
+
+        document.querySelector('[data-copy-payment-number]')?.addEventListener('click', async (event) => {
+            const number = document.querySelector('[data-payment-number]')?.textContent?.trim() || '';
+
+            if (! number) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(number);
+                event.currentTarget.textContent = 'Copiado';
+                setTimeout(() => {
+                    event.currentTarget.textContent = 'Copiar numero';
+                }, 1500);
+            } catch {
+                event.currentTarget.textContent = number;
+            }
         });
     </script>
 @endsection

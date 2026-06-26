@@ -974,6 +974,22 @@ document.querySelectorAll('[data-payment-form-toggle]').forEach((button) => {
     });
 });
 
+document.querySelectorAll('[data-payment-edit-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const paymentId = button.dataset.paymentEditToggle;
+        const editRow = document.querySelector(`[data-payment-edit-row="${paymentId}"]`);
+
+        document.querySelectorAll('[data-payment-edit-row]').forEach((row) => {
+            if (row !== editRow) {
+                row.classList.add('hidden');
+            }
+        });
+
+        editRow?.classList.toggle('hidden');
+        editRow?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+});
+
 const combosMenu = document.querySelector('[data-combos-menu]');
 const combosToggles = document.querySelectorAll('[data-combos-toggle]');
 const combosChevron = document.querySelector('[data-combos-chevron]');

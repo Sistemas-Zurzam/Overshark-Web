@@ -11,7 +11,7 @@ class MetodoPago extends Model
 
     protected $table = 'metodos_pago';
 
-    protected $fillable = ['name', 'imagen', 'imagen_qr', 'status'];
+    protected $fillable = ['name', 'titular', 'numero', 'imagen', 'imagen_qr', 'status'];
 
     protected static function booted(): void
     {

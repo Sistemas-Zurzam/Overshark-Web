@@ -22,6 +22,8 @@ class MetodoPagoController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'titular' => ['nullable', 'string', 'max:255'],
+            'numero' => ['nullable', 'string', 'max:50'],
             'image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
             'image_qr' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
             'status' => ['nullable', 'boolean'],
@@ -29,6 +31,8 @@ class MetodoPagoController extends Controller
 
         MetodoPago::query()->create([
             'name' => $validated['name'],
+            'titular' => $validated['titular'] ?? null,
+            'numero' => $validated['numero'] ?? null,
             'imagen' => $request->file('image')->store('metodos-pago', 'public'),
             'imagen_qr' => $request->file('image_qr')?->store('metodos-pago/qr', 'public'),
             'status' => $request->boolean('status'),
@@ -42,6 +46,51 @@ class MetodoPagoController extends Controller
         $metodoPago->update(['status' => ! $metodoPago->status]);
 
         return back()->with('status', 'Estado del medio de pago actualizado.');
+    }
+
+    public function update(Request $request, MetodoPago $metodoPago): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'titular' => ['nullable', 'string', 'max:255'],
+            'numero' => ['nullable', 'string', 'max:50'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
+            'image_qr' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:8192'],
+            'remove_qr' => ['nullable', 'boolean'],
+            'status' => ['nullable', 'boolean'],
+        ]);
+
+        $data = [
+            'name' => $validated['name'],
+            'titular' => $validated['titular'] ?? null,
+            'numero' => $validated['numero'] ?? null,
+            'status' => $request->boolean('status'),
+        ];
+
+        if ($request->hasFile('image')) {
+            if ($metodoPago->imagen) {
+                Storage::disk('public')->delete($metodoPago->imagen);
+            }
+
+            $data['imagen'] = $request->file('image')->store('metodos-pago', 'public');
+        }
+
+        if ($request->boolean('remove_qr') && $metodoPago->imagen_qr) {
+            Storage::disk('public')->delete($metodoPago->imagen_qr);
+            $data['imagen_qr'] = null;
+        }
+
+        if ($request->hasFile('image_qr')) {
+            if ($metodoPago->imagen_qr) {
+                Storage::disk('public')->delete($metodoPago->imagen_qr);
+            }
+
+            $data['imagen_qr'] = $request->file('image_qr')->store('metodos-pago/qr', 'public');
+        }
+
+        $metodoPago->update($data);
+
+        return back()->with('status', 'Medio de pago actualizado correctamente.');
     }
 
     public function destroy(MetodoPago $metodoPago): RedirectResponse
