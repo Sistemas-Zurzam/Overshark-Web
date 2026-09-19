@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Distrito extends Model
 {
-    protected $fillable = ['provincia_id', 'name'];
+    protected $fillable = ['provincia_id', 'codigo_reniec', 'codigo_inei', 'name', 'entity_id'];
 
     public function provincia()
     {

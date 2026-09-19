@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Provincia extends Model
 {
-    protected $fillable = ['departamento_id', 'name'];
+    protected $fillable = ['departamento_id', 'codigo', 'name'];
 
     public function departamento()
     {

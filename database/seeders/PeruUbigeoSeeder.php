@@ -33,6 +33,7 @@ class PeruUbigeoSeeder extends Seeder
 
             foreach ($hierarchy as $departmentData) {
                 $departmentId = DB::table('departamentos')->insertGetId([
+                    'codigo' => (string) $departmentData['id'],
                     'name' => trim((string) $departmentData['name']),
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -49,6 +50,7 @@ class PeruUbigeoSeeder extends Seeder
                 foreach ($provincesResponse['provinces'] as $provinceData) {
                     $provinceId = DB::table('provincias')->insertGetId([
                         'departamento_id' => $departmentId,
+                        'codigo' => (string) $provinceData['id'],
                         'name' => trim((string) $provinceData['name']),
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -69,7 +71,10 @@ class PeruUbigeoSeeder extends Seeder
                     foreach ($districtsResponse['districts'] as $districtData) {
                         $rows[] = [
                             'provincia_id' => $provinceIdMap[$districtData['provinceId']],
+                            'codigo_reniec' => (string) $districtData['id'],
+                            'codigo_inei' => $districtData['inei'] ?? null,
                             'name' => trim((string) $districtData['name']),
+                            'entity_id' => $districtData['entityId'] ?? null,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];
