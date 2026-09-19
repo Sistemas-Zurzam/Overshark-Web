@@ -152,7 +152,7 @@ class ZazuInventorySyncService
 
     private function zeroStaleProducts(array $seenKeys): int
     {
-        Producto::query()
+        return Producto::query()
             ->whereNotNull('zazu_source_key')
             ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('zazu_source_key', $seenKeys))
             ->update([
