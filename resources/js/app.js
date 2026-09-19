@@ -236,6 +236,88 @@ document.querySelectorAll('article').forEach((article) => {
     }
 });
 
+const comboForm = document.querySelector('[data-combo-form]');
+const comboProductRows = comboForm?.querySelector('[data-combo-product-rows]');
+const comboProductAdd = comboForm?.querySelector('[data-combo-product-add]');
+const comboDeleteDialog = document.querySelector('[data-combo-delete-dialog]');
+const comboDeleteName = comboDeleteDialog?.querySelector('[data-combo-delete-name]');
+const comboDeleteCancel = comboDeleteDialog?.querySelector('[data-combo-delete-cancel]');
+const comboDeleteConfirm = comboDeleteDialog?.querySelector('[data-combo-delete-confirm]');
+let pendingComboDeleteForm = null;
+
+document.querySelectorAll('[data-combo-form-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const isHidden = comboForm?.classList.toggle('hidden');
+        if (comboForm) {
+            comboForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        button.setAttribute('aria-expanded', String(!isHidden));
+    });
+});
+
+const bindComboProductRow = (row) => {
+    row?.querySelector('[data-combo-product-remove]')?.addEventListener('click', () => {
+        const rows = comboProductRows?.querySelectorAll('[data-combo-product-row]') ?? [];
+
+        if (rows.length > 1) {
+            row.remove();
+        } else {
+            row.querySelector('select').value = '';
+            row.querySelector('input[type="number"]').value = '1';
+        }
+    });
+};
+
+comboProductRows?.querySelectorAll('[data-combo-product-row]').forEach(bindComboProductRow);
+
+comboProductAdd?.addEventListener('click', () => {
+    const rows = comboProductRows?.querySelectorAll('[data-combo-product-row]') ?? [];
+    const source = rows[0];
+
+    if (!source || !comboProductRows) {
+        return;
+    }
+
+    const clone = source.cloneNode(true);
+    const index = rows.length;
+
+    clone.querySelectorAll('select, input').forEach((field) => {
+        field.name = field.name.replace(/products\[\d+\]/, `products[${index}]`);
+        if (field.tagName === 'SELECT') {
+            field.value = '';
+        } else {
+            field.value = '1';
+        }
+    });
+
+    comboProductRows.appendChild(clone);
+    bindComboProductRow(clone);
+    clone.querySelector('select')?.focus();
+});
+
+document.querySelectorAll('[data-combo-delete-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (!comboDeleteDialog?.showModal) {
+            return;
+        }
+
+        event.preventDefault();
+        pendingComboDeleteForm = form;
+        if (comboDeleteName) {
+            comboDeleteName.textContent = form.dataset.comboName || 'este combo';
+        }
+        comboDeleteDialog.showModal();
+    });
+});
+
+comboDeleteCancel?.addEventListener('click', () => comboDeleteDialog?.close());
+comboDeleteConfirm?.addEventListener('click', () => {
+    const form = pendingComboDeleteForm;
+    pendingComboDeleteForm = null;
+    comboDeleteDialog?.close();
+    form?.submit();
+});
+
 document.querySelectorAll('[data-product-info-tabs]').forEach((tabs) => {
     const buttons = Array.from(tabs.querySelectorAll('[data-product-info-tab]'));
     const panels = Array.from(tabs.querySelectorAll('[data-product-info-panel]'));
@@ -1013,15 +1095,6 @@ document.querySelectorAll('[data-banner-button-preview]').forEach((preview) => {
                 button.releasePointerCapture(event.pointerId);
             }
         });
-    });
-});
-
-const comboForm = document.querySelector('[data-combo-form]');
-
-document.querySelectorAll('[data-combo-form-toggle]').forEach((button) => {
-    button.addEventListener('click', () => {
-        comboForm?.classList.toggle('hidden');
-        comboForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 });
 

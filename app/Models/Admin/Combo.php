@@ -9,7 +9,20 @@ class Combo extends Model
 {
     private const ACTIVE_CACHE_KEY = 'combos.active';
 
-    protected $fillable = ['name', 'imagen', 'status', 'url'];
+    protected $fillable = [
+        'source_key',
+        'name',
+        'brand',
+        'modality',
+        'price',
+        'imagen',
+        'items',
+        'selection_mode',
+        'selection_limit',
+        'notes',
+        'status',
+        'url',
+    ];
 
     protected static function booted(): void
     {
@@ -19,7 +32,12 @@ class Combo extends Model
 
     protected function casts(): array
     {
-        return ['status' => 'boolean'];
+        return [
+            'price' => 'decimal:2',
+            'items' => 'array',
+            'selection_limit' => 'integer',
+            'status' => 'boolean',
+        ];
     }
 
     public static function activeForMenu()
@@ -33,7 +51,39 @@ class Combo extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
+        if (! $this->imagen) {
+            return asset('images/default-hero-banner.png');
+        }
+
+        if (filter_var($this->imagen, FILTER_VALIDATE_URL)) {
+            return $this->imagen;
+        }
+
+        if (str_starts_with($this->imagen, 'images/')) {
+            return asset($this->imagen);
+        }
+
+        return '/storage/'.ltrim($this->imagen, '/');
+    }
+
+    public function displayItems(): \Illuminate\Support\Collection
+    {
+        return collect($this->items ?? []);
+    }
+
+    public function quantityLabel(): string
+    {
+        if ($this->selection_mode === 'choice' && $this->selection_limit) {
+            return "Elige {$this->selection_limit} unidades";
+        }
+
+        $quantity = $this->displayItems()->sum('cantidad');
+
+        if ($quantity === 0 && $this->selection_limit) {
+            return "{$this->selection_limit} unidades";
+        }
+
+        return $quantity.' unidades';
     }
 
     public function productos()

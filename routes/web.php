@@ -30,6 +30,14 @@ Route::get('/carrito', function () {
     ]);
 })->name('web.cart.index');
 
+Route::get('/combos/{combo}', function (Combo $combo) {
+    abort_unless($combo->status, 404);
+
+    return view('web.combo-show', [
+        'combo' => $combo,
+    ]);
+})->name('web.combos.show');
+
 Route::post('/carrito', function (Request $request) {
     $validated = $request->validate([
         'producto_id' => ['required', 'integer', 'exists:productos,id'],

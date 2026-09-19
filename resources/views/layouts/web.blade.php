@@ -79,13 +79,16 @@
         <div id="combos-menu" data-combos-menu data-state="closed" class="combos-panel absolute left-0 right-0 top-full border-t border-slate-100 bg-white shadow-2xl">
             <div class="mx-auto grid max-w-[1440px] gap-4 px-5 py-6 sm:grid-cols-2 lg:grid-cols-3 lg:px-12">
                 @forelse ($menuCombos as $combo)
-                    <a href="{{ $combo->url }}" class="combo-card group relative min-h-48 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+                    <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="combo-card group relative min-h-48 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
                         <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110">
                         <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
                         <div class="relative flex h-full min-h-48 items-end p-5">
                             <div>
                                 <span class="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Ver combo</span>
                                 <h2 class="mt-1 text-xl font-black text-white">{{ $combo->name }}</h2>
+                                @if ($combo->price !== null)
+                                    <p class="mt-1 text-sm font-black text-white/85">S/ {{ number_format((float) $combo->price, 2) }}</p>
+                                @endif
                             </div>
                         </div>
                     </a>

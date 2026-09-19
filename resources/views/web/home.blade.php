@@ -111,9 +111,12 @@
                                     Combo destacado
                                 </span>
                                 <h3 class="mt-6 text-4xl font-black uppercase leading-none sm:text-5xl">{{ $combo->name }}</h3>
-                                <p class="mt-4 max-w-xs text-sm leading-6 text-slate-600">Descubre todos los productos incluidos y arma tu pedido ideal.</p>
-                                <a href="{{ $combo->url }}" class="btn-primary mt-8 w-fit px-7 py-3.5 shadow-lg">
-                                    Ver productos
+                                @if ($combo->price !== null)
+                                    <p class="mt-4 text-2xl font-black">S/ {{ number_format((float) $combo->price, 2) }}</p>
+                                @endif
+                                <p class="mt-2 max-w-xs text-sm leading-6 text-slate-600">{{ $combo->modality ?: 'Promoción' }} · {{ $combo->quantityLabel() }}.</p>
+                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="btn-primary mt-8 w-fit px-7 py-3.5 shadow-lg">
+                                    Ver combo
                                 </a>
                             </div>
                         </article>

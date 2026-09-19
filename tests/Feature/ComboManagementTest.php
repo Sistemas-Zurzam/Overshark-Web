@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Admin\Combo;
+use App\Models\Admin\Producto;
+use App\Services\ComboCatalogImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +33,37 @@ class ComboManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Combo verano')
             ->assertSee('/productos');
+    }
+
+    public function test_overshark_catalog_imports_prices_composition_and_product_links(): void
+    {
+        $product = Producto::query()->create([
+            'name' => 'CLASICO',
+            'stock' => 20,
+            'price' => 17,
+        ]);
+
+        $result = app(ComboCatalogImportService::class)->import();
+
+        $this->assertSame(52, $result['created']);
+        $this->assertSame(52, Combo::query()->count());
+        $this->assertDatabaseHas('combos', [
+            'name' => 'Promo Waflera',
+            'brand' => 'Overshark',
+            'modality' => 'Promoción',
+            'price' => 99,
+        ]);
+
+        $combo = Combo::query()->where('name', 'Combo Diva')->firstOrFail();
+
+        $this->assertSame('choice', $combo->selection_mode);
+        $this->assertSame(8, $combo->selection_limit);
+        $this->assertCount(7, $combo->displayItems());
+        $this->assertDatabaseHas('combo_producto', [
+            'combo_id' => Combo::query()->where('name', '10x99')->firstOrFail()->id,
+            'producto_id' => $product->id,
+            'cantidad' => 10,
+        ]);
     }
 
     private function png(): string

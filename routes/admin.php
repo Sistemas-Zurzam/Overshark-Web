@@ -36,6 +36,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/banners/{banner}/estado', [BannerController::class, 'toggle'])->name('banners.toggle');
     Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     Route::get('/combos', [ComboController::class, 'index'])->name('combos.index');
+    Route::post('/combos/importar-catalogo', [ComboController::class, 'importCatalog'])->name('combos.import');
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
     Route::patch('/combos/{combo}/estado', [ComboController::class, 'toggle'])->name('combos.toggle');
     Route::delete('/combos/{combo}', [ComboController::class, 'destroy'])->name('combos.destroy');
