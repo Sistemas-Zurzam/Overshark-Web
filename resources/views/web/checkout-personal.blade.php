@@ -75,6 +75,23 @@
                             <h2 class="text-base font-black">Datos de envio</h2>
                         </div>
 
+                        <div class="mb-6 flex flex-col gap-4 rounded-lg border border-blue-100 bg-blue-50/60 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex gap-3">
+                                <svg class="h-10 w-10 shrink-0 text-[#2f6fbd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/><path d="M5 21h14"/></svg>
+                                <div>
+                                    <p class="text-sm font-black">Ubicacion exacta de entrega (Opcional)</p>
+                                    <p class="mt-1 max-w-sm text-xs leading-5 text-slate-600">Puedes seleccionar una ubicacion para completar la direccion y el ubigeo automaticamente.</p>
+                                </div>
+                            </div>
+                            <button type="button" data-location-modal-open class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-xs font-black transition hover:border-slate-950" aria-haspopup="dialog">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/></svg>
+                                Seleccionar ubicacion
+                            </button>
+                            <input type="hidden" name="delivery_location" data-selected-location-value value="">
+                            <input type="hidden" name="delivery_lat" data-selected-location-lat value="">
+                            <input type="hidden" name="delivery_lng" data-selected-location-lng value="">
+                        </div>
+
                         <div class="grid gap-4 md:grid-cols-3">
                             <label class="block text-sm font-medium">
                                 Departamento <span class="text-red-500">*</span>
@@ -88,8 +105,8 @@
 
                             <label class="block text-sm font-medium">
                                 Provincia <span class="text-red-500">*</span>
-                                <select name="provincia_id" required class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100">
-                                    <option value="">Seleccionar</option>
+                                <select name="provincia_id" required disabled data-cascade-child class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">
+                                    <option value="">Primero selecciona departamento</option>
                                     @foreach ($provincias as $provincia)
                                         <option value="{{ $provincia->id }}" data-departamento-id="{{ $provincia->departamento_id }}">{{ $provincia->name }}</option>
                                     @endforeach
@@ -98,8 +115,8 @@
 
                             <label class="block text-sm font-medium">
                                 Distrito <span class="text-red-500">*</span>
-                                <select name="distrito_id" required class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100">
-                                    <option value="">Seleccionar</option>
+                                <select name="distrito_id" required disabled data-cascade-child class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">
+                                    <option value="">Primero selecciona provincia</option>
                                     @foreach ($distritos as $distrito)
                                         <option value="{{ $distrito->id }}" data-provincia-id="{{ $distrito->provincia_id }}">{{ $distrito->name }}</option>
                                     @endforeach
@@ -117,22 +134,6 @@
                             <input name="reference" type="text" class="mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-xs font-medium outline-none transition placeholder:text-slate-400 focus:border-[#2f6fbd] focus:ring-2 focus:ring-blue-100" placeholder="Ej. correo@ejemplo.com">
                         </label>
 
-                        <div class="mt-6 flex flex-col gap-4 rounded-lg border border-blue-100 bg-blue-50/60 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex gap-3">
-                                <svg class="h-10 w-10 shrink-0 text-[#2f6fbd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/><path d="M5 21h14"/></svg>
-                                <div>
-                                    <p class="text-sm font-black">Ubicacion exacta de entrega (Opcional)</p>
-                                    <p class="mt-1 max-w-sm text-xs leading-5 text-slate-600">Selecciona tu ubicacion en el mapa para ayudarnos a encontrar tu direccion con mayor precision.</p>
-                                </div>
-                            </div>
-                            <button type="button" data-location-modal-open class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-xs font-black transition hover:border-slate-950" aria-haspopup="dialog">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/></svg>
-                                Seleccionar ubicacion
-                            </button>
-                            <input type="hidden" name="delivery_location" data-selected-location-value value="">
-                            <input type="hidden" name="delivery_lat" data-selected-location-lat value="">
-                            <input type="hidden" name="delivery_lng" data-selected-location-lng value="">
-                        </div>
                     </section>
 
                     <label class="inline-flex items-start gap-2 text-xs font-medium text-slate-600">

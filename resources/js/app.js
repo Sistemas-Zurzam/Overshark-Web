@@ -382,6 +382,64 @@ const setSelectValueFromOption = (select, option) => {
     return true;
 };
 
+const resetCascadingSelect = (select, placeholder) => {
+    if (!select) {
+        return;
+    }
+
+    select.value = '';
+    select.disabled = true;
+    select.setAttribute('aria-disabled', 'true');
+    select.options[0].textContent = placeholder;
+
+    Array.from(select.options).slice(1).forEach((option) => {
+        option.hidden = true;
+    });
+};
+
+const initCheckoutLocationCascade = () => {
+    if (!checkoutDepartmentSelect || !checkoutProvinceSelect || !checkoutDistrictSelect) {
+        return;
+    }
+
+    const updateProvinces = () => {
+        const departmentId = checkoutDepartmentSelect.value;
+
+        resetCascadingSelect(checkoutDistrictSelect, 'Primero selecciona provincia');
+        checkoutProvinceSelect.value = '';
+        checkoutProvinceSelect.options[0].textContent = departmentId
+            ? 'Seleccionar provincia'
+            : 'Primero selecciona departamento';
+
+        Array.from(checkoutProvinceSelect.options).slice(1).forEach((option) => {
+            option.hidden = !departmentId || option.dataset.departamentoId !== departmentId;
+        });
+
+        checkoutProvinceSelect.disabled = !departmentId;
+        checkoutProvinceSelect.setAttribute('aria-disabled', String(!departmentId));
+    };
+
+    const updateDistricts = () => {
+        const provinceId = checkoutProvinceSelect.value;
+
+        checkoutDistrictSelect.value = '';
+        checkoutDistrictSelect.options[0].textContent = provinceId
+            ? 'Seleccionar distrito'
+            : 'Primero selecciona provincia';
+
+        Array.from(checkoutDistrictSelect.options).slice(1).forEach((option) => {
+            option.hidden = !provinceId || option.dataset.provinciaId !== provinceId;
+        });
+
+        checkoutDistrictSelect.disabled = !provinceId;
+        checkoutDistrictSelect.setAttribute('aria-disabled', String(!provinceId));
+    };
+
+    checkoutDepartmentSelect.addEventListener('change', updateProvinces);
+    checkoutProvinceSelect.addEventListener('change', updateDistricts);
+    updateProvinces();
+};
+
 const fillCheckoutLocationFields = () => {
     const address = selectedLocationLabel?.textContent?.trim() || '';
 
@@ -427,6 +485,8 @@ const fillCheckoutLocationFields = () => {
         distrito: districtOption?.textContent?.trim() || districtCandidates.find(Boolean) || '',
     }));
 };
+
+initCheckoutLocationCascade();
 
 const setSelectedLocation = (position, address, components = null) => {
     checkoutLocationPosition = normalizeMapPosition(position);
