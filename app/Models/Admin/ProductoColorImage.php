@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductoColorImage extends Model
 {
-    protected $fillable = ['odoo_template_id', 'product_name', 'color', 'images'];
+    protected $fillable = ['product_name', 'color', 'images'];
 
     protected static function booted(): void
     {

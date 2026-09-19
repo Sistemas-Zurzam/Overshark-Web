@@ -235,7 +235,7 @@
                     <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
                         <div>
                             <p class="text-lg font-black text-slate-700">Sin productos sincronizados</p>
-                            <p class="mt-1 text-sm text-slate-400">Sincroniza Odoo para mostrar los mas vendidos.</p>
+                            <p class="mt-1 text-sm text-slate-400">Agrega productos al catalogo para mostrarlos aqui.</p>
                         </div>
                     </div>
                 @endif
@@ -320,7 +320,7 @@
                     <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
                         <div>
                             <p class="text-lg font-black text-slate-700">Sin productos de manga corta</p>
-                            <p class="mt-1 text-sm text-slate-400">Sincroniza Odoo para mostrar esta seccion.</p>
+                            <p class="mt-1 text-sm text-slate-400">Agrega productos de manga corta para mostrarlos aqui.</p>
                         </div>
                     </div>
                 @endif

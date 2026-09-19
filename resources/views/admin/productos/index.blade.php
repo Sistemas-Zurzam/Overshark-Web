@@ -7,25 +7,7 @@
         <div>
             <p class="text-sm font-bold uppercase tracking-widest text-cyan-600">Catalogo</p>
             <h1 class="mt-2 text-3xl font-black text-slate-950">Productos</h1>
-            <p class="mt-2 text-slate-500">Sincroniza productos desde Odoo y revisa codigo, variantes, precios y stock.</p>
-        </div>
-        <div class="flex flex-col gap-3 sm:flex-row">
-            <form action="{{ route('admin.productos.odoo.sync') }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600 sm:w-auto">
-                    Traer datos de Odoo
-                </button>
-            </form>
-            <form action="{{ route('admin.productos.odoo.auto-sync') }}" method="POST">
-                @csrf
-                <button type="submit" @class([
-                    'w-full rounded-xl border px-5 py-3 text-sm font-bold transition sm:w-auto',
-                    'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' => $autoSyncEnabled,
-                    'border-slate-200 bg-white text-slate-700 hover:border-cyan-300 hover:text-cyan-700' => ! $autoSyncEnabled,
-                ])>
-                    {{ $autoSyncEnabled ? 'Cron activo cada 1 min' : 'Activar cron cada 1 min' }}
-                </button>
-            </form>
+            <p class="mt-2 text-slate-500">Administra productos, variantes, precios, stock e imagenes.</p>
         </div>
     </div>
 
@@ -44,8 +26,8 @@
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-lg font-black text-slate-950">Productos sincronizados</h2>
-                <p class="mt-1 text-sm text-slate-500">Origen: product.product de Odoo, agrupado por producto.</p>
+                <h2 class="text-lg font-black text-slate-950">Catalogo de productos</h2>
+                <p class="mt-1 text-sm text-slate-500">Productos agrupados por nombre y sus variantes disponibles.</p>
             </div>
             <p class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500">
                 {{ $productos->total() }} registros
@@ -69,7 +51,7 @@
                         <tr class="text-slate-700">
                             <td class="px-3 py-4">
                                 <div class="font-bold text-slate-950">{{ $producto->name }}</div>
-                                <div class="mt-1 text-xs text-slate-400">Template Odoo: {{ $producto->odoo_template_id ?? '-' }}</div>
+                                <div class="mt-1 text-xs text-slate-400">{{ $producto->variant_count }} variantes</div>
                             </td>
                             <td class="px-3 py-4 text-right font-bold">{{ $producto->variant_count }}</td>
                             <td class="px-3 py-4 text-right font-bold">
@@ -80,7 +62,7 @@
                             </td>
                             <td class="px-3 py-4 text-right">{{ number_format((float) $producto->total_stock, 2) }}</td>
                             <td class="px-3 py-4 text-xs text-slate-500">
-                                {{ $producto->odoo_synced_at?->format('d/m/Y H:i') ?? '-' }}
+                                {{ $producto->updated_at?->format('d/m/Y H:i') ?? '-' }}
                             </td>
                             <td class="px-3 py-4 text-right">
                                 <a href="{{ route('admin.productos.show', $producto->id) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-cyan-300 hover:text-cyan-700">
@@ -91,7 +73,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-3 py-16 text-center text-slate-400">
-                                No hay productos sincronizados. Usa "Traer datos de Odoo".
+                                No hay productos registrados todavía.
                             </td>
                         </tr>
                     @endforelse

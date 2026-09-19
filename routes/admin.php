@@ -20,8 +20,6 @@ Route::middleware('jwt.auth')->group(function () {
     Route::view('/usuarios', 'admin.usuarios.index')->name('usuarios.index');
     Route::view('/bodegas', 'admin.bodegas.index')->name('bodegas.index');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
-    Route::post('/productos/odoo/sync', [ProductoController::class, 'sync'])->name('productos.odoo.sync');
-    Route::post('/productos/odoo/auto-sync', [ProductoController::class, 'toggleAutoSync'])->name('productos.odoo.auto-sync');
     Route::get('/productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
     Route::patch('/productos/{producto}/detalle', [ProductoController::class, 'updateDetails'])->name('productos.details');
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');

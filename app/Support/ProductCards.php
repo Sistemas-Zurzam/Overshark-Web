@@ -9,23 +9,23 @@ class ProductCards
 {
     public static function make($products, string $fallbackImage)
     {
-        $templateIds = $products->pluck('odoo_template_id')->filter()->all();
-        $variantsByTemplate = Producto::query()
-            ->whereIn('odoo_template_id', $templateIds)
+        $productNames = $products->pluck('name')->filter()->unique()->values()->all();
+        $variantsByProduct = Producto::query()
+            ->whereIn('name', $productNames)
             ->whereNotNull('color')
             ->where('price', '>', 0)
-            ->where('qty_available', '>', 0)
+            ->where('stock', '>', 0)
             ->orderBy('color')
             ->get()
-            ->groupBy('odoo_template_id');
-        $galleriesByTemplate = ProductoColorImage::query()
-            ->whereIn('odoo_template_id', $templateIds)
+            ->groupBy('name');
+        $galleriesByProduct = ProductoColorImage::query()
+            ->whereIn('product_name', $productNames)
             ->get()
-            ->groupBy('odoo_template_id');
+            ->groupBy('product_name');
 
-        $products->each(function (Producto $product) use ($variantsByTemplate, $galleriesByTemplate, $fallbackImage): void {
-            $galleries = $galleriesByTemplate->get($product->odoo_template_id, collect())->keyBy('color');
-            $colors = $variantsByTemplate->get($product->odoo_template_id, collect())
+        $products->each(function (Producto $product) use ($variantsByProduct, $galleriesByProduct, $fallbackImage): void {
+            $galleries = $galleriesByProduct->get($product->name, collect())->keyBy('color');
+            $colors = $variantsByProduct->get($product->name, collect())
                 ->groupBy('color')
                 ->map(function ($variants, string $color) use ($galleries, $product, $fallbackImage) {
                     $gallery = $galleries->get($color);

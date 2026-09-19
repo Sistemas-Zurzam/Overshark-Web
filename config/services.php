@@ -39,4 +39,11 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'zazu' => [
+        'base_url' => env('ZAZU_BASE_URL'),
+        'inventory_path' => env('ZAZU_INVENTORY_PATH', '/api/external/inventario'),
+        'token' => env('ZAZU_INVENTORY_TOKEN'),
+        'timeout' => (int) env('ZAZU_TIMEOUT', 30),
+    ],
+
 ];

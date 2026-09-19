@@ -40,17 +40,17 @@ Route::post('/carrito', function (Request $request) {
 
     $producto = Producto::query()->findOrFail($validated['producto_id']);
     $variant = Producto::query()
-        ->where('odoo_template_id', $producto->odoo_template_id)
+        ->where('name', $producto->name)
         ->where('color', $validated['color'])
         ->where('talla', $validated['talla'])
         ->where('price', '>', 0)
-        ->where('qty_available', '>', 0)
+        ->where('stock', '>', 0)
         ->firstOrFail();
 
-    $maxQty = max(1, (int) floor((float) $variant->qty_available));
+    $maxQty = max(1, (int) $variant->stock);
     $qty = min((int) $validated['qty'], $maxQty);
     $galleryImages = ProductoColorImage::query()
-        ->where('odoo_template_id', $variant->odoo_template_id)
+        ->where('product_name', $variant->name)
         ->where('color', $variant->color)
         ->first()
         ?->imageUrls() ?? [];
@@ -284,9 +284,9 @@ Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'stor
 Route::get('/productos/{producto}', function (Producto $producto) {
     $fallbackImage = asset('images/default-hero-banner.png');
     $variants = Producto::query()
-        ->where('odoo_template_id', $producto->odoo_template_id)
+        ->where('name', $producto->name)
         ->where('price', '>', 0)
-        ->where('qty_available', '>', 0)
+        ->where('stock', '>', 0)
         ->orderBy('color')
         ->orderBy('talla')
         ->get();
@@ -294,7 +294,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     abort_if($variants->isEmpty(), 404);
 
     $galleries = ProductoColorImage::query()
-        ->where('odoo_template_id', $producto->odoo_template_id)
+        ->where('product_name', $producto->name)
         ->get()
         ->keyBy('color');
     $colorOptions = $variants
@@ -312,11 +312,10 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         ->values();
     $mainImages = $colorOptions->first()['images'] ?? [$producto->imageUrl() ?? $fallbackImage];
     $recommendedProductsQuery = Producto::query()
-        ->selectRaw('MIN(id) as id, odoo_template_id, categoria_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-        ->whereNotNull('odoo_template_id')
+        ->selectRaw('MIN(id) as id, categoria_id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
         ->where('price', '>', 0)
-        ->where('qty_available', '>', 0)
-        ->where('odoo_template_id', '!=', $producto->odoo_template_id);
+        ->where('stock', '>', 0)
+        ->where('name', '!=', $producto->name);
 
     if ($producto->categoria_id) {
         $recommendedProductsQuery->where('categoria_id', $producto->categoria_id);
@@ -324,7 +323,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
 
     $recommendedProducts = ProductCards::make(
         $recommendedProductsQuery
-            ->groupBy('odoo_template_id', 'categoria_id', 'name')
+            ->groupBy('categoria_id', 'name')
             ->orderByDesc('total_stock')
             ->limit(3)
             ->get(),
@@ -351,17 +350,16 @@ Route::get('/buscar', function (Request $request) {
     if ($search !== '') {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->whereNotNull('odoo_template_id')
+                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
-                ->where('qty_available', '>', 0)
+                ->where('stock', '>', 0)
                 ->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
                         ->orWhere('default_code', 'like', "%{$search}%")
                         ->orWhere('color', 'like', "%{$search}%")
                         ->orWhere('talla', 'like', "%{$search}%");
                 })
-                ->groupBy('odoo_template_id', 'name')
+                ->groupBy('name')
                 ->orderByDesc('total_stock')
                 ->limit(24)
                 ->get(),
@@ -383,11 +381,10 @@ Route::get('/', function () {
         now()->addMinutes(30),
         fn () => ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->whereNotNull('odoo_template_id')
+                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
-                ->where('qty_available', '>', 0)
-                ->groupBy('odoo_template_id', 'name')
+                ->where('stock', '>', 0)
+                ->groupBy('name')
                 ->orderByDesc('total_stock')
                 ->limit(4)
                 ->get(),
@@ -397,16 +394,15 @@ Route::get('/', function () {
     $shortSleeveProducts = Cache::remember("home.short_sleeve_products.{$productCacheVersion}", now()->addMinutes(30), function () use ($bestSellingProducts, $fallbackImage) {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, odoo_template_id, name, SUM(qty_available) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->whereNotNull('odoo_template_id')
+                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
-                ->where('qty_available', '>', 0)
+                ->where('stock', '>', 0)
                 ->where(function ($query) {
                     $query->where('name', 'like', '%MANGA CORTA%')
                         ->orWhere('name', 'like', '%CLASICO%')
                         ->orWhere('name', 'like', '%WAFFLE%');
                 })
-                ->groupBy('odoo_template_id', 'name')
+                ->groupBy('name')
                 ->orderByDesc('total_stock')
                 ->limit(3)
                 ->get(),
@@ -423,4 +419,3 @@ Route::get('/', function () {
         'shortSleeveProducts' => $shortSleeveProducts,
     ]);
 })->name('web.home');
-

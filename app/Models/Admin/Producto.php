@@ -11,17 +11,13 @@ class Producto extends Model
 
     protected $fillable = [
         'categoria_id',
-        'odoo_product_id',
-        'odoo_template_id',
         'default_code',
         'name',
-        'variant_values',
         'color',
         'talla',
         'stock',
         'price',
         'standard_price',
-        'qty_available',
         'imagen',
         'descripcion',
         'composicion',
@@ -30,19 +26,19 @@ class Producto extends Model
         'fit',
         'sensacion',
         'guia_tallas_imagen',
-        'odoo_synced_at',
+        'zazu_source_key',
+        'zazu_product_id',
+        'zazu_variant_id',
+        'zazu_company_id',
+        'empresa_nombre',
+        'zazu_synced_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'variant_values' => 'array',
-            'odoo_product_id' => 'integer',
-            'odoo_template_id' => 'integer',
             'price' => 'decimal:2',
             'standard_price' => 'decimal:2',
-            'qty_available' => 'decimal:2',
-            'odoo_synced_at' => 'datetime',
         ];
     }
 
@@ -79,7 +75,13 @@ class Producto extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->imagen ? '/storage/'.ltrim($this->imagen, '/') : null;
+        if (! $this->imagen) {
+            return null;
+        }
+
+        return filter_var($this->imagen, FILTER_VALIDATE_URL)
+            ? $this->imagen
+            : '/storage/'.ltrim($this->imagen, '/');
     }
 
     public function sizeGuideImageUrl(): ?string

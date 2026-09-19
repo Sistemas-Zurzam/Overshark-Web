@@ -8,11 +8,11 @@
             <a href="{{ route('admin.productos.index') }}" class="text-sm font-bold text-cyan-700 hover:text-cyan-900">Volver a productos</a>
             <p class="mt-4 text-sm font-bold uppercase tracking-widest text-cyan-600">Producto</p>
             <h1 class="mt-2 text-3xl font-black text-slate-950">{{ $producto->name }}</h1>
-            <p class="mt-2 text-slate-500">Variantes sincronizadas desde Odoo y gestion de imagenes.</p>
+            <p class="mt-2 text-slate-500">Gestion de variantes, imagenes y detalle comercial.</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
-            <div><span class="font-bold text-slate-950">Template Odoo:</span> {{ $producto->odoo_template_id ?? '-' }}</div>
             <div><span class="font-bold text-slate-950">Variantes:</span> {{ $variantsBySize->flatten(1)->count() }}</div>
+            <div class="mt-1"><span class="font-bold text-slate-950">Empresa:</span> {{ $variantsBySize->flatten(1)->pluck('empresa_nombre')->filter()->unique()->implode(', ') ?: '-' }}</div>
         </div>
     </div>
 
@@ -138,9 +138,10 @@
                                     <article class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
                                         <p><span class="font-black text-slate-950">Color:</span> {{ $variant->color ?? '-' }}</p>
                                         <p><span class="font-black text-slate-950">SKU:</span> {{ $variant->default_code ?? '-' }}</p>
+                                        <p><span class="font-black text-slate-950">Empresa:</span> {{ $variant->empresa_nombre ?? '-' }}</p>
                                         <p><span class="font-black text-slate-950">Precio:</span> S/ {{ number_format((float) $variant->price, 2) }}</p>
                                         <p><span class="font-black text-slate-950">Costo:</span> S/ {{ number_format((float) $variant->standard_price, 2) }}</p>
-                                        <p><span class="font-black text-slate-950">Stock:</span> {{ number_format((float) $variant->qty_available, 2) }}</p>
+                                        <p><span class="font-black text-slate-950">Stock:</span> {{ number_format((float) $variant->stock, 2) }}</p>
                                     </article>
                                 @endforeach
                             </div>
