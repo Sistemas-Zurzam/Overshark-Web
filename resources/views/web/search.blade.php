@@ -70,6 +70,7 @@
                                 <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
                             </a>
                             <div class="p-5">
+                                <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
                                 <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:text-cyan-700">{{ $product->name }}</a>
                                 <div class="mt-2 flex items-baseline gap-2">
                                     <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>

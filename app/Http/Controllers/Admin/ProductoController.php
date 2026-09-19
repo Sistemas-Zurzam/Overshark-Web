@@ -16,8 +16,8 @@ class ProductoController extends Controller
     {
         return view('admin.productos.index', [
             'productos' => Producto::query()
-                ->selectRaw('MIN(id) as id, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
-                ->groupBy('name')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
+                ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('updated_at')
                 ->paginate(25),
         ]);
@@ -123,6 +123,11 @@ class ProductoController extends Controller
 
     private function variantsFor(Producto $producto)
     {
-        return Producto::query()->where('name', $producto->name);
+        return Producto::query()
+            ->where('name', $producto->name)
+            ->when(
+                $producto->zazu_company_id !== null,
+                fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id),
+            );
     }
 }

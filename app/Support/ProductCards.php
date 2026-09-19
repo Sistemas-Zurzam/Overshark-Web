@@ -17,7 +17,7 @@ class ProductCards
             ->where('stock', '>', 0)
             ->orderBy('color')
             ->get()
-            ->groupBy('name');
+            ->groupBy(fn (Producto $product): string => self::productKey($product->name, $product->zazu_company_id));
         $galleriesByProduct = ProductoColorImage::query()
             ->whereIn('product_name', $productNames)
             ->get()
@@ -25,7 +25,7 @@ class ProductCards
 
         $products->each(function (Producto $product) use ($variantsByProduct, $galleriesByProduct, $fallbackImage): void {
             $galleries = $galleriesByProduct->get($product->name, collect())->keyBy('color');
-            $colors = $variantsByProduct->get($product->name, collect())
+            $colors = $variantsByProduct->get(self::productKey($product->name, $product->zazu_company_id), collect())
                 ->groupBy('color')
                 ->map(function ($variants, string $color) use ($galleries, $product, $fallbackImage) {
                     $gallery = $galleries->get($color);
@@ -43,5 +43,10 @@ class ProductCards
         });
 
         return $products;
+    }
+
+    private static function productKey(string $name, mixed $companyId): string
+    {
+        return $name.'|'.($companyId ?? 'legacy');
     }
 }

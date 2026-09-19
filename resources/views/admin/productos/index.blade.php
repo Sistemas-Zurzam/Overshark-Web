@@ -39,6 +39,7 @@
                 <thead class="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-400">
                     <tr>
                         <th class="px-3 py-3">Producto</th>
+                        <th class="px-3 py-3">Empresa</th>
                         <th class="px-3 py-3 text-right">Variantes</th>
                         <th class="px-3 py-3 text-right">Rango precio</th>
                         <th class="px-3 py-3 text-right">Stock</th>
@@ -53,6 +54,7 @@
                                 <div class="font-bold text-slate-950">{{ $producto->name }}</div>
                                 <div class="mt-1 text-xs text-slate-400">{{ $producto->variant_count }} variantes</div>
                             </td>
+                            <td class="px-3 py-4 text-sm font-semibold text-cyan-700">{{ $producto->empresa_nombre ?? 'Overshark' }}</td>
                             <td class="px-3 py-4 text-right font-bold">{{ $producto->variant_count }}</td>
                             <td class="px-3 py-4 text-right font-bold">
                                 S/ {{ number_format((float) $producto->min_price, 2) }}
@@ -72,7 +74,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-3 py-16 text-center text-slate-400">
+                            <td colspan="7" class="px-3 py-16 text-center text-slate-400">
                                 No hay productos registrados todavía.
                             </td>
                         </tr>

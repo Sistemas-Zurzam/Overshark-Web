@@ -41,6 +41,10 @@ Route::post('/carrito', function (Request $request) {
     $producto = Producto::query()->findOrFail($validated['producto_id']);
     $variant = Producto::query()
         ->where('name', $producto->name)
+        ->when(
+            $producto->zazu_company_id !== null,
+            fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id),
+        )
         ->where('color', $validated['color'])
         ->where('talla', $validated['talla'])
         ->where('price', '>', 0)
@@ -285,6 +289,10 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     $fallbackImage = asset('images/default-hero-banner.png');
     $variants = Producto::query()
         ->where('name', $producto->name)
+        ->when(
+            $producto->zazu_company_id !== null,
+            fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id),
+        )
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
         ->orderBy('color')
@@ -312,7 +320,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         ->values();
     $mainImages = $colorOptions->first()['images'] ?? [$producto->imageUrl() ?? $fallbackImage];
     $recommendedProductsQuery = Producto::query()
-        ->selectRaw('MIN(id) as id, categoria_id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+        ->selectRaw('MIN(id) as id, categoria_id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
         ->where('name', '!=', $producto->name);
@@ -323,7 +331,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
 
     $recommendedProducts = ProductCards::make(
         $recommendedProductsQuery
-            ->groupBy('categoria_id', 'name')
+            ->groupBy('categoria_id', 'zazu_company_id', 'name')
             ->orderByDesc('total_stock')
             ->limit(3)
             ->get(),
@@ -350,7 +358,7 @@ Route::get('/buscar', function (Request $request) {
     if ($search !== '') {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
                 ->where(function ($query) use ($search) {
@@ -359,7 +367,7 @@ Route::get('/buscar', function (Request $request) {
                         ->orWhere('color', 'like', "%{$search}%")
                         ->orWhere('talla', 'like', "%{$search}%");
                 })
-                ->groupBy('name')
+                ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('total_stock')
                 ->limit(24)
                 ->get(),
@@ -381,10 +389,10 @@ Route::get('/', function () {
         now()->addMinutes(30),
         fn () => ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
-                ->groupBy('name')
+                ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('total_stock')
                 ->limit(4)
                 ->get(),
@@ -394,7 +402,7 @@ Route::get('/', function () {
     $shortSleeveProducts = Cache::remember("home.short_sleeve_products.{$productCacheVersion}", now()->addMinutes(30), function () use ($bestSellingProducts, $fallbackImage) {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
                 ->where(function ($query) {
@@ -402,7 +410,7 @@ Route::get('/', function () {
                         ->orWhere('name', 'like', '%CLASICO%')
                         ->orWhere('name', 'like', '%WAFFLE%');
                 })
-                ->groupBy('name')
+                ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('total_stock')
                 ->limit(3)
                 ->get(),

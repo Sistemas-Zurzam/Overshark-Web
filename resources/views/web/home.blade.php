@@ -159,7 +159,7 @@
         <div class="mx-auto max-w-7xl">
             <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">Seleccion Overshark</p>
+                    <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">Selección de marcas</p>
                     <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Productos mas vendidos</h2>
                     <p class="mt-2 text-slate-500">Elige el color y mira la foto disponible para ese modelo.</p>
                 </div>
@@ -195,6 +195,7 @@
                             <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
                         </a>
                         <div class="p-5">
+                            <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
                             <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:text-cyan-700">{{ $product->name }}</a>
                             <div class="mt-2 flex items-baseline gap-2">
                                 <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
@@ -280,6 +281,7 @@
                             </span>
                         </a>
                         <div class="p-5">
+                            <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
                             <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:text-cyan-700">{{ $product->name }}</a>
                             <div class="mt-2 flex items-baseline gap-2">
                                 <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
