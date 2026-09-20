@@ -26,6 +26,18 @@ class ComboSelectionService
             ];
         })->filter(fn (array $group): bool => $group['name'] !== '');
 
+        $groups = $groups
+            ->groupBy(fn (array $group): string => $this->normalize($group['name']))
+            ->map(fn (Collection $sameNameGroups): array => [
+                'name' => $sameNameGroups->first()['name'],
+                'quantity' => $sameNameGroups->sum('quantity'),
+                'variants' => $sameNameGroups
+                    ->flatMap(fn (array $group): Collection => $group['variants'])
+                    ->unique('id')
+                    ->values(),
+            ])
+            ->values();
+
         if ($combo->selection_mode === 'choice') {
             $variants = $groups
                 ->flatMap(fn (array $group): Collection => $group['variants'])
@@ -37,18 +49,18 @@ class ComboSelectionService
                 'label' => "Unidad {$unit}",
                 'product' => 'Elige un producto',
                 'allow_product_choice' => true,
+                'quantity' => 1,
                 'variants' => $variants,
             ]);
         }
 
-        return $groups->flatMap(function (array $group): Collection {
-            return collect(range(1, $group['quantity']))->map(fn (int $unit): array => [
-                'label' => $group['name'],
-                'product' => $group['name'],
-                'allow_product_choice' => false,
-                'variants' => $group['variants'],
-            ]);
-        })->values();
+        return $groups->map(fn (array $group): array => [
+            'label' => $group['name'],
+            'product' => $group['name'],
+            'allow_product_choice' => false,
+            'quantity' => $group['quantity'],
+            'variants' => $group['variants'],
+        ])->values();
     }
 
     public function resolveSelections(Combo $combo, array $selectedIds): Collection
@@ -63,11 +75,11 @@ class ComboSelectionService
 
         if (count($selectedIds) !== $slots->count()) {
             throw ValidationException::withMessages([
-                'selections' => "Selecciona talla y color para las {$slots->count()} unidades del combo.",
+                'selections' => 'Selecciona talla y color para cada producto del combo.',
             ]);
         }
 
-        $selections = collect($selectedIds)->values()->map(function ($selectedId, int $index) use ($slots): Producto {
+        $selections = collect($selectedIds)->values()->map(function ($selectedId, int $index) use ($slots): array {
             $variant = $slots[$index]['variants']->firstWhere('id', (int) $selectedId);
 
             if (! $variant) {
@@ -76,8 +88,13 @@ class ComboSelectionService
                 ]);
             }
 
-            return $variant;
-        });
+            return [
+                'variant' => $variant,
+                'quantity' => max(1, (int) ($slots[$index]['quantity'] ?? 1)),
+            ];
+        })->flatMap(fn (array $selection): Collection => collect(range(1, $selection['quantity']))
+            ->map(fn (): Producto => $selection['variant']))
+            ->values();
 
         foreach ($selections->countBy(fn (Producto $variant): int => $variant->id) as $variantId => $quantity) {
             $variant = $selections->firstWhere('id', (int) $variantId);

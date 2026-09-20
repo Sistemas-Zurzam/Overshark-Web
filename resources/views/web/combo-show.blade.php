@@ -58,7 +58,7 @@
                     @csrf
                     <div>
                         <h2 class="text-lg font-black">Elige talla y color</h2>
-                        <p class="mt-1 text-sm leading-6 text-slate-500">Selecciona la combinación de cada unidad del combo antes de agregarlo al carrito.</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">Selecciona talla y color para cada producto. Si la promoción repite un producto, una selección se aplicará a todas sus unidades.</p>
                     </div>
 
                     @if ($comboSlots->isEmpty() || $hasUnavailableSlot)
@@ -89,10 +89,10 @@
                                 <div data-combo-slot data-variants='@json($variantData)' class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
-                                            <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Unidad {{ $index + 1 }}</p>
+                                            <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">{{ $slot['allow_product_choice'] ? 'Unidad '.($index + 1) : 'Producto '.($index + 1) }}</p>
                                             <p class="mt-1 text-sm font-black text-slate-950">{{ $slot['label'] }}</p>
                                         </div>
-                                        <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-500">Producto</span>
+                                        <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-500">{{ ($slot['quantity'] ?? 1) > 1 ? '×'.($slot['quantity']).' unidades' : 'Producto' }}</span>
                                     </div>
 
                                     @if ($slot['allow_product_choice'])

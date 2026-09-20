@@ -7,6 +7,7 @@ use App\Models\Brand;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -24,14 +25,24 @@ class BrandController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Brand::query()->create($this->validated($request));
+        $validated = $this->validated($request);
+        $validated['logo_path'] = $request->file('logo')?->store('branding/brands', 'public');
+        Brand::query()->create($validated);
 
         return back()->with('status', 'Marca creada correctamente.');
     }
 
     public function update(Request $request, Brand $brand): RedirectResponse
     {
-        $brand->update($this->validated($request, $brand));
+        $validated = $this->validated($request, $brand);
+        if ($request->hasFile('logo')) {
+            $newPath = $request->file('logo')->store('branding/brands', 'public');
+            if ($brand->logo_path) {
+                Storage::disk('public')->delete($brand->logo_path);
+            }
+            $validated['logo_path'] = $newPath;
+        }
+        $brand->update($validated);
 
         return back()->with('status', 'Marca actualizada correctamente.');
     }
@@ -50,6 +61,7 @@ class BrandController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('brands', 'name')->ignore($brand?->id)],
             'slug' => ['nullable', 'string', 'max:140', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('brands', 'slug')->ignore($brand?->id)],
+            'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,svg', 'max:4096'],
             'primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'secondary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],

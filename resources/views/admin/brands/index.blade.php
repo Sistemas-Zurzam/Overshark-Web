@@ -30,7 +30,7 @@
             <span class="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700">Paleta de 5 colores</span>
         </div>
 
-        <form action="{{ route('admin.brands.store') }}" method="POST" class="mt-6 space-y-5">
+        <form action="{{ route('admin.brands.store') }}" method="POST" enctype="multipart/form-data" class="mt-6 space-y-5">
             @csrf
             <div class="grid gap-4 md:grid-cols-3">
                 <label class="block md:col-span-2">
@@ -42,6 +42,11 @@
                     <input type="text" name="slug" value="{{ old('slug') }}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="overshark-girls">
                 </label>
             </div>
+            <label class="block max-w-xl">
+                <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Logo de la marca</span>
+                <input type="file" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg" class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
+                <span class="mt-2 block text-xs text-slate-400">Opcional. PNG, JPG, WEBP o SVG; máximo 4 MB.</span>
+            </label>
             @include('admin.brands._palette-fields', ['values' => null, 'prefix' => 'new'])
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p class="text-xs text-slate-500">Usa valores hexadecimales de seis digitos, por ejemplo #0078D7.</p>
@@ -88,7 +93,7 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('admin.brands.update', $brand) }}" method="POST" class="mt-6 space-y-5 border-t border-slate-200 pt-5">
+                    <form action="{{ route('admin.brands.update', $brand) }}" method="POST" enctype="multipart/form-data" class="mt-6 space-y-5 border-t border-slate-200 pt-5">
                         @csrf
                         @method('PATCH')
                         <div class="grid gap-4 md:grid-cols-3">
@@ -101,6 +106,16 @@
                                 <input type="text" name="slug" value="{{ $brand->slug }}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
                             </label>
                         </div>
+                        <label class="block max-w-xl">
+                            <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Logo de la marca</span>
+                            <div class="flex flex-wrap items-center gap-4">
+                                @if ($brand->logoUrl())
+                                    <img src="{{ $brand->logoUrl() }}" alt="Logo de {{ $brand->name }}" class="h-14 max-w-48 rounded-xl border border-slate-200 bg-white object-contain p-2">
+                                @endif
+                                <input type="file" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
+                            </div>
+                            <span class="mt-2 block text-xs text-slate-400">Sube un archivo nuevo para reemplazar el actual.</span>
+                        </label>
                         @include('admin.brands._palette-fields', ['values' => $brand, 'prefix' => 'brand-'.$brand->id])
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <p class="text-xs text-slate-500">Los productos se agrupan por el valor de su campo marca, sin importar mayusculas.</p>

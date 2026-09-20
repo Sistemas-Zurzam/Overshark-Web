@@ -2,6 +2,7 @@
     $brand = \App\Models\BrandSetting::current();
     $menuCombos = \App\Models\Admin\Combo::activeForMenu();
     $brandPageContext = $brandPage ?? null;
+    $publicBrandLogo = $brandPageContext?->logoUrl() ?: $brand->logoUrl();
     if ($brandPageContext) {
         $brandPageName = mb_strtoupper(trim($brandPageContext->name));
         $menuCombos = $menuCombos
@@ -71,8 +72,8 @@
             </div>
 
             <a href="{{ route('web.home') }}" class="absolute left-1/2 flex h-[70px] w-40 -translate-x-1/2 items-center justify-center overflow-hidden text-xl font-black tracking-normal sm:h-[76px] sm:w-56 sm:text-2xl lg:w-72 lg:text-3xl" aria-label="Overshark inicio">
-                @if ($brand->logoUrl())
-                    <img src="{{ $brand->logoUrl() }}" alt="Overshark" class="h-14 w-full object-contain sm:h-16 sm:scale-125 lg:h-20 lg:scale-150">
+                @if ($publicBrandLogo)
+                    <img src="{{ $publicBrandLogo }}" alt="{{ $brandPageContext?->name ?: 'Overshark' }}" class="h-14 w-full object-contain sm:h-16 sm:scale-125 lg:h-20 lg:scale-150">
                 @else
                     OVER<span class="text-cyan-600">SHARK</span>
                 @endif
@@ -281,8 +282,8 @@
     <footer id="contacto" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 text-slate-900">
         <div class="border-b border-slate-200 px-5 py-7">
             <a href="{{ route('web.home') }}" class="mx-auto flex w-fit items-center justify-center" aria-label="Overshark inicio">
-                @if ($brand->logoUrl())
-                    <img src="{{ $brand->logoUrl() }}" alt="Overshark" class="h-16 w-56 object-contain sm:w-64">
+                @if ($publicBrandLogo)
+                    <img src="{{ $publicBrandLogo }}" alt="{{ $brandPageContext?->name ?: 'Overshark' }}" class="h-16 w-56 object-contain sm:w-64">
                 @else
                     <span class="text-3xl font-black tracking-[-0.07em]">OVER<span class="text-cyan-600">SHARK</span></span>
                 @endif

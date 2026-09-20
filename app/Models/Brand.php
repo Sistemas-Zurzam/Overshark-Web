@@ -10,6 +10,7 @@ class Brand extends Model
     protected $fillable = [
         'name',
         'slug',
+        'logo_path',
         'primary_color',
         'secondary_color',
         'accent_color',
@@ -30,5 +31,10 @@ class Brand extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public function logoUrl(): ?string
+    {
+        return $this->logo_path ? '/storage/'.ltrim($this->logo_path, '/') : null;
     }
 }
