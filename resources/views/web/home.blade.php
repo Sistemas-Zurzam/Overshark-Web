@@ -161,7 +161,7 @@
     <section id="productos" class="bg-white px-5 pb-20 text-slate-950 sm:pb-24 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
+                <div id="marcas" class="scroll-mt-28">
                     <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">Selección de marcas</p>
                     <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Productos mas vendidos</h2>
                     <p class="mt-2 text-slate-500">Elige el color y mira la foto disponible para ese modelo.</p>

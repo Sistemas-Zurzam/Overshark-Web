@@ -33,6 +33,7 @@
                     </a>
                     <a href="#categorias" class="transition hover:text-cyan-600">Categorías</a>
                     <a href="#contacto" class="transition hover:text-cyan-600">Nosotros</a>
+                    <a href="{{ route('web.home') }}#marcas" class="transition hover:text-cyan-600">Marcas</a>
                 </nav>
             </div>
 
@@ -108,6 +109,7 @@
                 </button>
                 <a href="#categorias" class="rounded-lg px-3 py-3 hover:bg-slate-100">Categorías</a>
                 <a href="#contacto" class="rounded-lg px-3 py-3 hover:bg-slate-100">Nosotros</a>
+                <a href="{{ route('web.home') }}#marcas" class="rounded-lg px-3 py-3 hover:bg-slate-100">Marcas</a>
                 <a href="{{ route('admin.dashboard') }}" class="rounded-lg px-3 py-3 hover:bg-slate-100">Mi cuenta</a>
             </div>
         </nav>
