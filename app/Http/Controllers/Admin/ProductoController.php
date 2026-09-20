@@ -12,14 +12,42 @@ use Illuminate\View\View;
 
 class ProductoController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('search', ''));
+        $empresa = trim((string) $request->query('empresa', ''));
+        $marca = trim((string) $request->query('marca', ''));
+
+        $productosQuery = Producto::query()
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($searchQuery) use ($search): void {
+                    $searchQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('default_code', 'like', "%{$search}%");
+                });
+            })
+            ->when($empresa !== '', fn ($query) => $query->where('empresa_nombre', $empresa))
+            ->when($marca !== '', fn ($query) => $query->where('marca', $marca));
+
         return view('admin.productos.index', [
-            'productos' => Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
+            'productos' => $productosQuery
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
                 ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('updated_at')
-                ->paginate(25),
+                ->paginate(25)
+                ->withQueryString(),
+            'empresas' => Producto::query()
+                ->whereNotNull('empresa_nombre')
+                ->where('empresa_nombre', '<>', '')
+                ->distinct()
+                ->orderBy('empresa_nombre')
+                ->pluck('empresa_nombre'),
+            'marcas' => Producto::query()
+                ->whereNotNull('marca')
+                ->where('marca', '<>', '')
+                ->distinct()
+                ->orderBy('marca')
+                ->pluck('marca'),
         ]);
     }
 
@@ -75,6 +103,22 @@ class ProductoController extends Controller
         Producto::refreshCacheVersion();
 
         return back()->with('status', 'Informacion del producto actualizada.');
+    }
+
+    public function updateBrand(Request $request, Producto $producto): RedirectResponse
+    {
+        $validated = $request->validate([
+            'marca' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $marca = trim((string) ($validated['marca'] ?? '')) ?: null;
+        $query = $this->variantsFor($producto);
+        $query->update(['marca' => $marca]);
+        Producto::refreshCacheVersion();
+
+        return back()->with('status', $marca
+            ? "Marca {$marca} asignada al producto."
+            : 'Marca retirada del producto.');
     }
 
     public function updateSizeGuideImage(Request $request, Producto $producto): RedirectResponse

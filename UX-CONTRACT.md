@@ -4,6 +4,8 @@
 
 This contract covers the `/admin/combos` CRUD surface and the public `/combos/{combo}` detail route.
 
+The product catalog at `/admin/productos` also follows the filter and brand-assignment behavior below.
+
 ## Canonical behavior
 
 | Operation | Trigger | Success | Failure | Recovery |
@@ -21,6 +23,12 @@ This contract covers the `/admin/combos` CRUD surface and the public `/combos/{c
 - Choice combos store eligible ZAZU styles plus a `selection_limit` and visible explanatory note.
 - Unknown compositions remain empty and visible as pending; the importer does not invent products.
 - A missing custom image uses the standard `default-hero-banner.png` asset.
+
+## Product catalog
+
+- The catalog supports URL-persisted filters for product name or SKU, company, and manually assigned brand.
+- Assigning a brand from a product detail applies it to every synchronized variant of that product and does not get overwritten by the ZAZU inventory sync.
+- Products without a brand remain visible as `Sin asignar` and are recoverable through the product detail screen.
 
 ## Accessibility and resilience
 

@@ -34,11 +34,45 @@
             </p>
         </div>
 
+        <form action="{{ route('admin.productos.index') }}" method="GET" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:p-5" novalidate>
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+                <label class="block">
+                    <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Producto o SKU</span>
+                    <input type="search" name="search" value="{{ request('search') }}" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Buscar por nombre o SKU" autocomplete="off">
+                </label>
+                <label class="block">
+                    <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Empresa</span>
+                    <select name="empresa" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                        <option value="">Todas las empresas</option>
+                        @foreach ($empresas as $empresa)
+                            <option value="{{ $empresa }}" @selected(request('empresa') === $empresa)>{{ $empresa }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Marca</span>
+                    <select name="marca" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                        <option value="">Todas las marcas</option>
+                        @foreach ($marcas as $marca)
+                            <option value="{{ $marca }}" @selected(request('marca') === $marca)>{{ $marca }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <div class="flex flex-wrap gap-2">
+                    <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100">Filtrar</button>
+                    @if (request()->filled('search') || request()->filled('empresa') || request()->filled('marca'))
+                        <a href="{{ route('admin.productos.index') }}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition hover:border-slate-950 hover:text-slate-950 focus:outline-none focus:ring-4 focus:ring-cyan-100">Limpiar</a>
+                    @endif
+                </div>
+            </div>
+        </form>
+
         <div class="mt-6 overflow-x-auto">
-            <table class="w-full min-w-[980px] text-left text-sm">
+            <table class="w-full min-w-[1080px] text-left text-sm">
                 <thead class="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-400">
                     <tr>
                         <th class="px-3 py-3">Producto</th>
+                        <th class="px-3 py-3">Marca</th>
                         <th class="px-3 py-3">Empresa</th>
                         <th class="px-3 py-3 text-right">Variantes</th>
                         <th class="px-3 py-3 text-right">Rango precio</th>
@@ -54,6 +88,7 @@
                                 <div class="font-bold text-slate-950">{{ $producto->name }}</div>
                                 <div class="mt-1 text-xs text-slate-400">{{ $producto->variant_count }} variantes</div>
                             </td>
+                            <td class="px-3 py-4 text-sm font-semibold {{ $producto->marca ? 'text-slate-700' : 'text-slate-400' }}">{{ $producto->marca ?: 'Sin asignar' }}</td>
                             <td class="px-3 py-4 text-sm font-semibold text-cyan-700">{{ $producto->empresa_nombre ?? 'Overshark' }}</td>
                             <td class="px-3 py-4 text-right font-bold">{{ $producto->variant_count }}</td>
                             <td class="px-3 py-4 text-right font-bold">
@@ -74,7 +109,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-3 py-16 text-center text-slate-400">
+                            <td colspan="8" class="px-3 py-16 text-center text-slate-400">
                                 No hay productos registrados todavía.
                             </td>
                         </tr>

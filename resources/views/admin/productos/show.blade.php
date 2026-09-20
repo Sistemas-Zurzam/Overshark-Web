@@ -13,6 +13,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
             <div><span class="font-bold text-slate-950">Variantes:</span> {{ $variantsBySize->flatten(1)->count() }}</div>
             <div class="mt-1"><span class="font-bold text-slate-950">Empresa:</span> {{ $variantsBySize->flatten(1)->pluck('empresa_nombre')->filter()->unique()->implode(', ') ?: '-' }}</div>
+            <div class="mt-1"><span class="font-bold text-slate-950">Marca:</span> {{ $producto->marca ?: 'Sin asignar' }}</div>
         </div>
     </div>
 
@@ -23,8 +24,13 @@
     @endif
 
     @if ($errors->any())
-        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            Revisa los archivos: solo PNG, JPG, JPEG o WEBP, maximo 8 MB por imagen.
+        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+            <p>Revisa los datos ingresados.</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm font-medium">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
@@ -84,6 +90,21 @@
         </aside>
 
         <main class="space-y-6">
+            <section class="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-5 shadow-sm lg:p-6">
+                <h2 class="text-lg font-black text-slate-950">Marca del producto</h2>
+                <p class="mt-1 text-sm text-slate-600">Asigna la marca comercial. Se aplicará a todas las variantes de este producto y no será reemplazada por la sincronización de ZAZU.</p>
+
+                <form action="{{ route('admin.productos.brand', $producto) }}" method="POST" class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end" novalidate>
+                    @csrf
+                    @method('PATCH')
+                    <label class="block flex-1">
+                        <span class="mb-2 block text-sm font-bold text-slate-700">Marca</span>
+                        <input type="text" name="marca" value="{{ old('marca', $producto->marca) }}" maxlength="120" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ej. Overshark, Bravos u Overshark Girls">
+                    </label>
+                    <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100">Guardar marca</button>
+                </form>
+            </section>
+
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
                 <h2 class="text-lg font-black text-slate-950">Detalle comercial</h2>
                 <p class="mt-1 text-sm text-slate-500">Estos textos se muestran en la pagina del producto y se aplican a todas sus variantes.</p>

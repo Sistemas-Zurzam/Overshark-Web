@@ -31,6 +31,7 @@ class Producto extends Model
         'zazu_variant_id',
         'zazu_company_id',
         'empresa_nombre',
+        'marca',
         'zazu_synced_at',
     ];
 

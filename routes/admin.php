@@ -21,6 +21,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::view('/bodegas', 'admin.bodegas.index')->name('bodegas.index');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
+    Route::patch('/productos/{producto}/marca', [ProductoController::class, 'updateBrand'])->name('productos.brand');
     Route::patch('/productos/{producto}/detalle', [ProductoController::class, 'updateDetails'])->name('productos.details');
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');
     Route::post('/productos/{producto}/guia-tallas', [ProductoController::class, 'updateSizeGuideImage'])->name('productos.size-guide');
