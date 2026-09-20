@@ -1,6 +1,11 @@
 @php
     $brand = \App\Models\BrandSetting::current();
     $menuCombos = \App\Models\Admin\Combo::activeForMenu();
+    $menuBrands = \App\Models\Brand::query()
+        ->active()
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
     $cartItems = collect(session('cart.items', []));
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
@@ -33,7 +38,29 @@
                     </a>
                     <a href="#categorias" class="transition hover:text-cyan-600">Categorías</a>
                     <a href="#contacto" class="transition hover:text-cyan-600">Nosotros</a>
-                    <a href="{{ route('web.home') }}#marcas" class="transition hover:text-cyan-600">Marcas</a>
+                    <div class="relative">
+                        <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-desktop" class="flex items-center gap-1.5 transition hover:text-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-desktop">
+                            Marcas
+                            <svg class="h-4 w-4 text-slate-400 transition-transform" data-brands-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                        </button>
+                        <div id="brands-menu-desktop" data-brands-menu data-state="closed" class="brands-panel absolute left-1/2 top-[calc(100%+22px)] z-50 w-72 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-2xl">
+                            <div class="border-b border-slate-100 px-3 pb-3">
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700">Nuestras marcas</p>
+                                <p class="mt-1 text-xs text-slate-500">Explora productos por marca.</p>
+                            </div>
+                            <div class="mt-2 max-h-64 overflow-y-auto">
+                                @forelse ($menuBrands as $menuBrand)
+                                    <a href="{{ route('web.brands.show', $menuBrand) }}" class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 transition hover:bg-cyan-50 hover:text-cyan-700">
+                                        <span>{{ $menuBrand->name }}</span>
+                                        <span class="h-3 w-3 rounded-full border border-slate-200" style="background-color: {{ $menuBrand->primary_color }}" aria-hidden="true"></span>
+                                        <span class="text-cyan-600" aria-hidden="true">-&gt;</span>
+                                    </a>
+                                @empty
+                                    <p class="px-3 py-4 text-sm text-slate-500">Aún no hay marcas asignadas.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
                 </nav>
             </div>
 
@@ -109,7 +136,23 @@
                 </button>
                 <a href="#categorias" class="rounded-lg px-3 py-3 hover:bg-slate-100">Categorías</a>
                 <a href="#contacto" class="rounded-lg px-3 py-3 hover:bg-slate-100">Nosotros</a>
-                <a href="{{ route('web.home') }}#marcas" class="rounded-lg px-3 py-3 hover:bg-slate-100">Marcas</a>
+                <div>
+                    <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-mobile" class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-cyan-100" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-mobile">
+                        Marcas
+                        <svg class="h-4 w-4 text-slate-400 transition-transform" data-brands-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                    </button>
+                    <div id="brands-menu-mobile" data-brands-menu data-state="closed" class="brands-panel-mobile ml-3 border-l border-slate-200 pl-3">
+                        @forelse ($menuBrands as $menuBrand)
+                            <a href="{{ route('web.brands.show', $menuBrand) }}" class="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-600 hover:bg-cyan-50 hover:text-cyan-700">
+                                <span>{{ $menuBrand->name }}</span>
+                                <span class="h-3 w-3 rounded-full border border-slate-200" style="background-color: {{ $menuBrand->primary_color }}" aria-hidden="true"></span>
+                                <span aria-hidden="true">-&gt;</span>
+                            </a>
+                        @empty
+                            <p class="px-3 py-3 text-sm text-slate-500">Aún no hay marcas asignadas.</p>
+                        @endforelse
+                    </div>
+                </div>
                 <a href="{{ route('admin.dashboard') }}" class="rounded-lg px-3 py-3 hover:bg-slate-100">Mi cuenta</a>
             </div>
         </nav>
@@ -130,9 +173,10 @@
         </div>
 
         <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-            @forelse ($cartItems as $item)
+            @forelse ($cartItems as $itemKey => $item)
                 @php
                     $variantId = $item['variant_id'] ?? 0;
+                    $isCombo = ($item['kind'] ?? null) === 'combo';
                     $qty = (int) ($item['qty'] ?? 1);
                     $price = (float) ($item['price'] ?? 0);
                     $oldPrice = $price > 0 ? $price / 0.8 : 0;
@@ -145,8 +189,15 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h3 class="truncate text-sm font-black">{{ $item['producto'] ?? 'Producto' }}</h3>
-                                <p class="mt-1 text-sm text-slate-600">Color: {{ $item['color'] ?? '-' }}</p>
-                                <p class="mt-1 text-sm text-slate-600">Talla: {{ $item['talla'] ?? '-' }}</p>
+                                @if ($isCombo)
+                                    <p class="mt-1 text-xs font-black uppercase tracking-wide text-cyan-700">Combo · {{ $qty }} unidad{{ $qty === 1 ? '' : 'es' }}</p>
+                                    @foreach (collect($item['selections'] ?? [])->take(3) as $selection)
+                                        <p class="mt-1 truncate text-xs text-slate-600">{{ $selection['producto'] ?? 'Producto' }} · {{ $selection['talla'] ?? '-' }} · {{ $selection['color'] ?? '-' }}</p>
+                                    @endforeach
+                                @else
+                                    <p class="mt-1 text-sm text-slate-600">Color: {{ $item['color'] ?? '-' }}</p>
+                                    <p class="mt-1 text-sm text-slate-600">Talla: {{ $item['talla'] ?? '-' }}</p>
+                                @endif
                             </div>
                             <div class="text-right">
                                 <p class="text-sm font-black text-red-600">S/ {{ number_format($price, 2) }}</p>
@@ -157,23 +208,27 @@
                         </div>
 
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-                            <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
-                                <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="action" value="increment">
-                                    <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-slate-500 transition hover:bg-slate-100">+</button>
-                                </form>
-                                <span class="grid h-9 place-items-center text-sm text-slate-500">{{ $qty }}</span>
-                                <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="action" value="decrement">
-                                    <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-slate-500 transition hover:bg-slate-100">-</button>
-                                </form>
-                            </div>
+                            @if ($isCombo)
+                                <span class="rounded-md bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">{{ $qty }} combo{{ $qty === 1 ? '' : 's' }}</span>
+                            @else
+                                <div class="grid w-28 grid-cols-3 overflow-hidden rounded-md border border-slate-200">
+                                    <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="increment">
+                                        <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-slate-500 transition hover:bg-slate-100">+</button>
+                                    </form>
+                                    <span class="grid h-9 place-items-center text-sm text-slate-500">{{ $qty }}</span>
+                                    <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="decrement">
+                                        <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-slate-500 transition hover:bg-slate-100">-</button>
+                                    </form>
+                                </div>
+                            @endif
 
-                            <form method="POST" action="{{ route('web.cart.destroy', $variantId) }}">
+                            <form method="POST" action="{{ $isCombo ? route('web.cart.combo.destroy', $itemKey) : route('web.cart.destroy', $variantId) }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="grid h-9 w-9 place-items-center rounded-md text-slate-400 transition hover:bg-red-50 hover:text-red-600" aria-label="Eliminar producto">

@@ -7,8 +7,10 @@ use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\TipoDocumento;
+use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
 use App\Support\ProductCards;
+use App\Services\ComboSelectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -35,8 +37,64 @@ Route::get('/combos/{combo}', function (Combo $combo) {
 
     return view('web.combo-show', [
         'combo' => $combo,
+        'comboSlots' => app(ComboSelectionService::class)->slots($combo),
     ]);
 })->name('web.combos.show');
+
+Route::post('/combos/{combo}/carrito', function (Request $request, Combo $combo, ComboSelectionService $selector) {
+    abort_unless($combo->status, 404);
+
+    if ($combo->price === null) {
+        return back()->withErrors(['selections' => 'Este combo todavía no tiene un precio configurado.']);
+    }
+
+    $validated = $request->validate([
+        'selections' => ['required', 'array'],
+        'selections.*' => ['required', 'integer', 'exists:productos,id'],
+    ]);
+    $selectedVariants = $selector->resolveSelections($combo, $validated['selections']);
+    $items = session('cart.items', []);
+    $selectionIds = $selectedVariants->pluck('id')->implode('-');
+    $key = 'combo-'.$combo->id.'-'.substr(hash('sha256', $selectionIds), 0, 16);
+
+    $existingItem = $items[$key] ?? null;
+    $existingQuantities = collect($existingItem['selections'] ?? [])->countBy('variant_id');
+    foreach ($selectedVariants->countBy(fn (Producto $variant): int => $variant->id) as $variantId => $quantity) {
+        $variant = $selectedVariants->firstWhere('id', (int) $variantId);
+        $requestedQuantity = (int) ($existingQuantities->get($variantId, 0)) + (int) $quantity;
+
+        if ($requestedQuantity > (int) $variant->stock) {
+            return back()->withErrors([
+                'selections' => "No hay stock suficiente para {$variant->name} en el carrito.",
+            ])->withInput();
+        }
+    }
+
+    $comboItem = [
+        'kind' => 'combo',
+        'combo_id' => $combo->id,
+        'producto' => $combo->name,
+        'qty' => 1,
+        'price' => (float) $combo->price,
+        'image' => $combo->imageUrl(),
+        'selections' => $selectedVariants->map(fn (Producto $variant): array => [
+            'variant_id' => $variant->id,
+            'producto' => $variant->name,
+            'talla' => $variant->talla,
+            'color' => $variant->color,
+        ])->values()->all(),
+    ];
+
+    if (isset($items[$key])) {
+        $items[$key]['qty'] = (int) $items[$key]['qty'] + 1;
+    } else {
+        $items[$key] = $comboItem;
+    }
+
+    session(['cart.items' => $items]);
+
+    return redirect()->route('web.cart.index')->with('status', 'Combo agregado al carrito.');
+})->name('web.combos.cart.store');
 
 Route::post('/carrito', function (Request $request) {
     $validated = $request->validate([
@@ -120,6 +178,14 @@ Route::delete('/carrito/{variantId}', function (int $variantId) {
 
     return back()->with('cart_open', true);
 })->name('web.cart.destroy');
+
+Route::delete('/carrito/combo/{itemKey}', function (string $itemKey) {
+    $items = session('cart.items', []);
+    unset($items[$itemKey]);
+    session(['cart.items' => $items]);
+
+    return back()->with('cart_open', true);
+})->name('web.cart.combo.destroy');
 
 Route::get('/checkout/datos-personales', function () {
     $items = collect(session('cart.items', []));
@@ -293,6 +359,31 @@ Route::get('/checkout/courier-agencies', function (Request $request) {
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
 
+Route::get('/marcas/{brand:slug}', function (Brand $brand) {
+    abort_unless($brand->is_active, 404);
+
+    $fallbackImage = asset('images/default-hero-banner.png');
+    $brandName = mb_strtoupper(trim($brand->name));
+    $products = ProductCards::make(
+        Producto::query()
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+            ->where('price', '>', 0)
+            ->where('stock', '>', 0)
+            ->whereRaw('UPPER(TRIM(marca)) = ?', [$brandName])
+            ->groupBy('zazu_company_id', 'name')
+            ->orderByDesc('total_stock')
+            ->limit(48)
+            ->get(),
+        $fallbackImage,
+        $brand->name,
+    );
+
+    return view('web.brand-show', [
+        'brandPage' => $brand,
+        'products' => $products,
+    ]);
+})->name('web.brands.show');
+
 Route::get('/productos/{producto}', function (Producto $producto) {
     $fallbackImage = asset('images/default-hero-banner.png');
     $variants = Producto::query()
@@ -361,20 +452,24 @@ Route::get('/productos/{producto}', function (Producto $producto) {
 Route::get('/buscar', function (Request $request) {
     $fallbackImage = asset('images/default-hero-banner.png');
     $search = trim((string) $request->query('q', ''));
+    $marca = trim((string) $request->query('marca', ''));
     $products = collect();
 
-    if ($search !== '') {
+    if ($search !== '' || $marca !== '') {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
-                ->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('default_code', 'like', "%{$search}%")
-                        ->orWhere('color', 'like', "%{$search}%")
-                        ->orWhere('talla', 'like', "%{$search}%");
+                ->when($search !== '', function ($query) use ($search): void {
+                    $query->where(function ($searchQuery) use ($search): void {
+                        $searchQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('default_code', 'like', "%{$search}%")
+                            ->orWhere('color', 'like', "%{$search}%")
+                            ->orWhere('talla', 'like', "%{$search}%");
+                    });
                 })
+                ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
                 ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('total_stock')
                 ->limit(24)
@@ -386,6 +481,7 @@ Route::get('/buscar', function (Request $request) {
     return view('web.search', [
         'products' => $products,
         'search' => $search,
+        'marca' => $marca,
     ]);
 })->name('web.products.search');
 

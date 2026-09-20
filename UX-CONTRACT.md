@@ -6,6 +6,8 @@ This contract covers the `/admin/combos` CRUD surface and the public `/combos/{c
 
 The product catalog at `/admin/productos` also follows the filter and brand-assignment behavior below.
 
+The brand maintainer at `/admin/marcas` defines the public visual palette and storefront context for each commercial brand.
+
 ## Canonical behavior
 
 | Operation | Trigger | Success | Failure | Recovery |
@@ -18,6 +20,9 @@ The product catalog at `/admin/productos` also follows the filter and brand-assi
 
 ## Data rules
 
+- Public combo selection resolves each unit to an available product variant with talla and color; the server revalidates the allowed variant and stock before adding it.
+- Combo cart lines keep the selected variants for checkout display and use the configured combo `price`, never the individual product prices.
+
 - `price` is the total combo price in Peruvian soles and is never inferred from product prices.
 - Fixed combos store product names and quantities.
 - Choice combos store eligible ZAZU styles plus a `selection_limit` and visible explanatory note.
@@ -29,6 +34,13 @@ The product catalog at `/admin/productos` also follows the filter and brand-assi
 - The catalog supports URL-persisted filters for product name or SKU, company, and manually assigned brand.
 - Assigning a brand from a product detail applies it to every synchronized variant of that product and does not get overwritten by the ZAZU inventory sync.
 - Products without a brand remain visible as `Sin asignar` and are recoverable through the product detail screen.
+
+## Brand storefronts
+
+- Each active brand has a stable public route at `/marcas/{slug}` and is reachable from the public `Marcas` menu.
+- A brand storefront uses that brand's configured primary, secondary, accent, background, and text colors while preserving the shared product-card behavior.
+- Brand storefront queries match `productos.marca` case-insensitively and show only products assigned to the selected brand with price and stock available.
+- Hiding a brand removes it from the public menu and makes its storefront unavailable without deleting its products or palette configuration.
 
 ## Accessibility and resilience
 

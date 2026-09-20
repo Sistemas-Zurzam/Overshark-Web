@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\BrandSettingController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
@@ -41,6 +42,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
     Route::patch('/combos/{combo}/estado', [ComboController::class, 'toggle'])->name('combos.toggle');
     Route::delete('/combos/{combo}', [ComboController::class, 'destroy'])->name('combos.destroy');
+    Route::get('/marcas', [BrandController::class, 'index'])->name('brands.index');
+    Route::post('/marcas', [BrandController::class, 'store'])->name('brands.store');
+    Route::patch('/marcas/{brand}', [BrandController::class, 'update'])->name('brands.update');
+    Route::patch('/marcas/{brand}/estado', [BrandController::class, 'toggle'])->name('brands.toggle');
     Route::get('/identidad-visual', [BrandSettingController::class, 'edit'])->name('brand.edit');
     Route::put('/identidad-visual', [BrandSettingController::class, 'update'])->name('brand.update');
 

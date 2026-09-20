@@ -7,7 +7,7 @@ use App\Models\Admin\ProductoColorImage;
 
 class ProductCards
 {
-    public static function make($products, string $fallbackImage)
+    public static function make($products, string $fallbackImage, ?string $brandName = null)
     {
         $productNames = $products->pluck('name')->filter()->unique()->values()->all();
         $variantsByProduct = Producto::query()
@@ -15,6 +15,7 @@ class ProductCards
             ->whereNotNull('color')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
+            ->when($brandName !== null, fn ($query) => $query->whereRaw('UPPER(TRIM(marca)) = ?', [mb_strtoupper(trim($brandName))]))
             ->orderBy('color')
             ->get()
             ->groupBy(fn (Producto $product): string => self::productKey($product->name, $product->zazu_company_id));

@@ -307,6 +307,29 @@
         transform: translateY(0);
     }
 
+    .brands-panel {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -8px);
+        transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+    }
+
+    .brands-panel[data-state='open'] {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+    }
+
+    .brands-panel-mobile {
+        display: none;
+    }
+
+    .brands-panel-mobile[data-state='open'] {
+        display: block;
+    }
+
     @keyframes combo-float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-2px); }

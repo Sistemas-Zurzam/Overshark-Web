@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use Illuminate\Http\RedirectResponse;
@@ -42,12 +43,18 @@ class ProductoController extends Controller
                 ->distinct()
                 ->orderBy('empresa_nombre')
                 ->pluck('empresa_nombre'),
-            'marcas' => Producto::query()
+            'marcas' => Brand::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->merge(Producto::query()
                 ->whereNotNull('marca')
                 ->where('marca', '<>', '')
                 ->distinct()
                 ->orderBy('marca')
-                ->pluck('marca'),
+                ->pluck('marca'))
+                ->unique()
+                ->values(),
         ]);
     }
 
@@ -68,6 +75,7 @@ class ProductoController extends Controller
             'variantsBySize' => $variants->groupBy(fn (Producto $variant) => $variant->talla ?: 'Sin talla'),
             'colors' => $variants->pluck('color')->filter()->unique()->values(),
             'colorImages' => $colorImages,
+            'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->pluck('name'),
         ]);
     }
 

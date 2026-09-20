@@ -77,4 +77,33 @@ class ProductoManagementTest extends TestCase
             ->assertSee('PANTALON CATANIA')
             ->assertDontSee('POLO CLASICO');
     }
+
+    public function test_public_brand_menu_filters_available_products(): void
+    {
+        Producto::query()->create([
+            'name' => 'POLO OVERSHARK',
+            'default_code' => 'OVER-001',
+            'stock' => 5,
+            'price' => 35,
+            'empresa_nombre' => 'OVERSHARK PERU S.A.C',
+            'marca' => 'Overshark',
+            'zazu_company_id' => 1,
+        ]);
+
+        Producto::query()->create([
+            'name' => 'POLO BRAVOS',
+            'default_code' => 'BRAVOS-001',
+            'stock' => 5,
+            'price' => 35,
+            'empresa_nombre' => 'BRAVOS',
+            'marca' => 'Bravos',
+            'zazu_company_id' => 2,
+        ]);
+
+        $this->get(route('web.products.search', ['marca' => 'Overshark']))
+            ->assertOk()
+            ->assertSee('Overshark')
+            ->assertSee('POLO OVERSHARK')
+            ->assertDontSee('POLO BRAVOS');
+    }
 }

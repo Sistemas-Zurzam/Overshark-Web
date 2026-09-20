@@ -52,6 +52,7 @@
                 ['admin.medios-pago.index', 'Medios de Pago'],
                 ['admin.banners.index', 'Banners'],
                 ['admin.combos.index', 'Combos'],
+                ['admin.brands.index', 'Marcas'],
                 ['admin.brand.edit', 'Logo e Icono'],
             ] as [$routeName, $label])
                 <a href="{{ route($routeName) }}" @class([

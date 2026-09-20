@@ -99,7 +99,12 @@
                     @method('PATCH')
                     <label class="block flex-1">
                         <span class="mb-2 block text-sm font-bold text-slate-700">Marca</span>
-                        <input type="text" name="marca" value="{{ old('marca', $producto->marca) }}" maxlength="120" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ej. Overshark, Bravos u Overshark Girls">
+                        <select name="marca" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                            <option value="">Sin marca</option>
+                            @foreach ($brands as $brand)
+                                <option value="{{ $brand }}" @selected(old('marca', $producto->marca) === $brand)>{{ $brand }}</option>
+                            @endforeach
+                        </select>
                     </label>
                     <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100">Guardar marca</button>
                 </form>

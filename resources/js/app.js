@@ -1159,3 +1159,121 @@ document.addEventListener('keydown', (event) => {
         closeCombosMenu();
     }
 });
+
+const brandsToggles = document.querySelectorAll('[data-brands-toggle]');
+const brandsMenus = document.querySelectorAll('[data-brands-menu]');
+
+const closeBrandsMenus = () => {
+    brandsMenus.forEach((menu) => {
+        menu.dataset.state = 'closed';
+    });
+    brandsToggles.forEach((toggle) => {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.querySelector('[data-brands-chevron]')?.classList.remove('rotate-180');
+    });
+};
+
+brandsToggles.forEach((toggle) => {
+    toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const menu = document.getElementById(toggle.dataset.brandsMenuTarget);
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+
+        closeBrandsMenus();
+
+        if (!isOpen && menu) {
+            menu.dataset.state = 'open';
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.querySelector('[data-brands-chevron]')?.classList.add('rotate-180');
+        }
+    });
+});
+
+brandsMenus.forEach((menu) => {
+    menu.addEventListener('click', (event) => event.stopPropagation());
+    menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeBrandsMenus));
+});
+
+document.addEventListener('click', closeBrandsMenus);
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeBrandsMenus();
+    }
+});
+
+document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
+    const productSelect = slot.querySelector('[data-combo-product]');
+    const sizeSelect = slot.querySelector('[data-combo-size]');
+    const colorSelect = slot.querySelector('[data-combo-color]');
+    const variantInput = slot.querySelector('[data-combo-variant]');
+
+    if (!sizeSelect || !colorSelect || !variantInput) {
+        return;
+    }
+
+    let variants = [];
+
+    try {
+        variants = JSON.parse(slot.dataset.variants || '[]');
+    } catch {
+        variants = [];
+    }
+
+    const filteredVariants = () => variants.filter((variant) => !productSelect || variant.producto === productSelect.value);
+    const uniqueValues = (values) => [...new Set(values.filter(Boolean))];
+    const setOptions = (select, values, selectedValue) => {
+        select.replaceChildren(...values.map((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            option.selected = value === selectedValue;
+            return option;
+        }));
+    };
+
+    const refreshComboSlot = (preferredVariantId = null) => {
+        const availableVariants = filteredVariants();
+        const currentVariant = availableVariants.find((variant) => String(variant.id) === String(preferredVariantId ?? variantInput.value)) || availableVariants[0];
+
+        if (!currentVariant) {
+            sizeSelect.innerHTML = '<option value="">Sin tallas disponibles</option>';
+            colorSelect.innerHTML = '<option value="">Sin colores disponibles</option>';
+            variantInput.value = '';
+            return;
+        }
+
+        if (productSelect) {
+            productSelect.value = currentVariant.producto;
+        }
+
+        const sizes = uniqueValues(availableVariants.map((variant) => variant.talla));
+        const size = sizes.includes(sizeSelect.value) ? sizeSelect.value : currentVariant.talla;
+        setOptions(sizeSelect, sizes, size);
+
+        const colors = uniqueValues(availableVariants.filter((variant) => variant.talla === size).map((variant) => variant.color));
+        const colorVariants = availableVariants.filter((variant) => variant.talla === size);
+        const color = colors.includes(colorSelect.value) ? colorSelect.value : colorVariants[0]?.color;
+        setOptions(colorSelect, colors, color);
+
+        const selectedVariant = colorVariants.find((variant) => variant.color === color) || currentVariant;
+        variantInput.value = selectedVariant.id;
+    };
+
+    productSelect?.addEventListener('change', () => refreshComboSlot());
+    sizeSelect.addEventListener('change', () => refreshComboSlot());
+    colorSelect.addEventListener('change', () => refreshComboSlot());
+    refreshComboSlot(variantInput.value);
+});
+
+document.querySelector('[data-combo-cart-form]')?.addEventListener('submit', (event) => {
+    const emptySelection = Array.from(document.querySelectorAll('[data-combo-variant]')).some((input) => !input.value);
+    const error = document.querySelector('[data-combo-selection-error]');
+
+    if (emptySelection) {
+        event.preventDefault();
+        if (error) {
+            error.textContent = 'Completa la talla y el color de cada unidad.';
+            error.classList.remove('hidden');
+        }
+    }
+});

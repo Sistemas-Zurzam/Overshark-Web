@@ -66,6 +66,57 @@ class ComboManagementTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_choose_combo_variants_and_add_the_combo_price_to_cart(): void
+    {
+        $small = Producto::query()->create([
+            'name' => 'WAFFLE',
+            'talla' => 'S',
+            'color' => 'Negro',
+            'stock' => 4,
+            'price' => 35,
+        ]);
+        $medium = Producto::query()->create([
+            'name' => 'WAFFLE',
+            'talla' => 'M',
+            'color' => 'Azul',
+            'stock' => 4,
+            'price' => 35,
+        ]);
+        $combo = Combo::query()->create([
+            'name' => '5x99',
+            'brand' => 'Overshark',
+            'price' => 99,
+            'items' => [['zazu' => 'WAFFLE', 'cantidad' => 2]],
+            'selection_mode' => 'fixed',
+            'status' => true,
+        ]);
+
+        $this->get(route('web.combos.show', $combo))
+            ->assertOk()
+            ->assertSee('Elige talla y color')
+            ->assertSee('Talla')
+            ->assertSee('Color');
+
+        $response = $this->post(route('web.combos.cart.store', $combo), [
+            'selections' => [$small->id, $medium->id],
+        ]);
+        $response->assertRedirect(route('web.cart.index'));
+
+        $response->assertSessionHas('cart.items', function (array $items) use ($combo, $small, $medium): bool {
+            $comboItem = collect($items)->first(fn (array $item): bool => ($item['combo_id'] ?? null) === $combo->id);
+
+            return $comboItem !== null
+                && $comboItem['price'] === 99.0
+                && collect($comboItem['selections'])->pluck('variant_id')->all() === [$small->id, $medium->id];
+        });
+
+        $this->get(route('web.cart.index'))
+            ->assertOk()
+            ->assertSee('5x99')
+            ->assertSee('Negro')
+            ->assertSee('Azul');
+    }
+
     private function png(): string
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
