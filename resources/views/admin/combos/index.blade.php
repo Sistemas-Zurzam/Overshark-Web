@@ -69,7 +69,12 @@
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <label class="block">
                     <span class="mb-2 block text-sm font-bold text-slate-700">Marca</span>
-                    <input id="combo-brand" type="text" name="brand" value="{{ old('brand', 'Overshark') }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                    <select id="combo-brand" name="brand" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                        <option value="">Selecciona una marca</option>
+                        @foreach ($brands as $brand)
+                            <option value="{{ $brand }}" @selected(old('brand', 'OVERSHARK') === $brand)>{{ $brand }}</option>
+                        @endforeach
+                    </select>
                 </label>
                 <label class="block">
                     <span class="mb-2 block text-sm font-bold text-slate-700">Modalidad</span>

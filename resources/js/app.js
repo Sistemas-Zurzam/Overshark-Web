@@ -1206,6 +1206,9 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
     const sizeSelect = slot.querySelector('[data-combo-size]');
     const colorSelect = slot.querySelector('[data-combo-color]');
     const variantInput = slot.querySelector('[data-combo-variant]');
+    const sizeOptions = Array.from(slot.querySelectorAll('[data-combo-size-option]'));
+    const colorOptions = Array.from(slot.querySelectorAll('[data-combo-color-option]'));
+    const selectedColorLabel = slot.querySelector('[data-combo-selected-color]');
 
     if (!sizeSelect || !colorSelect || !variantInput) {
         return;
@@ -1231,6 +1234,27 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
         }));
     };
 
+    const syncOptionButtons = (buttons, values, selectedValue, dataKey) => {
+        buttons.forEach((button) => {
+            const value = button.dataset[dataKey];
+            const isAvailable = values.includes(value);
+            const isSelected = value === selectedValue;
+
+            button.classList.toggle('hidden', !isAvailable);
+            button.disabled = !isAvailable;
+
+            if (dataKey === 'comboSizeOption') {
+                button.classList.toggle('bg-slate-950', isSelected);
+                button.classList.toggle('text-white', isSelected);
+                button.classList.toggle('bg-white', !isSelected);
+                button.classList.toggle('text-slate-950', !isSelected);
+            } else {
+                button.classList.toggle('ring-2', isSelected);
+                button.classList.toggle('ring-slate-950', isSelected);
+            }
+        });
+    };
+
     const refreshComboSlot = (preferredVariantId = null) => {
         const availableVariants = filteredVariants();
         const currentVariant = availableVariants.find((variant) => String(variant.id) === String(preferredVariantId ?? variantInput.value)) || availableVariants[0];
@@ -1238,6 +1262,8 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
         if (!currentVariant) {
             sizeSelect.innerHTML = '<option value="">Sin tallas disponibles</option>';
             colorSelect.innerHTML = '<option value="">Sin colores disponibles</option>';
+            syncOptionButtons(sizeOptions, [], '', 'comboSizeOption');
+            syncOptionButtons(colorOptions, [], '', 'comboColorOption');
             variantInput.value = '';
             return;
         }
@@ -1254,6 +1280,11 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
         const colorVariants = availableVariants.filter((variant) => variant.talla === size);
         const color = colors.includes(colorSelect.value) ? colorSelect.value : colorVariants[0]?.color;
         setOptions(colorSelect, colors, color);
+        syncOptionButtons(sizeOptions, sizes, size, 'comboSizeOption');
+        syncOptionButtons(colorOptions, colors, color, 'comboColorOption');
+        if (selectedColorLabel) {
+            selectedColorLabel.textContent = color || 'Elige un color';
+        }
 
         const selectedVariant = colorVariants.find((variant) => variant.color === color) || currentVariant;
         variantInput.value = selectedVariant.id;
@@ -1262,6 +1293,14 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
     productSelect?.addEventListener('change', () => refreshComboSlot());
     sizeSelect.addEventListener('change', () => refreshComboSlot());
     colorSelect.addEventListener('change', () => refreshComboSlot());
+    sizeOptions.forEach((button) => button.addEventListener('click', () => {
+        sizeSelect.value = button.dataset.comboSizeOption || '';
+        refreshComboSlot();
+    }));
+    colorOptions.forEach((button) => button.addEventListener('click', () => {
+        colorSelect.value = button.dataset.comboColorOption || '';
+        refreshComboSlot();
+    }));
     refreshComboSlot(variantInput.value);
 });
 

@@ -20,6 +20,47 @@
             </div>
         </section>
 
+        <section id="combos" class="px-5 py-14 text-slate-950 sm:py-20 lg:px-8" style="background-color: var(--brand-accent);">
+            <div class="mx-auto max-w-7xl">
+                <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.22em]" style="color: var(--brand-primary);">Promociones de {{ $brandPage->name }}</p>
+                        <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Combos disponibles</h2>
+                        <p class="mt-2 text-slate-600">Elige una promocion de {{ $brandPage->name }} y selecciona sus productos.</p>
+                    </div>
+                </div>
+
+                @if ($brandCombos->isEmpty())
+                    <div class="grid min-h-40 place-items-center rounded-3xl border border-dashed border-slate-300 bg-white/70 px-5 text-center">
+                        <div>
+                            <p class="text-lg font-black text-slate-700">Aun no hay combos para esta marca</p>
+                            <p class="mt-1 text-sm text-slate-500">Puedes crear uno desde Administracion &gt; Combos.</p>
+                        </div>
+                    </div>
+                @else
+                    <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($brandCombos as $combo)
+                            <article class="group overflow-hidden rounded-3xl border border-white/70 bg-white shadow-xl shadow-slate-900/10 transition hover:-translate-y-1">
+                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="relative block aspect-[4/3] overflow-hidden bg-slate-100">
+                                    <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="h-full w-full object-cover transition duration-700 group-hover:scale-105">
+                                    <span class="absolute left-4 top-4 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wide text-white" style="background-color: var(--brand-primary);">{{ $brandPage->name }}</span>
+                                </a>
+                                <div class="p-5">
+                                    <p class="text-xs font-black uppercase tracking-[0.16em]" style="color: var(--brand-primary);">{{ $combo->modality ?: 'Promocion' }}</p>
+                                    <h3 class="mt-2 text-xl font-black text-slate-950">{{ $combo->name }}</h3>
+                                    @if ($combo->price !== null)
+                                        <p class="mt-3 text-2xl font-black text-slate-950">S/ {{ number_format((float) $combo->price, 2) }}</p>
+                                    @endif
+                                    <p class="mt-1 text-sm text-slate-500">{{ $combo->quantityLabel() }}</p>
+                                    <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="mt-5 inline-flex rounded-xl px-5 py-3 text-sm font-black text-white transition hover:opacity-85" style="background-color: var(--brand-secondary);">Ver combo</a>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </section>
+
         <section id="productos" class="bg-white px-5 py-14 text-slate-950 sm:py-20 lg:px-8">
             <div class="mx-auto max-w-7xl">
                 <div class="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

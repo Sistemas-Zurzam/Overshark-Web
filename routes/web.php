@@ -364,6 +364,12 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
 
     $fallbackImage = asset('images/default-hero-banner.png');
     $brandName = mb_strtoupper(trim($brand->name));
+    $brandCombos = Combo::query()
+        ->where('status', true)
+        ->whereNotNull('imagen')
+        ->whereRaw('UPPER(TRIM(brand)) = ?', [$brandName])
+        ->latest()
+        ->get();
     $products = ProductCards::make(
         Producto::query()
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
@@ -380,6 +386,7 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
 
     return view('web.brand-show', [
         'brandPage' => $brand,
+        'brandCombos' => $brandCombos,
         'products' => $products,
     ]);
 })->name('web.brands.show');

@@ -1,6 +1,13 @@
 @php
     $brand = \App\Models\BrandSetting::current();
     $menuCombos = \App\Models\Admin\Combo::activeForMenu();
+    $brandPageContext = $brandPage ?? null;
+    if ($brandPageContext) {
+        $brandPageName = mb_strtoupper(trim($brandPageContext->name));
+        $menuCombos = $menuCombos
+            ->filter(fn ($menuCombo) => mb_strtoupper(trim((string) $menuCombo->brand)) === $brandPageName)
+            ->values();
+    }
     $menuBrands = \App\Models\Brand::query()
         ->active()
         ->orderBy('sort_order')
@@ -37,7 +44,6 @@
                         <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
                     </a>
                     <a href="#categorias" class="transition hover:text-cyan-600">Categorías</a>
-                    <a href="#contacto" class="transition hover:text-cyan-600">Nosotros</a>
                     <div class="relative">
                         <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-desktop" class="flex items-center gap-1.5 transition hover:text-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-desktop">
                             Marcas
@@ -135,7 +141,6 @@
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
                 </button>
                 <a href="#categorias" class="rounded-lg px-3 py-3 hover:bg-slate-100">Categorías</a>
-                <a href="#contacto" class="rounded-lg px-3 py-3 hover:bg-slate-100">Nosotros</a>
                 <div>
                     <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-mobile" class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-cyan-100" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-mobile">
                         Marcas

@@ -79,6 +79,12 @@
                                     $initialVariant = $slot['variants']->firstWhere('id', (int) $oldVariantId) ?? $slot['variants']->first();
                                     $sizes = $slot['variants']->pluck('talla')->filter()->unique()->values();
                                     $colors = $slot['variants']->where('talla', $initialVariant?->talla)->pluck('color')->filter()->unique()->values();
+                                    $allColors = $slot['variants']->pluck('color')->filter()->unique()->values();
+                                    $swatches = [
+                                        'azul' => '#1d4f91', 'beige' => '#ddcdbd', 'perla' => '#e8e0d6', 'cemento' => '#9b9b95',
+                                        'negro' => '#111111', 'vino' => '#7b1028', 'botella' => '#0f4f3b', 'plomo' => '#9a9aa0',
+                                        'pacay' => '#8c9b73', 'denim' => '#526f91', 'blanco' => '#f7f7f2', 'p. rosa' => '#e8b8bd',
+                                    ];
                                 @endphp
                                 <div data-combo-slot data-variants='@json($variantData)' class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                                     <div class="flex items-center justify-between gap-3">
@@ -100,23 +106,47 @@
                                         </label>
                                     @endif
 
-                                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                                        <label class="block text-xs font-black uppercase tracking-wide text-slate-600">
-                                            Talla
-                                            <select data-combo-size class="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition focus:border-cyan-600 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="mt-5 space-y-5">
+                                        <div>
+                                            <div class="flex items-center justify-between gap-3">
+                                                <p class="text-xs font-black uppercase tracking-wide text-slate-600">Talla</p>
+                                                <span class="text-xs font-bold text-slate-400">Elige una</span>
+                                            </div>
+                                            <div data-combo-size-options class="mt-3 flex flex-wrap gap-2">
+                                                @foreach ($sizes as $size)
+                                                    <button type="button" data-combo-size-option="{{ $size }}" @class([
+                                                        'grid h-10 min-w-10 place-items-center border px-3 text-sm font-bold transition hover:border-slate-950 hover:bg-slate-950 hover:text-white',
+                                                        'bg-slate-950 text-white' => $initialVariant?->talla === $size,
+                                                        'bg-white text-slate-950' => $initialVariant?->talla !== $size,
+                                                    ])>{{ $size }}</button>
+                                                @endforeach
+                                            </div>
+                                            <select data-combo-size class="sr-only" tabindex="-1" aria-hidden="true">
                                                 @foreach ($sizes as $size)
                                                     <option value="{{ $size }}" @selected($initialVariant?->talla === $size)>{{ $size }}</option>
                                                 @endforeach
                                             </select>
-                                        </label>
-                                        <label class="block text-xs font-black uppercase tracking-wide text-slate-600">
-                                            Color
-                                            <select data-combo-color class="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition focus:border-cyan-600 focus:ring-4 focus:ring-cyan-100">
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center justify-between gap-3">
+                                                <p class="text-xs font-black uppercase tracking-wide text-slate-600">Color</p>
+                                                <span data-combo-selected-color class="text-xs font-bold text-slate-950">{{ $initialVariant?->color ?: 'Elige un color' }}</span>
+                                            </div>
+                                            <div data-combo-color-options class="mt-3 flex flex-wrap items-center gap-3">
+                                                @foreach ($allColors as $color)
+                                                    @php($colorName = mb_strtolower($color))
+                                                    <button type="button" data-combo-color-option="{{ $color }}" @class([
+                                                        'h-7 w-7 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300',
+                                                        'ring-2 ring-slate-950' => $initialVariant?->color === $color,
+                                                    ]) style="background-color: {{ $swatches[$colorName] ?? '#b8b8bd' }}" aria-label="Elegir color {{ $color }}" title="{{ $color }}"></button>
+                                                @endforeach
+                                            </div>
+                                            <select data-combo-color class="sr-only" tabindex="-1" aria-hidden="true">
                                                 @foreach ($colors as $color)
                                                     <option value="{{ $color }}" @selected($initialVariant?->color === $color)>{{ $color }}</option>
                                                 @endforeach
                                             </select>
-                                        </label>
+                                        </div>
                                     </div>
                                     <input type="hidden" name="selections[]" value="{{ $initialVariant?->id }}" data-combo-variant>
                                 </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Admin\Combo;
 use App\Models\Admin\Producto;
 use App\Services\ComboCatalogImportService;
@@ -24,6 +25,11 @@ class ComboController extends Controller
                 ->groupBy('name')
                 ->orderBy('name')
                 ->get(),
+            'brands' => Brand::query()
+                ->active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name'),
         ]);
     }
 
