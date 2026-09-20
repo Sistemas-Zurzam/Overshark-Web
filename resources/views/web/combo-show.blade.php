@@ -58,7 +58,7 @@
                     @csrf
                     <div>
                         <h2 class="text-lg font-black">Elige talla y color</h2>
-                        <p class="mt-1 text-sm leading-6 text-slate-500">Selecciona talla y color para cada producto. Si la promoción repite un producto, una selección se aplicará a todas sus unidades.</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">Los productos repetidos se agrupan en una sola tarjeta. Elige la talla y el color de cada unidad por separado.</p>
                     </div>
 
                     @if ($comboSlots->isEmpty() || $hasUnavailableSlot)
@@ -82,7 +82,7 @@
                                         'pacay' => '#8c9b73', 'denim' => '#526f91', 'blanco' => '#f7f7f2', 'p. rosa' => '#e8b8bd',
                                     ];
                                 @endphp
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4" aria-label="{{ $slot['product'] }}: {{ $slot['quantity'] }} unidades">
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
                                             <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">{{ $slot['allow_product_choice'] ? 'Unidad '.($index + 1) : 'Producto '.($index + 1) }}</p>
@@ -90,6 +90,9 @@
                                         </div>
                                         <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-500">{{ ($slot['quantity'] ?? 1) > 1 ? '×'.($slot['quantity']).' unidades' : 'Producto' }}</span>
                                     </div>
+                                    @if (($slot['quantity'] ?? 1) > 1)
+                                        <p class="mt-2 text-xs font-semibold text-slate-500">Configura cada unidad con una combinación distinta si lo deseas.</p>
+                                    @endif
 
                                     @php
                                         $slotQuantity = max(1, (int) ($slot['quantity'] ?? 1));
