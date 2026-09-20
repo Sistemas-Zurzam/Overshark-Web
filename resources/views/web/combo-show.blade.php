@@ -75,10 +75,6 @@
                                         'talla' => $variant->talla,
                                         'color' => $variant->color,
                                     ])->values();
-                                    $oldVariantId = old("selections.{$index}");
-                                    $initialVariant = $slot['variants']->firstWhere('id', (int) $oldVariantId) ?? $slot['variants']->first();
-                                    $sizes = $slot['variants']->pluck('talla')->filter()->unique()->values();
-                                    $colors = $slot['variants']->where('talla', $initialVariant?->talla)->pluck('color')->filter()->unique()->values();
                                     $allColors = $slot['variants']->pluck('color')->filter()->unique()->values();
                                     $swatches = [
                                         'azul' => '#1d4f91', 'beige' => '#ddcdbd', 'perla' => '#e8e0d6', 'cemento' => '#9b9b95',
@@ -86,7 +82,7 @@
                                         'pacay' => '#8c9b73', 'denim' => '#526f91', 'blanco' => '#f7f7f2', 'p. rosa' => '#e8b8bd',
                                     ];
                                 @endphp
-                                <div data-combo-slot data-variants='@json($variantData)' class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
                                             <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">{{ $slot['allow_product_choice'] ? 'Unidad '.($index + 1) : 'Producto '.($index + 1) }}</p>
@@ -94,6 +90,24 @@
                                         </div>
                                         <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-500">{{ ($slot['quantity'] ?? 1) > 1 ? '×'.($slot['quantity']).' unidades' : 'Producto' }}</span>
                                     </div>
+
+                                    @php
+                                        $slotQuantity = max(1, (int) ($slot['quantity'] ?? 1));
+                                        $selectionOffset = $comboSlots->take($index)->sum(fn (array $previousSlot): int => max(1, (int) ($previousSlot['quantity'] ?? 1)));
+                                    @endphp
+                                    @for ($unit = 0; $unit < $slotQuantity; $unit++)
+                                        @php
+                                            $selectionIndex = $selectionOffset + $unit;
+                                            $oldVariantId = old("selections.{$selectionIndex}");
+                                            $initialVariant = $slot['variants']->firstWhere('id', (int) $oldVariantId) ?? $slot['variants']->first();
+                                            $sizes = $slot['variants']->pluck('talla')->filter()->unique()->values();
+                                            $colors = $slot['variants']->where('talla', $initialVariant?->talla)->pluck('color')->filter()->unique()->values();
+                                        @endphp
+                                        <div data-combo-slot data-variants='@json($variantData)' class="mt-4 rounded-xl border border-slate-200 bg-white p-4 first:mt-5">
+                                            <div class="mb-4 flex items-center justify-between gap-3">
+                                                <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Unidad {{ $unit + 1 }}</p>
+                                                <span class="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-500">Escoge una combinación</span>
+                                            </div>
 
                                     @if ($slot['allow_product_choice'])
                                         <label class="mt-4 block text-xs font-black uppercase tracking-wide text-slate-600">
@@ -149,6 +163,8 @@
                                         </div>
                                     </div>
                                     <input type="hidden" name="selections[]" value="{{ $initialVariant?->id }}" data-combo-variant>
+                                </div>
+                                    @endfor
                                 </div>
                             @endforeach
                         </div>

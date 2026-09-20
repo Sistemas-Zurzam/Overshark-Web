@@ -99,7 +99,7 @@ class ComboManagementTest extends TestCase
             ->assertSee('×2 unidades');
 
         $response = $this->post(route('web.combos.cart.store', $combo), [
-            'selections' => [$small->id],
+            'selections' => [$small->id, $medium->id],
         ]);
         $response->assertRedirect(route('web.cart.index'));
 
@@ -108,14 +108,15 @@ class ComboManagementTest extends TestCase
 
             return $comboItem !== null
                 && $comboItem['price'] === 99.0
-                && collect($comboItem['selections'])->pluck('variant_id')->all() === [$small->id, $small->id]
-                && collect($comboItem['selections'])->pluck('color')->unique()->all() === ['Negro'];
+                && collect($comboItem['selections'])->pluck('variant_id')->all() === [$small->id, $medium->id]
+                && collect($comboItem['selections'])->pluck('color')->all() === ['Negro', 'Azul'];
         });
 
         $this->get(route('web.cart.index'))
             ->assertOk()
             ->assertSee('5x99')
-            ->assertSee('Negro');
+            ->assertSee('Negro')
+            ->assertSee('Azul');
     }
 
     private function png(): string

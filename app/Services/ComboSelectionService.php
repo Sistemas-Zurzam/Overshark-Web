@@ -73,14 +73,19 @@ class ComboSelectionService
             ]);
         }
 
-        if (count($selectedIds) !== $slots->count()) {
+        $selectionSlots = $slots->flatMap(fn (array $slot, int $slotIndex): Collection => collect(range(1, max(1, (int) ($slot['quantity'] ?? 1))))
+            ->map(fn (): int => $slotIndex))
+            ->values();
+
+        if (count($selectedIds) !== $selectionSlots->count()) {
             throw ValidationException::withMessages([
-                'selections' => 'Selecciona talla y color para cada producto del combo.',
+                'selections' => 'Selecciona talla y color para cada unidad del combo.',
             ]);
         }
 
-        $selections = collect($selectedIds)->values()->map(function ($selectedId, int $index) use ($slots): array {
-            $variant = $slots[$index]['variants']->firstWhere('id', (int) $selectedId);
+        $selections = collect($selectedIds)->values()->map(function ($selectedId, int $index) use ($slots, $selectionSlots): Producto {
+            $slotIndex = $selectionSlots[$index];
+            $variant = $slots[$slotIndex]['variants']->firstWhere('id', (int) $selectedId);
 
             if (! $variant) {
                 throw ValidationException::withMessages([
@@ -88,13 +93,8 @@ class ComboSelectionService
                 ]);
             }
 
-            return [
-                'variant' => $variant,
-                'quantity' => max(1, (int) ($slots[$index]['quantity'] ?? 1)),
-            ];
-        })->flatMap(fn (array $selection): Collection => collect(range(1, $selection['quantity']))
-            ->map(fn (): Producto => $selection['variant']))
-            ->values();
+            return $variant;
+        })->values();
 
         foreach ($selections->countBy(fn (Producto $variant): int => $variant->id) as $variantId => $quantity) {
             $variant = $selections->firstWhere('id', (int) $variantId);
