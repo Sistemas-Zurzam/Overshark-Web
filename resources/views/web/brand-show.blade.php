@@ -20,38 +20,38 @@
             </div>
         </section>
 
-        <section id="combos" class="px-5 py-14 text-slate-950 sm:py-20 lg:px-8" style="background-color: var(--brand-accent);">
+        <section id="combos" class="px-5 py-14 text-white sm:py-20 lg:px-8" style="background-color: var(--brand-accent);">
             <div class="mx-auto max-w-7xl">
                 <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p class="text-sm font-black uppercase tracking-[0.22em]" style="color: var(--brand-primary);">Promociones de {{ $brandPage->name }}</p>
                         <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Combos disponibles</h2>
-                        <p class="mt-2 text-slate-600">Elige una promocion de {{ $brandPage->name }} y selecciona sus productos.</p>
+                        <p class="mt-2 text-mist">Elige una promocion de {{ $brandPage->name }} y selecciona sus productos.</p>
                     </div>
                 </div>
 
                 @if ($brandCombos->isEmpty())
-                    <div class="grid min-h-40 place-items-center rounded-3xl border border-dashed border-slate-300 bg-white/70 px-5 text-center">
+                    <div class="grid min-h-40 place-items-center rounded-3xl border border-dashed border-edge-strong bg-panel/80 px-5 text-center">
                         <div>
-                            <p class="text-lg font-black text-slate-700">Aun no hay combos para esta marca</p>
-                            <p class="mt-1 text-sm text-slate-500">Puedes crear uno desde Administracion &gt; Combos.</p>
+                            <p class="text-lg font-black text-mist">Aun no hay combos para esta marca</p>
+                            <p class="mt-1 text-sm text-haze">Puedes crear uno desde Administracion &gt; Combos.</p>
                         </div>
                     </div>
                 @else
                     <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                         @foreach ($brandCombos as $combo)
-                            <article class="group overflow-hidden rounded-3xl border border-white/70 bg-white shadow-xl shadow-slate-900/10 transition hover:-translate-y-1">
-                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="relative block aspect-[4/3] overflow-hidden bg-slate-100">
+                            <article class="group overflow-hidden rounded-3xl border border-edge bg-panel shadow-xl shadow-black/30 transition hover:-translate-y-1">
+                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="relative block aspect-[4/3] overflow-hidden bg-panel-2">
                                     <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="h-full w-full object-cover transition duration-700 group-hover:scale-105">
                                     <span class="absolute left-4 top-4 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wide text-white" style="background-color: var(--brand-primary);">{{ $brandPage->name }}</span>
                                 </a>
                                 <div class="p-5">
                                     <p class="text-xs font-black uppercase tracking-[0.16em]" style="color: var(--brand-primary);">{{ $combo->modality ?: 'Promocion' }}</p>
-                                    <h3 class="mt-2 text-xl font-black text-slate-950">{{ $combo->name }}</h3>
+                                    <h3 class="mt-2 text-xl font-black text-white">{{ $combo->name }}</h3>
                                     @if ($combo->price !== null)
-                                        <p class="mt-3 text-2xl font-black text-slate-950">S/ {{ number_format((float) $combo->price, 2) }}</p>
+                                        <p class="mt-3 text-2xl font-black text-white">S/ {{ number_format((float) $combo->price, 2) }}</p>
                                     @endif
-                                    <p class="mt-1 text-sm text-slate-500">{{ $combo->quantityLabel() }}</p>
+                                    <p class="mt-1 text-sm text-haze">{{ $combo->quantityLabel() }}</p>
                                     <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="mt-5 inline-flex rounded-xl px-5 py-3 text-sm font-black text-white transition hover:opacity-85" style="background-color: var(--brand-secondary);">Ver combo</a>
                                 </div>
                             </article>
@@ -61,7 +61,7 @@
             </div>
         </section>
 
-        <section id="productos" class="bg-white px-5 py-14 text-slate-950 sm:py-20 lg:px-8">
+        <section id="productos" class="px-5 py-14 text-white sm:py-20 lg:px-8">
             <div class="mx-auto max-w-7xl">
                 <div class="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
@@ -72,10 +72,10 @@
                 </div>
 
                 @if ($products->isEmpty())
-                    <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                    <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-edge bg-panel-2 px-5 text-center">
                         <div>
-                            <p class="text-lg font-black text-slate-700">Aun no hay productos publicados</p>
-                            <p class="mt-1 text-sm text-slate-400">Asigna esta marca a los productos desde Administracion &gt; Productos.</p>
+                            <p class="text-lg font-black text-mist">Aun no hay productos publicados</p>
+                            <p class="mt-1 text-sm text-haze">Asigna esta marca a los productos desde Administracion &gt; Productos.</p>
                         </div>
                     </div>
                 @else
@@ -90,24 +90,24 @@
                                 $displayColors = collect($product->display_colors ?? []);
                                 $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
                             @endphp
-                            <article class="group rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1">
-                                <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
+                            <article class="group rounded-2xl bg-panel p-4 shadow-xl shadow-black/30 transition hover:-translate-y-1">
+                                <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-frame">
                                     <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
                                     <span class="absolute left-0 top-0 rounded-br-lg px-3 py-1.5 text-base font-medium text-white" style="background-color: var(--brand-primary);">{{ $brandPage->name }}</span>
                                 </a>
                                 <div class="p-5">
                                     <p class="text-[11px] font-black uppercase tracking-[0.16em]" style="color: var(--brand-primary);">{{ $product->marca ?: $brandPage->name }}</p>
-                                    <a href="{{ route('web.products.show', $product->id) }}" class="mt-1 line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:opacity-70">{{ $product->name }}</a>
+                                    <a href="{{ route('web.products.show', $product->id) }}" class="mt-1 line-clamp-2 min-h-10 text-base font-bold text-white transition hover:opacity-70">{{ $product->name }}</a>
                                     <div class="mt-2 flex items-baseline gap-2">
                                         <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
                                         @if ($oldPrice > 0)
-                                            <p class="text-sm text-slate-400 line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                                            <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
                                         @endif
                                     </div>
                                     <div class="mt-4 flex flex-wrap items-center gap-1.5">
                                         @foreach ($displayColors->take(8) as $color)
                                             @php($colorName = mb_strtolower($color['name']))
-                                            <button type="button" data-product-color data-image="{{ $color['image'] }}" class="h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300" style="background-color: {{ $swatches[$colorName] ?? '#b8b8bd' }}" aria-label="Ver color {{ $color['name'] }}"></button>
+                                            <button type="button" data-product-color data-image="{{ $color['image'] }}" class="h-5 w-5 rounded-full border border-edge-strong ring-offset-2 ring-offset-ink transition hover:ring-2 hover:ring-edge-strong" style="background-color: {{ $swatches[$colorName] ?? '#b8b8bd' }}" aria-label="Ver color {{ $color['name'] }}"></button>
                                         @endforeach
                                     </div>
                                 </div>

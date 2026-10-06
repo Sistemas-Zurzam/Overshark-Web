@@ -5,8 +5,8 @@
 @section('content')
     <style>
         .checkout-option:has(> input:checked) > .checkout-card {
-            border-color: #2f6fbd;
-            box-shadow: 0 18px 45px rgba(47, 111, 189, 0.08);
+            border-color: #5e9bea;
+            box-shadow: 0 18px 45px rgba(94, 155, 234, 0.18);
         }
 
         .checkout-option:has(> input:checked) .checkout-expanded {
@@ -14,28 +14,28 @@
         }
 
         .checkout-option:has(> input:checked) .checkout-radio {
-            border-color: #2f6fbd;
-            background: radial-gradient(circle at center, #2f6fbd 0 45%, transparent 47%);
+            border-color: #5e9bea;
+            background: radial-gradient(circle at center, #5e9bea 0 45%, transparent 47%);
         }
     </style>
 
-    <section class="bg-[#fbfbfb] px-4 py-7 text-slate-950 sm:px-6 lg:px-8">
+    <section class="px-4 py-7 text-white sm:px-6 lg:px-8">
         <div class="mx-auto grid max-w-[980px] gap-10 lg:grid-cols-[minmax(0,620px)_270px] lg:items-start lg:justify-center">
             <div>
-                <div class="mx-auto grid max-w-md grid-cols-3 items-start gap-0 text-center text-xs font-medium text-slate-500">
+                <div class="mx-auto grid max-w-md grid-cols-3 items-start gap-0 text-center text-xs font-medium text-haze">
                     @foreach ([['1', 'Datos personales', false], ['2', 'Entrega y pago', true], ['3', 'Confirmacion', false]] as [$step, $label, $active])
                         <div class="relative flex flex-col items-center gap-3 pb-4">
                             @if (! $loop->first)
-                                <span class="absolute right-1/2 top-3.5 h-px w-full -translate-x-4 bg-slate-200"></span>
+                                <span class="absolute right-1/2 top-3.5 h-px w-full -translate-x-4 bg-edge"></span>
                             @endif
                             <span @class([
                                 'relative z-10 grid h-7 w-7 place-items-center rounded-full border text-sm font-bold',
-                                'border-[#2f6fbd] bg-[#2f6fbd] text-white' => $active || $step === '1',
-                                'border-slate-200 bg-white text-slate-400' => ! $active && $step !== '1',
+                                'border-neon-soft bg-neon text-white' => $active || $step === '1',
+                                'border-edge bg-panel text-haze' => ! $active && $step !== '1',
                             ])>{{ $step }}</span>
-                            <span @class(['text-slate-950' => $active])>{{ $label }}</span>
+                            <span @class(['text-white' => $active])>{{ $label }}</span>
                             @if ($active)
-                                <span class="absolute bottom-0 h-px w-32 bg-[#2f6fbd]"></span>
+                                <span class="absolute bottom-0 h-px w-32 bg-neon"></span>
                             @endif
                         </div>
                     @endforeach
@@ -44,21 +44,21 @@
                 <form class="mt-8 space-y-4">
                     <label class="checkout-option block cursor-pointer">
                         <input type="radio" name="delivery_type" value="home" class="sr-only">
-                        <div class="checkout-card rounded-lg border border-slate-100 bg-white p-5 shadow-sm transition">
+                        <div class="checkout-card rounded-lg border border-edge bg-panel p-5 shadow-sm transition">
                             <div class="flex items-start gap-4">
-                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-slate-300"></span>
-                                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-slate-100">
+                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-edge-strong"></span>
+                                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-panel-2">
                                     <img src="{{ asset('images/iconos/Truck.svg') }}" alt="" class="h-7 w-7 object-contain" aria-hidden="true">
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <div class="flex items-start justify-between gap-4 border-b border-edge pb-3">
                                         <div>
                                             <h2 class="text-base font-black">Delivery a domicilio</h2>
-                                            <p class="mt-1 text-xs text-slate-600">Recibe tu pedido en la direccion registrada.</p>
+                                            <p class="mt-1 text-xs text-mist">Recibe tu pedido en la direccion registrada.</p>
                                         </div>
                                         <span class="shrink-0 text-base font-black">S/14.00</span>
                                     </div>
-                                    <p class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                                    <p class="mt-3 flex items-center gap-2 text-xs text-haze">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                                         Entrega estimada: 1 a 2 dias habiles
                                     </p>
@@ -68,13 +68,13 @@
                             <div class="checkout-expanded hidden">
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Agencia seleccionada</h3>
-                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-slate-100 bg-slate-50 px-5 py-4">
-                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-[#2f6fbd]">
+                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-edge bg-panel-2 px-5 py-4">
+                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-neon/15 text-neon-soft">
                                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/></svg>
                                         </div>
                                         <div class="min-w-0 flex-1 text-xs">
                                             <p class="font-black">Av. Universitaria 2200, Los Olivos, Lima</p>
-                                            <p class="mt-1 text-slate-500">Akapana 1261, Lima 15427</p>
+                                            <p class="mt-1 text-haze">Akapana 1261, Lima 15427</p>
                                         </div>
                                         <a href="{{ route('web.checkout.personal') }}" class="shrink-0 text-xs font-bold underline">Cambiar direccion</a>
                                     </div>
@@ -83,30 +83,30 @@
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Como deseas realizar el pago?</h3>
                                     <div class="mt-4 space-y-4">
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="home_payment_type" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h16l-2 12H6Z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9 14h6"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="home_payment_type" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h16l-2 12H6Z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9 14h6"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Pagar pedido completo</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Realiza el pago total ahora y recibe tu pedido sin pagos pendientes.</span>
+                                                <span class="mt-1 block text-xs text-haze">Realiza el pago total ahora y recibe tu pedido sin pagos pendientes.</span>
                                             </span>
                                             <span class="shrink-0 text-base font-black">S/14.00</span>
                                         </label>
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="home_payment_type" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14v12H5Z"/><path d="M8 7V5h8v2"/><path d="M9 13h6"/><path d="M12 10v6"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="home_payment_type" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14v12H5Z"/><path d="M8 7V5h8v2"/><path d="M9 13h6"/><path d="M12 10v6"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Pago contraentrega</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Separa tu pedido hoy y paga el saldo restante al recibirlo.</span>
+                                                <span class="mt-1 block text-xs text-haze">Separa tu pedido hoy y paga el saldo restante al recibirlo.</span>
                                             </span>
                                             <span class="shrink-0 text-base font-black">S/14.00</span>
                                         </label>
                                     </div>
-                                    <p class="mt-4 rounded-md bg-blue-50 px-3 py-2 text-xs text-slate-600">Te notificaremos por WhatsApp cuando tu pedido este listo.</p>
+                                    <p class="mt-4 rounded-md bg-neon/10 px-3 py-2 text-xs text-mist">Te notificaremos por WhatsApp cuando tu pedido este listo.</p>
                                 </div>
                             </div>
                         </div>
@@ -114,21 +114,21 @@
 
                     <label class="checkout-option block cursor-pointer">
                         <input type="radio" name="delivery_type" value="shalom" class="sr-only">
-                        <div class="checkout-card rounded-lg border border-slate-100 bg-white p-5 shadow-sm transition">
+                        <div class="checkout-card rounded-lg border border-edge bg-panel p-5 shadow-sm transition">
                             <div class="flex items-start gap-4">
-                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-slate-300"></span>
-                                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-slate-100">
-                                    <svg class="h-7 w-7 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16v13H4Z"/><path d="M8 7V4h8v3"/><path d="M8 12h8"/></svg>
+                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-edge-strong"></span>
+                                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-panel-2">
+                                    <svg class="h-7 w-7 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16v13H4Z"/><path d="M8 7V4h8v3"/><path d="M8 12h8"/></svg>
                                 </span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <span class="flex items-start justify-between gap-4 border-b border-edge pb-3">
                                         <span>
                                             <span class="block text-base font-black">Retiro en agencia Shalom</span>
-                                            <span class="mt-1 block text-xs text-slate-600">Retira tu pedido en la agencia Shalom mas cercana.</span>
+                                            <span class="mt-1 block text-xs text-mist">Retira tu pedido en la agencia Shalom mas cercana.</span>
                                         </span>
-                                        <span class="flex shrink-0 items-center gap-2 text-base font-black">S/12.00 <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span>
+                                        <span class="flex shrink-0 items-center gap-2 text-base font-black">S/12.00 <svg class="h-4 w-4 text-haze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span>
                                     </span>
-                                    <span class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                                    <span class="mt-3 flex items-center gap-2 text-xs text-haze">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                                         Entrega estimada: 1 a 2 dias habiles
                                     </span>
@@ -138,14 +138,14 @@
                             <div class="checkout-expanded hidden">
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Agencia seleccionada</h3>
-                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-slate-100 bg-slate-50 px-5 py-4">
-                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-[#2f6fbd]">
+                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-edge bg-panel-2 px-5 py-4">
+                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-neon/15 text-neon-soft">
                                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/></svg>
                                         </div>
                                         <div class="min-w-0 flex-1 text-xs">
                                             <p data-shalom-selected-name class="font-black">Shalom Manco Capac</p>
-                                            <p data-shalom-selected-address class="mt-1 text-slate-500">Av. Manco Capac 123, Los Olivos</p>
-                                            <span class="mt-3 inline-flex rounded-md bg-blue-50 px-3 py-1 text-[11px] font-bold text-[#2f6fbd]">Mas cercana a tu direccion</span>
+                                            <p data-shalom-selected-address class="mt-1 text-haze">Av. Manco Capac 123, Los Olivos</p>
+                                            <span class="mt-3 inline-flex rounded-md bg-neon/10 px-3 py-1 text-[11px] font-bold text-neon-soft">Mas cercana a tu direccion</span>
                                         </div>
                                         <button type="button" data-shalom-agency-modal-open class="shrink-0 text-xs font-bold underline">Cambiar agencia</button>
                                     </div>
@@ -154,25 +154,25 @@
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Tipo de envio</h3>
                                     <div class="mt-4 space-y-4">
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="shalom_shipping" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h11v10H4Z"/><path d="M15 11h3l2 3v3h-5Z"/><circle cx="8" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="shalom_shipping" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h11v10H4Z"/><path d="M15 11h3l2 3v3h-5Z"/><circle cx="8" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Envio terrestre</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Entrega estimada: 2 a 5 dias habiles</span>
+                                                <span class="mt-1 block text-xs text-haze">Entrega estimada: 2 a 5 dias habiles</span>
                                             </span>
                                             <span class="shrink-0 text-base font-black">S/12.00</span>
                                         </label>
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="shalom_shipping" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m3 13 18-8-8 18-2-8Z"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="shalom_shipping" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m3 13 18-8-8 18-2-8Z"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Envio aereo</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Entrega estimada: 1 a 2 dias habiles</span>
+                                                <span class="mt-1 block text-xs text-haze">Entrega estimada: 1 a 2 dias habiles</span>
                                             </span>
                                             <span class="shrink-0 text-base font-black">S/12.00</span>
                                         </label>
@@ -184,21 +184,21 @@
 
                     <label class="checkout-option block cursor-pointer">
                         <input type="radio" name="delivery_type" value="warehouse" class="sr-only">
-                        <div class="checkout-card rounded-lg border border-slate-100 bg-white p-5 shadow-sm transition">
+                        <div class="checkout-card rounded-lg border border-edge bg-panel p-5 shadow-sm transition">
                             <div class="flex items-start gap-4">
-                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-slate-300"></span>
-                                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-slate-100">
-                                    <svg class="h-7 w-7 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10h16"/><path d="M5 10l1-5h12l1 5v10H5Z"/><path d="M9 20v-6h6v6"/></svg>
+                                <span class="checkout-radio mt-6 h-4 w-4 rounded-full border border-edge-strong"></span>
+                                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-panel-2">
+                                    <svg class="h-7 w-7 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10h16"/><path d="M5 10l1-5h12l1 5v10H5Z"/><path d="M9 20v-6h6v6"/></svg>
                                 </span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <span class="flex items-start justify-between gap-4 border-b border-edge pb-3">
                                         <span>
                                             <span class="block text-base font-black">Retiro en almacen</span>
-                                            <span class="mt-1 block text-xs text-slate-600">Recoge tu pedido en nuestro almacen.</span>
+                                            <span class="mt-1 block text-xs text-mist">Recoge tu pedido en nuestro almacen.</span>
                                         </span>
-                                        <span class="flex shrink-0 items-center gap-2 text-base font-black text-[#2f6fbd]">Gratis <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span>
+                                        <span class="flex shrink-0 items-center gap-2 text-base font-black text-neon-soft">Gratis <svg class="h-4 w-4 text-haze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span>
                                     </span>
-                                    <span class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                                    <span class="mt-3 flex items-center gap-2 text-xs text-haze">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                                         Disponible para recojo hoy
                                     </span>
@@ -208,14 +208,14 @@
                             <div class="checkout-expanded hidden">
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Agencia seleccionada</h3>
-                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-slate-100 bg-slate-50 px-5 py-4">
-                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-[#2f6fbd]">
+                                    <div class="mt-4 flex items-center gap-4 rounded-lg border border-edge bg-panel-2 px-5 py-4">
+                                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-neon/15 text-neon-soft">
                                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s6-4.3 6-10a6 6 0 1 0-12 0c0 5.7 6 10 6 10Z"/><circle cx="12" cy="11" r="2"/></svg>
                                         </div>
                                         <div class="min-w-0 flex-1 text-xs">
                                             <p class="font-black">Almacen Overshark</p>
-                                            <p class="mt-1 text-slate-500">Akapana 1261, Lima 15427</p>
-                                            <span class="mt-3 inline-flex rounded-md bg-blue-50 px-3 py-1 text-[11px] font-bold text-[#2f6fbd]">Mas cercana a tu direccion</span>
+                                            <p class="mt-1 text-haze">Akapana 1261, Lima 15427</p>
+                                            <span class="mt-3 inline-flex rounded-md bg-neon/10 px-3 py-1 text-[11px] font-bold text-neon-soft">Mas cercana a tu direccion</span>
                                         </div>
                                         <button type="button" class="shrink-0 text-xs font-bold underline">Ver ubicacion</button>
                                     </div>
@@ -224,41 +224,41 @@
                                 <div class="mt-7">
                                     <h3 class="text-base font-black">Como deseas realizar el pago?</h3>
                                     <div class="mt-4 space-y-4">
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="warehouse_payment_type" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h16l-2 12H6Z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9 14h6"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="warehouse_payment_type" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h16l-2 12H6Z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9 14h6"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Pagar pedido completo</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Realiza el pago total ahora y recibe tu pedido sin pagos pendientes.</span>
+                                                <span class="mt-1 block text-xs text-haze">Realiza el pago total ahora y recibe tu pedido sin pagos pendientes.</span>
                                             </span>
                                         </label>
-                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                                            <input type="radio" name="warehouse_payment_type" class="h-4 w-4 border-slate-300 text-[#2f6fbd] focus:ring-[#2f6fbd]">
-                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100">
-                                                <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14v12H5Z"/><path d="M8 7V5h8v2"/><path d="M12 10v6"/></svg>
+                                        <label class="flex cursor-pointer items-center gap-4 rounded-lg border border-edge bg-panel px-5 py-4 shadow-sm">
+                                            <input type="radio" name="warehouse_payment_type" class="h-4 w-4 border-edge-strong text-neon-soft focus:ring-neon-soft">
+                                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-panel-2">
+                                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14v12H5Z"/><path d="M8 7V5h8v2"/><path d="M12 10v6"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1">
                                                 <span class="block text-sm font-black">Reservar con S/5</span>
-                                                <span class="mt-1 block text-xs text-slate-500">Separa tu pedido hoy y paga el saldo restante al recogerlo.</span>
+                                                <span class="mt-1 block text-xs text-haze">Separa tu pedido hoy y paga el saldo restante al recogerlo.</span>
                                             </span>
                                         </label>
                                     </div>
-                                    <p class="mt-4 rounded-md bg-blue-50 px-3 py-2 text-xs text-slate-600">Te notificaremos por WhatsApp cuando tu pedido este listo para recoger.</p>
+                                    <p class="mt-4 rounded-md bg-neon/10 px-3 py-2 text-xs text-mist">Te notificaremos por WhatsApp cuando tu pedido este listo para recoger.</p>
                                 </div>
                             </div>
                         </div>
                     </label>
 
-                    <a href="{{ route('web.checkout.payment') }}" class="inline-flex h-12 w-full items-center justify-center gap-4 rounded-md bg-[#111] px-5 text-sm font-black uppercase tracking-normal text-white transition hover:bg-[#2f6fbd]">
+                    <a href="{{ route('web.checkout.payment') }}" class="inline-flex h-12 w-full items-center justify-center gap-4 rounded-md bg-neon px-5 text-sm font-black uppercase tracking-normal text-white transition hover:bg-neon-soft">
                         Continuar
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                 </form>
             </div>
 
-            <aside class="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:sticky lg:top-28">
+            <aside class="h-fit rounded-2xl border border-edge bg-panel p-5 lg:sticky lg:top-32">
                 <h2 class="text-base font-black">Resumen de compra</h2>
 
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -267,27 +267,27 @@
                             $variantLabel = trim('Color: '.($item['color'] ?? '-').' | Talla: '.($item['talla'] ?? '-'));
                             $productLabel = ($item['producto'] ?? 'Producto').' - '.$variantLabel;
                         @endphp
-                        <div class="group relative h-9 w-9 rounded-md bg-slate-50" title="{{ $productLabel }}">
+                        <div class="group relative h-9 w-9 rounded-md bg-panel-2" title="{{ $productLabel }}">
                             <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain">
-                            <div class="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-48 -translate-x-1/2 rounded-lg bg-slate-950 px-3 py-2 text-left text-xs font-bold leading-4 text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                            <div class="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-48 -translate-x-1/2 rounded-lg bg-neon px-3 py-2 text-left text-xs font-bold leading-4 text-white opacity-0 shadow-xl transition group-hover:opacity-100">
                                 <p class="truncate">{{ $item['producto'] ?? 'Producto' }}</p>
-                                <p class="mt-1 font-medium text-slate-300">{{ $variantLabel }}</p>
+                                <p class="mt-1 font-medium text-haze">{{ $variantLabel }}</p>
                             </div>
                         </div>
                     @endforeach
                 </div>
 
-                <div class="mt-5 space-y-4 border-b border-slate-100 pb-5 text-sm">
+                <div class="mt-5 space-y-4 border-b border-edge pb-5 text-sm">
                     <div class="flex items-center justify-between">
-                        <span class="font-medium text-slate-600">Envio</span>
+                        <span class="font-medium text-mist">Envio</span>
                         <span class="font-semibold">S/{{ number_format($shipping, 2) }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="font-medium text-slate-600">Subtotal</span>
+                        <span class="font-medium text-mist">Subtotal</span>
                         <span class="font-semibold">S/{{ number_format($subtotal, 2) }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="font-medium text-slate-600">IGV (18%)</span>
+                        <span class="font-medium text-mist">IGV (18%)</span>
                         <span class="font-semibold">S/{{ number_format($igv, 2) }}</span>
                     </div>
                 </div>
@@ -297,7 +297,7 @@
                     <span class="text-base font-black">S/{{ number_format($total, 2) }}</span>
                 </div>
 
-                <button type="button" class="flex h-9 w-full items-center justify-between rounded-none border border-slate-200 px-3 text-xs font-semibold transition hover:border-slate-950">
+                <button type="button" class="flex h-9 w-full items-center justify-between rounded-none border border-edge px-3 text-xs font-semibold transition hover:border-neon-soft">
                     <span class="inline-flex items-center gap-2">
                         <img src="{{ asset('images/iconos/Ticket.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
                         Tienes un cupon?
@@ -305,11 +305,11 @@
                     <span class="text-base leading-none">-</span>
                 </button>
 
-                <div class="mt-6 border-t border-slate-100 pt-5">
+                <div class="mt-6 border-t border-edge pt-5">
                     <p class="text-xs font-black">Aceptamos</p>
                     <div class="mt-3 flex flex-wrap gap-2">
                         @forelse ($paymentMethods as $method)
-                            <div class="grid h-9 min-w-11 place-items-center rounded bg-slate-50 px-2">
+                            <div class="grid h-9 min-w-11 place-items-center rounded bg-panel-2 px-2">
                                 @if ($method->imageUrl())
                                     <img src="{{ $method->imageUrl() }}" alt="{{ $method->name }}" class="h-6 w-10 object-contain">
                                 @else
@@ -317,49 +317,49 @@
                                 @endif
                             </div>
                         @empty
-                            <span class="rounded bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Sin metodos activos</span>
+                            <span class="rounded bg-panel-2 px-3 py-2 text-xs font-black text-mist">Sin metodos activos</span>
                         @endforelse
                     </div>
                 </div>
             </aside>
         </div>
 
-        <div data-shalom-agency-modal class="fixed inset-0 z-[90] hidden overflow-y-auto bg-black/70 px-4 py-6 text-slate-950 sm:px-6" role="dialog" aria-modal="true" aria-labelledby="shalom-agency-modal-title">
+        <div data-shalom-agency-modal class="fixed inset-0 z-[90] hidden overflow-y-auto bg-black/70 px-4 py-6 text-white sm:px-6" role="dialog" aria-modal="true" aria-labelledby="shalom-agency-modal-title">
             <div class="mx-auto flex min-h-full w-full max-w-[820px] items-center">
-                <div class="relative w-full rounded-3xl bg-white px-5 py-6 shadow-2xl sm:px-8">
-                    <button type="button" data-shalom-agency-modal-close class="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full text-slate-700 transition hover:bg-slate-100" aria-label="Cerrar modal">
+                <div class="relative w-full rounded-3xl bg-panel px-5 py-6 shadow-2xl sm:px-8">
+                    <button type="button" data-shalom-agency-modal-close class="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full text-mist transition hover:bg-white/5" aria-label="Cerrar modal">
                         <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                     </button>
 
                     <header class="pr-12">
                         <div class="flex items-start gap-3">
-                            <svg class="mt-1 h-6 w-6 shrink-0 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                            <svg class="mt-1 h-6 w-6 shrink-0 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
                             <div>
                                 <h2 id="shalom-agency-modal-title" class="text-xl font-black sm:text-2xl">Selecciona tu ubicacion</h2>
-                                <p class="mt-1 text-sm font-medium leading-6 text-slate-500 sm:text-base">Busca una direccion o mueve el pin para marcar el punto exacto de entrega.</p>
+                                <p class="mt-1 text-sm font-medium leading-6 text-haze sm:text-base">Busca una direccion o mueve el pin para marcar el punto exacto de entrega.</p>
                             </div>
                         </div>
                     </header>
 
                     <div class="mt-5 grid gap-5 lg:grid-cols-[1fr_356px]">
-                        <div class="relative h-[430px] overflow-hidden rounded-2xl bg-slate-100">
+                        <div class="relative h-[430px] overflow-hidden rounded-2xl bg-panel-2">
                             <div data-shalom-agency-map class="h-full w-full"></div>
-                            <div data-shalom-agency-map-loading class="absolute inset-0 grid place-items-center bg-slate-100 text-center text-sm font-bold text-slate-500">
+                            <div data-shalom-agency-map-loading class="absolute inset-0 grid place-items-center bg-panel-2 text-center text-sm font-bold text-haze">
                                 Cargando mapa...
                             </div>
                         </div>
 
                         <div class="flex min-h-0 flex-col">
-                            <label class="flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-slate-400 focus-within:border-[#2f6fbd] focus-within:ring-2 focus-within:ring-blue-100">
+                            <label class="flex h-10 items-center gap-2 rounded-lg border border-edge px-3 text-haze focus-within:border-neon-soft focus-within:ring-2 focus-within:ring-neon/25">
                                 <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
-                                <input data-shalom-agency-search type="text" class="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400" placeholder="Ej. Shalom Rimac">
-                                <button type="button" data-shalom-agency-search-clear class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-slate-400 text-white transition hover:bg-slate-600" aria-label="Limpiar busqueda">
+                                <input data-shalom-agency-search type="text" class="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-mist outline-none placeholder:text-haze" placeholder="Ej. Shalom Rimac">
+                                <button type="button" data-shalom-agency-search-clear class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-edge-strong text-white transition hover:bg-neon-soft" aria-label="Limpiar busqueda">
                                     <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                                 </button>
                             </label>
 
                             <div data-shalom-agency-list data-url="{{ route('web.checkout.courier-agencies') }}" class="mt-4 max-h-[376px] space-y-3 overflow-y-auto pr-1">
-                                <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+                                <div class="rounded-lg border border-edge bg-panel px-4 py-6 text-center text-sm font-bold text-haze">
                                     Cargando agencias...
                                 </div>
                             </div>
@@ -367,8 +367,8 @@
                     </div>
 
                     <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                        <button type="button" data-shalom-agency-modal-close class="h-12 rounded-lg border border-slate-200 bg-white px-5 text-sm font-black uppercase transition hover:border-slate-950">Cancelar</button>
-                        <button type="button" data-shalom-agency-confirm class="h-12 rounded-lg bg-[#111] px-5 text-sm font-black uppercase text-white transition hover:bg-[#2f6fbd]">Confirmar ubicacion</button>
+                        <button type="button" data-shalom-agency-modal-close class="h-12 rounded-lg border border-edge bg-panel px-5 text-sm font-black uppercase transition hover:border-neon-soft">Cancelar</button>
+                        <button type="button" data-shalom-agency-confirm class="h-12 rounded-lg bg-neon px-5 text-sm font-black uppercase text-white transition hover:bg-neon-soft">Confirmar ubicacion</button>
                     </div>
                 </div>
             </div>

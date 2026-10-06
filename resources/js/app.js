@@ -128,7 +128,7 @@ const renderProductThumbnails = (article, images) => {
     }
 
     thumbnails.innerHTML = images.slice(0, 5).map((src) => `
-        <button type="button" data-product-thumbnail data-image="${src}" class="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-[#F7F7F7] p-1 transition hover:border-cyan-600 sm:h-28 sm:w-full">
+        <button type="button" data-product-thumbnail data-image="${src}" class="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-edge bg-frame p-1 transition hover:border-neon-soft sm:h-28 sm:w-full">
             <img src="${src}" alt="" class="h-full w-full rounded-lg object-cover">
         </button>
     `).join('');
@@ -156,10 +156,10 @@ document.querySelectorAll('[data-product-color]').forEach((button) => {
             }
 
             card?.querySelectorAll('[data-product-color][data-color-name]').forEach((swatch) => {
-                swatch.classList.remove('ring-2', 'ring-slate-950');
+                swatch.classList.remove('ring-2', 'ring-neon-soft');
             });
 
-            button.classList.add('ring-2', 'ring-slate-950');
+            button.classList.add('ring-2', 'ring-neon-soft');
             renderProductThumbnails(card, parseProductImages(button));
         }
     });
@@ -212,12 +212,12 @@ document.querySelectorAll('[data-product-size]').forEach((button) => {
         }
 
         article.querySelectorAll('[data-product-size]').forEach((sizeButton) => {
-            sizeButton.classList.remove('bg-slate-950', 'text-white');
-            sizeButton.classList.add('bg-white', 'text-slate-950');
+            sizeButton.classList.remove('bg-neon');
+            sizeButton.classList.add('bg-panel');
         });
 
-        button.classList.add('bg-slate-950', 'text-white');
-        button.classList.remove('bg-white', 'text-slate-950');
+        button.classList.add('bg-neon');
+        button.classList.remove('bg-panel');
 
         const cartSize = article.querySelector('[data-cart-size]');
         if (cartSize) {
@@ -326,10 +326,10 @@ document.querySelectorAll('[data-product-info-tabs]').forEach((tabs) => {
         button.addEventListener('click', () => {
             buttons.forEach((tabButton) => {
                 const isActive = tabButton === button;
-                tabButton.classList.toggle('border-slate-950', isActive);
-                tabButton.classList.toggle('text-slate-950', isActive);
+                tabButton.classList.toggle('border-neon-soft', isActive);
+                tabButton.classList.toggle('text-white', isActive);
                 tabButton.classList.toggle('border-transparent', !isActive);
-                tabButton.classList.toggle('text-slate-500', !isActive);
+                tabButton.classList.toggle('text-haze', !isActive);
             });
 
             panels.forEach((panel) => {
@@ -726,8 +726,8 @@ const selectShalomAgencyOption = (option) => {
         const isSelected = item === option;
         item.setAttribute('aria-pressed', String(isSelected));
         item.classList.toggle('border-red-300', isSelected);
-        item.classList.toggle('bg-red-50/30', isSelected);
-        item.classList.toggle('border-slate-100', !isSelected);
+        item.classList.toggle('bg-red-500/10', isSelected);
+        item.classList.toggle('border-edge', !isSelected);
     });
 
     geocodeShalomAgency(selectedShalomAgency);
@@ -740,7 +740,7 @@ const renderShalomAgencies = (agencies) => {
 
     if (!agencies.length) {
         shalomAgencyList.innerHTML = `
-            <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+            <div class="rounded-lg border border-edge bg-panel px-4 py-6 text-center text-sm font-bold text-haze">
                 No encontramos agencias para esta ubicacion.
             </div>
         `;
@@ -756,16 +756,16 @@ const renderShalomAgencies = (agencies) => {
             data-zone="${escapeHtml(agency.zone || '')}"
             data-province="${escapeHtml(agency.province || '')}"
             data-department="${escapeHtml(agency.department || '')}"
-            class="flex w-full items-center gap-4 rounded-lg border bg-white px-4 py-4 text-left transition hover:border-red-300 ${index === 0 ? 'border-red-300 bg-red-50/30' : 'border-slate-100'}"
+            class="flex w-full items-center gap-4 rounded-lg border bg-panel px-4 py-4 text-left transition hover:border-red-300 ${index === 0 ? 'border-red-300 bg-red-500/10' : 'border-edge'}"
             aria-pressed="${index === 0 ? 'true' : 'false'}"
         >
             <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-red-600 text-[10px] font-black italic text-white">SHALOM</span>
             <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-3">
                     <span class="block truncate text-sm font-black">${escapeHtml(agency.name || 'Agencia Shalom')}</span>
-                    ${agency.badge ? `<span class="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-black">${escapeHtml(agency.badge)}</span>` : ''}
+                    ${agency.badge ? `<span class="rounded-md bg-panel-2 px-2 py-1 text-[11px] font-black">${escapeHtml(agency.badge)}</span>` : ''}
                 </span>
-                <span class="mt-2 block truncate text-xs font-medium text-slate-600">${escapeHtml(agency.address || '')}</span>
+                <span class="mt-2 block truncate text-xs font-medium text-mist">${escapeHtml(agency.address || '')}</span>
             </span>
         </button>
     `).join('');
@@ -794,7 +794,7 @@ const fetchShalomAgencies = () => {
     });
 
     shalomAgencyList.innerHTML = `
-        <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+        <div class="rounded-lg border border-edge bg-panel px-4 py-6 text-center text-sm font-bold text-haze">
             Cargando agencias...
         </div>
     `;
@@ -809,7 +809,7 @@ const fetchShalomAgencies = () => {
         })
         .catch(() => {
             shalomAgencyList.innerHTML = `
-                <div class="rounded-lg border border-slate-100 bg-white px-4 py-6 text-center text-sm font-bold text-slate-500">
+                <div class="rounded-lg border border-edge bg-panel px-4 py-6 text-center text-sm font-bold text-haze">
                     No se pudieron cargar las agencias.
                 </div>
             `;
@@ -861,7 +861,7 @@ productLensToggle?.addEventListener('click', () => {
     isProductLensActive = !isProductLensActive;
     productLensToggle.setAttribute('aria-pressed', String(isProductLensActive));
     productLensToggle.classList.toggle('ring-2', isProductLensActive);
-    productLensToggle.classList.toggle('ring-slate-950', isProductLensActive);
+    productLensToggle.classList.toggle('ring-neon-soft', isProductLensActive);
     productLensFrame?.classList.toggle('cursor-zoom-in', !isProductLensActive);
     productLensFrame?.classList.toggle('cursor-zoom-out', isProductLensActive);
 
@@ -1160,6 +1160,18 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+const searchToggle = document.querySelector('[data-search-toggle]');
+const searchPanel = document.querySelector('[data-search-panel]');
+
+searchToggle?.addEventListener('click', () => {
+    const isHidden = searchPanel?.classList.toggle('hidden');
+    searchToggle.setAttribute('aria-expanded', String(!isHidden));
+
+    if (!isHidden) {
+        searchPanel?.querySelector('input')?.focus();
+    }
+});
+
 const brandsToggles = document.querySelectorAll('[data-brands-toggle]');
 const brandsMenus = document.querySelectorAll('[data-brands-menu]');
 
@@ -1244,13 +1256,11 @@ document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
             button.disabled = !isAvailable;
 
             if (dataKey === 'comboSizeOption') {
-                button.classList.toggle('bg-slate-950', isSelected);
-                button.classList.toggle('text-white', isSelected);
-                button.classList.toggle('bg-white', !isSelected);
-                button.classList.toggle('text-slate-950', !isSelected);
+                button.classList.toggle('bg-neon', isSelected);
+                button.classList.toggle('bg-panel', !isSelected);
             } else {
                 button.classList.toggle('ring-2', isSelected);
-                button.classList.toggle('ring-slate-950', isSelected);
+                button.classList.toggle('ring-neon-soft', isSelected);
             }
         });
     };

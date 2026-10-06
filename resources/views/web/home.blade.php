@@ -2,120 +2,191 @@
 
 @section('title', 'Overshark | Tienda')
 
+@php
+    $storeLine = request()->query('linea') === 'mujer' ? 'mujer' : 'hombre';
+    $liveUrl = config('services.storefront.live_url');
+    $chatUrl = config('services.storefront.chat_url');
+    $heroSlides = $banners->isNotEmpty()
+        ? $banners
+        : collect([null]);
+    $categories = [
+        ['title' => 'Polos', 'query' => 'polo', 'position' => 'object-[64%_center]'],
+        ['title' => 'Camiseros', 'query' => 'camisero', 'position' => 'object-[84%_center]'],
+        ['title' => 'Waffle', 'query' => 'waffle', 'position' => 'object-[100%_center]'],
+    ];
+@endphp
+
 @section('content')
-    <section class="bg-[#F1F2F4]">
-        <div id="home-carousel" class="relative w-full" data-carousel="slide">
-            <div class="relative overflow-hidden bg-[#F1F2F4]">
-                @if ($banners->isNotEmpty())
-                    @foreach ($banners as $banner)
-                        <div class="{{ $loop->first ? 'block' : 'hidden' }} duration-700 ease-in-out" data-carousel-item>
-                            <img
-                                src="{{ $banner->imageUrl() }}"
-                                class="block h-auto w-full object-contain"
-                                alt="{{ $banner->name }}"
-                            >
-                            @if (! empty($banner->buttons))
-                                @foreach ($banner->buttons as $button)
-                                    @php
-                                        $radiusClass = [
-                                            'square' => 'rounded-none',
-                                            'rounded' => 'rounded-lg',
-                                            'pill' => 'rounded-full',
-                                        ][$button['shape'] ?? 'rounded'] ?? 'rounded-lg';
-                                        $sizeClass = [
-                                            'sm' => 'px-4 py-2 text-xs',
-                                            'md' => 'px-7 py-3 text-sm',
-                                            'lg' => 'px-9 py-4 text-base',
-                                            'xl' => 'px-12 py-5 text-lg',
-                                        ][$button['size'] ?? 'md'] ?? 'px-7 py-3 text-sm';
-                                    @endphp
-                                    <a href="{{ $button['url'] ?? '#productos' }}" class="absolute z-20 -translate-x-1/2 -translate-y-1/2 {{ $radiusClass }} {{ $sizeClass }} font-black uppercase shadow-lg transition hover:-translate-y-[calc(50%+2px)]" style="left: {{ $button['x'] ?? 20 }}%; top: {{ $button['y'] ?? 50 }}%; background-color: {{ $button['bg_color'] ?? '#111111' }}; color: {{ $button['text_color'] ?? '#ffffff' }};">
-                                        {{ $button['text'] ?? 'Comprar ahora' }}
-                                    </a>
-                                @endforeach
+    <section id="home-carousel" class="neon-stars relative overflow-hidden border-b border-edge/50" data-carousel="slide">
+        <div class="pointer-events-none absolute -right-40 top-10 h-[520px] w-[520px] rounded-full bg-neon/25 blur-[120px]" aria-hidden="true"></div>
+
+        <div class="relative mx-auto grid max-w-[1440px] grid-cols-1 lg:min-h-[640px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <div class="relative z-10 flex min-w-0 flex-col justify-center px-5 pb-10 pt-12 sm:px-10 lg:py-20 lg:pl-28 lg:pr-0">
+                <p class="text-[10px] font-medium uppercase tracking-[0.42em] text-mist sm:text-[11px]">
+                    Colección {{ $storeLine }} · Overshark
+                </p>
+                <h1 class="mt-6">
+                    <span class="block text-[27px] font-light uppercase leading-none tracking-[0.05em] sm:text-5xl lg:whitespace-nowrap lg:text-[52px] xl:text-[60px]">Nacido del océano,</span>
+                    <span class="mt-2 block font-display text-[40px] italic leading-[1.05] sm:text-6xl lg:whitespace-nowrap lg:text-[72px] xl:text-[84px]">hecho para <span class="neon-hero-title-accent">dominar</span></span>
+                </h1>
+                <p class="mt-6 max-w-md text-sm text-mist sm:text-base">Prendas esenciales con carácter, precisión y fuerza.</p>
+
+                <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                    <a href="#categorias" class="btn-light px-6 py-3.5">
+                        Ver colección
+                        <span aria-hidden="true">→</span>
+                    </a>
+                    <nav class="flex flex-wrap items-center gap-3 text-xs text-mist" aria-label="Colecciones destacadas">
+                        @foreach ($categories as $category)
+                            @if (! $loop->first)
+                                <span class="text-haze" aria-hidden="true">·</span>
                             @endif
-                        </div>
-                    @endforeach
-                @else
-                    <div class="block duration-700 ease-in-out" data-carousel-item>
-                        <img
-                            src="{{ asset('images/default-hero-banner.png') }}"
-                            class="block h-auto w-full object-contain"
-                            alt="Modelos Overshark usando polos de la promocion"
-                        >
+                            <a href="{{ route('web.products.search', ['q' => $category['query']]) }}" class="underline decoration-edge-strong underline-offset-4 transition hover:text-white hover:decoration-neon-soft">{{ $category['title'] }}</a>
+                        @endforeach
+                    </nav>
+                </div>
+
+                @if ($heroSlides->count() > 1)
+                    <div class="mt-10 flex gap-2">
+                        @foreach ($heroSlides as $slide)
+                            <button
+                                type="button"
+                                @class(['slider-dot transition-all', 'is-active' => $loop->first])
+                                aria-current="{{ $loop->first ? 'true' : 'false' }}"
+                                aria-label="Slide {{ $loop->iteration }}"
+                                data-carousel-slide-to="{{ $loop->index }}"
+                            ></button>
+                        @endforeach
                     </div>
                 @endif
             </div>
 
-            @php
-                $slideCount = max($banners->count(), 1);
-            @endphp
-            <div class="absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-3">
-                @for ($index = 0; $index < $slideCount; $index++)
-                    <button
-                        type="button"
-                        @class(['slider-dot', 'is-active' => $index === 0])
-                        aria-current="{{ $index === 0 ? 'true' : 'false' }}"
-                        aria-label="Slide {{ $index + 1 }}"
-                        data-carousel-slide-to="{{ $index }}"
-                    ></button>
-                @endfor
+            <div class="relative flex min-w-0 items-end justify-end lg:-ml-24">
+                @foreach ($heroSlides as $banner)
+                    <div class="{{ $loop->first ? 'block' : 'hidden' }} relative w-full" data-carousel-item>
+                        <img
+                            src="{{ $banner?->imageUrl() ?? asset('images/default-hero-banner.png') }}"
+                            class="neon-hero-image block h-auto w-full"
+                            alt="{{ $banner?->name ?? 'Modelos Overshark usando polos de la colección' }}"
+                            @if ($loop->first) fetchpriority="high" @else loading="lazy" @endif
+                        >
+                        @foreach ($banner?->buttons ?? [] as $button)
+                            @php
+                                $radiusClass = [
+                                    'square' => 'rounded-none',
+                                    'rounded' => 'rounded-lg',
+                                    'pill' => 'rounded-full',
+                                ][$button['shape'] ?? 'rounded'] ?? 'rounded-lg';
+                                $sizeClass = [
+                                    'sm' => 'px-4 py-2 text-xs',
+                                    'md' => 'px-7 py-3 text-sm',
+                                    'lg' => 'px-9 py-4 text-base',
+                                    'xl' => 'px-12 py-5 text-lg',
+                                ][$button['size'] ?? 'md'] ?? 'px-7 py-3 text-sm';
+                            @endphp
+                            <a href="{{ $button['url'] ?? '#productos' }}" class="absolute z-20 -translate-x-1/2 -translate-y-1/2 {{ $radiusClass }} {{ $sizeClass }} font-black uppercase shadow-lg transition hover:-translate-y-[calc(50%+2px)]" style="left: {{ $button['x'] ?? 20 }}%; top: {{ $button['y'] ?? 50 }}%; background-color: {{ $button['bg_color'] ?? '#111111' }}; color: {{ $button['text_color'] ?? '#ffffff' }};">
+                                {{ $button['text'] ?? 'Comprar ahora' }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endforeach
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink to-transparent" aria-hidden="true"></div>
             </div>
+        </div>
 
-            @if ($slideCount > 1)
-                <button type="button" class="absolute left-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-4 focus:outline-none" data-carousel-prev>
-                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/70 text-slate-950 shadow-sm transition hover:bg-white">
-                        <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>
-                        <span class="sr-only">Anterior</span>
+        <div class="relative z-10 mx-auto grid max-w-7xl gap-5 px-5 pb-14 sm:px-10 md:grid-cols-2 lg:-mt-6 lg:px-8">
+            <article class="flex flex-col gap-4 rounded-2xl border border-live/70 bg-gradient-to-r from-live/15 via-panel/90 to-panel/90 p-5 shadow-[0_0_40px_rgb(229_72_77/15%)] backdrop-blur sm:flex-row sm:items-center">
+                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-live text-white shadow-[0_0_24px_rgb(229_72_77/55%)]" aria-hidden="true">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-live/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ff8a8e]">
+                        <span class="neon-live-dot h-1.5 w-1.5 rounded-full bg-live" aria-hidden="true"></span>
+                        En vivo ahora
                     </span>
-                </button>
-                <button type="button" class="absolute right-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-4 focus:outline-none" data-carousel-next>
-                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/70 text-slate-950 shadow-sm transition hover:bg-white">
-                        <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
-                        <span class="sr-only">Siguiente</span>
-                    </span>
-                </button>
-            @endif
+                    <h2 class="mt-2 text-base font-black uppercase tracking-wide">Compras en vivo</h2>
+                    <p class="mt-1 text-xs leading-5 text-mist">Compra mientras transmitimos y aprovecha precios exclusivos del live.</p>
+                </div>
+                <a href="{{ $liveUrl ?: '#contacto' }}" @if ($liveUrl) target="_blank" rel="noopener" @endif class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-live px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgb(229_72_77/45%)]">
+                    Ver live
+                    <span aria-hidden="true">→</span>
+                </a>
+            </article>
+
+            <article class="flex flex-col gap-4 rounded-2xl border border-neon/70 bg-gradient-to-r from-neon/15 via-panel/90 to-panel/90 p-5 shadow-[0_0_40px_rgb(47_111_208/18%)] backdrop-blur sm:flex-row sm:items-center">
+                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-neon text-white shadow-[0_0_24px_rgb(47_111_208/60%)]" aria-hidden="true">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2.5-4 2.5h-2"/></svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <span class="inline-flex rounded-full bg-neon/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-neon-soft">Responde en 1 min</span>
+                    <h2 class="mt-2 text-base font-black uppercase tracking-wide">Asesoría personalizada</h2>
+                    <p class="mt-1 text-xs leading-5 text-mist">Habla con un asesor en la web y arma tu outfit con su ayuda.</p>
+                </div>
+                <a href="{{ $chatUrl ?: '#contacto' }}" @if ($chatUrl) target="_blank" rel="noopener" @endif class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-neon px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-neon-soft hover:shadow-[0_10px_26px_rgb(47_111_208/45%)]">
+                    Iniciar chat
+                    <span aria-hidden="true">→</span>
+                </a>
+            </article>
         </div>
     </section>
 
-    <section id="combos" class="bg-white px-5 py-16 text-slate-950 sm:py-20 lg:px-8">
+    <section id="categorias" class="scroll-mt-32 px-5 py-16 sm:py-20 lg:px-8">
+        <div class="mx-auto max-w-7xl">
+            <p class="text-[11px] font-medium uppercase tracking-[0.32em] text-mist">Categorías Overshark</p>
+            <h2 class="mt-3 text-2xl font-black uppercase tracking-tight sm:text-4xl">Explora por <span class="text-neon-soft">categoría</span></h2>
+
+            <div class="-mx-5 mt-9 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
+                @foreach ($categories as $category)
+                    <a href="{{ route('web.products.search', ['q' => $category['query']]) }}" class="group relative block aspect-[3/4] basis-[78vw] shrink-0 snap-start overflow-hidden rounded-2xl border border-edge bg-panel transition hover:border-neon-soft lg:basis-auto">
+                        <img src="{{ asset('images/default-hero-banner.png') }}" alt="{{ $category['title'] }} Overshark" class="absolute inset-0 h-full w-full object-cover {{ $category['position'] }} transition duration-700 group-hover:scale-105" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/10 to-transparent"></div>
+                        <span class="absolute bottom-6 left-6 flex items-center gap-2 text-xl font-black uppercase tracking-wide text-white">
+                            {{ $category['title'] }}
+                            <span class="transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    <section id="combos" class="scroll-mt-32 px-5 py-16 sm:py-20 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">Promociones Overshark</p>
-                    <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Combos mas pedidos</h2>
-                    <p class="mt-2 text-slate-500">Encuentra promociones listas para elegir y comprar.</p>
+                    <p class="text-[11px] font-medium uppercase tracking-[0.32em] text-mist">Promociones Overshark</p>
+                    <h2 class="mt-3 text-2xl font-black uppercase tracking-tight sm:text-4xl">Combos más <span class="text-neon-soft">pedidos</span></h2>
+                    <p class="mt-2 text-sm text-haze">Encuentra promociones listas para elegir y comprar.</p>
                 </div>
-                <button type="button" data-combos-toggle class="btn-secondary hidden px-5 py-3 sm:inline-flex">
+                <button type="button" data-combos-toggle class="btn-secondary hidden px-5 py-3 sm:inline-flex" aria-expanded="false" aria-controls="combos-menu">
                     Ver todos los combos
                 </button>
             </div>
 
             @if ($combos->isEmpty())
-                <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-edge bg-panel px-5 text-center">
                     <div>
-                        <p class="text-lg font-black text-slate-700">Proximamente nuevos combos</p>
-                        <p class="mt-1 text-sm text-slate-400">Las promociones activas apareceran en esta seccion.</p>
+                        <p class="text-lg font-black text-mist">Próximamente nuevos combos</p>
+                        <p class="mt-1 text-sm text-haze">Las promociones activas aparecerán en esta sección.</p>
                     </div>
                 </div>
             @else
                 <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 lg:pb-0">
                     @foreach ($combos as $combo)
-                        <article class="group relative min-h-[390px] basis-[86vw] shrink-0 snap-start overflow-hidden rounded-3xl border border-slate-200 bg-[#F1F2F4] shadow-lg shadow-slate-200/60 lg:basis-auto">
-                            <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105">
-                            <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 via-42% to-transparent"></div>
+                        <article class="group relative min-h-[390px] basis-[86vw] shrink-0 snap-start overflow-hidden rounded-3xl border border-edge bg-panel transition hover:border-neon/70 lg:basis-auto">
+                            <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 via-42% to-transparent"></div>
                             <div class="relative flex min-h-[390px] max-w-sm flex-col justify-center p-7 sm:p-10">
-                                <span class="flex w-fit items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-black uppercase tracking-wide shadow-sm">
-                                    <svg class="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.5 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.1l6.2-.9Z"/></svg>
+                                <span class="flex w-fit items-center gap-2 rounded-full border border-edge bg-ink/70 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-neon-soft">
+                                    <img src="{{ asset('images/iconos/fuego_combo.svg') }}" alt="" class="h-4 w-4" aria-hidden="true">
                                     Combo destacado
                                 </span>
                                 <h3 class="mt-6 text-4xl font-black uppercase leading-none sm:text-5xl">{{ $combo->name }}</h3>
                                 @if ($combo->price !== null)
                                     <p class="mt-4 text-2xl font-black">S/ {{ number_format((float) $combo->price, 2) }}</p>
                                 @endif
-                                <p class="mt-2 max-w-xs text-sm leading-6 text-slate-600">{{ $combo->modality ?: 'Promoción' }} · {{ $combo->quantityLabel() }}.</p>
-                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="btn-primary mt-8 w-fit px-7 py-3.5 shadow-lg">
+                                <p class="mt-2 max-w-xs text-sm leading-6 text-mist">{{ $combo->modality ?: 'Promoción' }} · {{ $combo->quantityLabel() }}.</p>
+                                <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="btn-primary mt-8 w-fit px-7 py-3.5">
                                     Ver combo
                                 </a>
                             </div>
@@ -126,252 +197,85 @@
         </div>
     </section>
 
-    <section id="categorias" class="bg-white px-5 py-16 text-slate-950 sm:py-20 lg:px-8">
-        <div class="mx-auto max-w-7xl">
-            <div class="mb-8">
-                <h2 class="text-2xl font-black uppercase tracking-tight">Encuentra tu estilo</h2>
-                <p class="mt-2 text-sm text-slate-500">Elige el fit, cuello y tela ideal para ti.</p>
-            </div>
-
-            <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
-                @foreach ([
-                    ['tag' => 'Imprescindible', 'title' => 'Polos', 'type' => 'Clasicos', 'copy' => 'El basico de todos los dias.', 'position' => 'object-[32%_center]'],
-                    ['tag' => 'Elegante', 'title' => 'Polos', 'type' => 'Camiseros', 'copy' => 'Mas elegante y versatil.', 'position' => 'object-[52%_center]'],
-                    ['tag' => 'Moderno', 'title' => 'Polos', 'type' => 'Notch', 'copy' => 'Cuello abierto y moderno.', 'position' => 'object-[72%_center]'],
-                ] as $style)
-                    <article class="group relative min-h-[370px] basis-[82vw] shrink-0 snap-start overflow-hidden rounded-lg bg-white shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 lg:basis-auto">
-                        <img src="{{ asset('images/default-hero-banner.png') }}" alt="{{ $style['title'] }} {{ $style['type'] }}" class="absolute inset-0 h-full w-full object-cover {{ $style['position'] }} transition duration-700 group-hover:scale-105">
-                        <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 via-45% to-white/10"></div>
-                        <div class="relative flex min-h-[370px] max-w-[210px] flex-col justify-center p-8">
-                            <span class="w-fit rounded-lg bg-[#f2eee8] px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-stone-500">{{ $style['tag'] }}</span>
-                            <h3 class="mt-9 text-lg font-black uppercase">{{ $style['title'] }}</h3>
-                            <p class="mt-1 w-fit border-b border-slate-950 pb-1 text-sm font-medium uppercase tracking-wide text-slate-600">{{ $style['type'] }}</p>
-                            <p class="mt-7 text-sm leading-5 text-slate-600">{{ $style['copy'] }}</p>
-                            <a href="#productos" class="mt-auto inline-flex w-fit items-center gap-1 text-sm font-bold text-slate-950 transition hover:text-cyan-700">
-                                Ver coleccion
-                                <span aria-hidden="true">-&gt;</span>
-                            </a>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <section id="productos" class="bg-white px-5 pb-20 text-slate-950 sm:pb-24 lg:px-8">
+    <section id="productos" class="scroll-mt-32 px-5 pb-20 pt-4 sm:pb-24 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div id="marcas" class="scroll-mt-28">
-                    <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">Selección de marcas</p>
-                    <h2 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Productos mas vendidos</h2>
-                    <p class="mt-2 text-slate-500">Elige el color y mira la foto disponible para ese modelo.</p>
+                <div id="marcas" class="scroll-mt-32">
+                    <p class="text-[11px] font-medium uppercase tracking-[0.32em] text-mist">Selección de marcas</p>
+                    <h2 class="mt-3 text-2xl font-black uppercase tracking-tight sm:text-4xl">Productos más <span class="text-neon-soft">vendidos</span></h2>
+                    <p class="mt-2 text-sm text-haze">Elige el color y mira la foto disponible para ese modelo.</p>
                 </div>
-                <a href="#productos" class="btn-secondary hidden px-5 py-3 sm:inline-flex">
+                <a href="{{ route('web.products.search', ['q' => 'polo']) }}" class="btn-secondary hidden px-5 py-3 sm:inline-flex">
                     Ver todos los productos
                 </a>
             </div>
 
             <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
-                @if ($bestSellingProducts->isNotEmpty())
-                    @foreach ($bestSellingProducts as $product)
-                    @php
-                        $swatches = [
-                            'azul' => '#1d4f91',
-                            'beige' => '#ddcdbd',
-                            'perla' => '#e8e0d6',
-                            'cemento' => '#9b9b95',
-                            'negro' => '#111111',
-                            'vino' => '#7b1028',
-                            'botella' => '#0f4f3b',
-                            'plomo' => '#9a9aa0',
-                            'pacay' => '#8c9b73',
-                            'denim' => '#526f91',
-                            'blanco' => '#f7f7f2',
-                            'p. rosa' => '#e8b8bd',
-                        ];
-                        $displayColors = collect($product->display_colors ?? []);
-                        $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
-                    @endphp
-                    <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
-                        <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
-                            <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
-                            <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
-                        </a>
-                        <div class="p-5">
-                            <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
-                            <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:text-cyan-700">{{ $product->name }}</a>
-                            <div class="mt-2 flex items-baseline gap-2">
-                                <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-                                @if ($oldPrice > 0)
-                                    <p class="text-sm text-slate-400 line-through">S/ {{ number_format($oldPrice, 2) }}</p>
-                                @endif
-                            </div>
-                            <div class="mt-4 flex flex-wrap items-center gap-1.5">
-                                @foreach ($displayColors as $color)
-                                    @php
-                                        $colorName = mb_strtolower($color['name']);
-                                        $swatchColor = $swatches[$colorName] ?? '#b8b8bd';
-                                    @endphp
-                                    @if ($loop->iteration === 9 && $displayColors->count() > 8)
-                                        <button type="button" data-product-colors-expand data-collapsed-label="+{{ $displayColors->count() - 8 }}" data-expanded-label="-" class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar colores extra" aria-expanded="false">
-                                            +{{ $displayColors->count() - 8 }}
-                                        </button>
-                                    @endif
-                                    <button
-                                        type="button"
-                                        data-product-color
-                                        data-image="{{ $color['image'] }}"
-                                        @class([
-                                            'h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300',
-                                            'hidden' => $loop->iteration > 8,
-                                        ])
-                                        @if ($loop->iteration > 8) data-extra-product-color @endif
-                                        style="background-color: {{ $swatchColor }}"
-                                        aria-label="Ver color {{ $color['name'] }}"
-                                    ></button>
-                                @endforeach
-
-                            </div>
-                        </div>
-                    </article>
-                    @endforeach
-                @else
-                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                @forelse ($bestSellingProducts as $product)
+                    @include('web.partials.product-card', ['product' => $product])
+                @empty
+                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-edge bg-panel px-5 text-center">
                         <div>
-                            <p class="text-lg font-black text-slate-700">Sin productos sincronizados</p>
-                            <p class="mt-1 text-sm text-slate-400">Agrega productos al catalogo para mostrarlos aqui.</p>
+                            <p class="text-lg font-black text-mist">Sin productos sincronizados</p>
+                            <p class="mt-1 text-sm text-haze">Agrega productos al catálogo para mostrarlos aquí.</p>
                         </div>
                     </div>
-                @endif
+                @endforelse
             </div>
         </div>
     </section>
 
-    <section id="manga-corta" class="bg-white px-5 pb-8 text-slate-950 sm:pb-10 lg:px-8">
+    <section id="manga-corta" class="px-5 pb-10 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-8">
-                <h2 class="text-2xl font-black uppercase tracking-tight">Estilo manga corta</h2>
-                <p class="mt-2 text-sm text-slate-500">Polos frescos y versatiles para todos los dias.</p>
+                <p class="text-[11px] font-medium uppercase tracking-[0.32em] text-mist">Para todos los días</p>
+                <h2 class="mt-3 text-2xl font-black uppercase tracking-tight sm:text-3xl">Estilo manga <span class="text-neon-soft">corta</span></h2>
+                <p class="mt-2 text-sm text-haze">Polos frescos y versátiles para todos los días.</p>
             </div>
 
             <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
-                @if ($shortSleeveProducts->isNotEmpty())
-                    @foreach ($shortSleeveProducts as $product)
-                    @php
-                        $swatches = [
-                            'azul' => '#1d4f91',
-                            'beige' => '#ddcdbd',
-                            'perla' => '#e8e0d6',
-                            'cemento' => '#9b9b95',
-                            'negro' => '#111111',
-                            'vino' => '#7b1028',
-                            'botella' => '#0f4f3b',
-                            'plomo' => '#9a9aa0',
-                            'pacay' => '#8c9b73',
-                            'denim' => '#526f91',
-                            'blanco' => '#f7f7f2',
-                            'p. rosa' => '#e8b8bd',
-                        ];
-                        $displayColors = collect($product->display_colors ?? []);
-                        $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
-                    @endphp
-                    <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-white p-4 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 sm:basis-auto">
-                        <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#F7F7F7]">
-                            <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
-                            <span class="absolute left-0 top-0 rounded-br-lg bg-red-50 px-3 py-1.5 text-base font-medium text-red-600">-20%</span>
-                            <span class="absolute bottom-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-slate-950 text-white shadow-lg" aria-hidden="true">
-                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
-                            </span>
-                        </a>
-                        <div class="p-5">
-                            <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
-                            <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-slate-950 transition hover:text-cyan-700">{{ $product->name }}</a>
-                            <div class="mt-2 flex items-baseline gap-2">
-                                <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-                                @if ($oldPrice > 0)
-                                    <p class="text-sm text-slate-400 line-through">S/ {{ number_format($oldPrice, 2) }}</p>
-                                @endif
-                            </div>
-                            <div class="mt-4 flex flex-wrap items-center gap-1.5">
-                                @foreach ($displayColors as $color)
-                                    @php
-                                        $colorName = mb_strtolower($color['name']);
-                                        $swatchColor = $swatches[$colorName] ?? '#b8b8bd';
-                                    @endphp
-                                    @if ($loop->iteration === 9 && $displayColors->count() > 8)
-                                        <button type="button" data-product-colors-expand data-collapsed-label="+{{ $displayColors->count() - 8 }}" data-expanded-label="-" class="grid h-5 min-w-5 place-items-center rounded-full border border-slate-300 bg-white px-1 text-[11px] font-black leading-none text-slate-700 transition hover:border-slate-950 hover:text-slate-950" aria-label="Mostrar colores extra" aria-expanded="false">
-                                            +{{ $displayColors->count() - 8 }}
-                                        </button>
-                                    @endif
-                                    <button
-                                        type="button"
-                                        data-product-color
-                                        data-image="{{ $color['image'] }}"
-                                        @class([
-                                            'h-5 w-5 rounded-full border border-[#8E8E8E] ring-offset-2 transition hover:ring-2 hover:ring-slate-300',
-                                            'hidden' => $loop->iteration > 8,
-                                        ])
-                                        @if ($loop->iteration > 8) data-extra-product-color @endif
-                                        style="background-color: {{ $swatchColor }}"
-                                        aria-label="Ver color {{ $color['name'] }}"
-                                    ></button>
-                                @endforeach
-
-                            </div>
-                        </div>
-                    </article>
-                    @endforeach
-                @else
-                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 text-center">
+                @forelse ($shortSleeveProducts as $product)
+                    @include('web.partials.product-card', ['product' => $product, 'showBag' => true])
+                @empty
+                    <div class="col-span-full grid min-h-64 basis-full shrink-0 place-items-center rounded-3xl border border-dashed border-edge bg-panel px-5 text-center">
                         <div>
-                            <p class="text-lg font-black text-slate-700">Sin productos de manga corta</p>
-                            <p class="mt-1 text-sm text-slate-400">Agrega productos de manga corta para mostrarlos aqui.</p>
+                            <p class="text-lg font-black text-mist">Sin productos de manga corta</p>
+                            <p class="mt-1 text-sm text-haze">Agrega productos de manga corta para mostrarlos aquí.</p>
                         </div>
                     </div>
-                @endif
+                @endforelse
             </div>
         </div>
     </section>
 
-    <section id="calidad" class="bg-white py-12 text-slate-950 sm:py-16">
-        <div class="w-full bg-white px-5 py-10 shadow-[0_18px_55px_rgba(17,17,17,0.06)] sm:px-12 sm:py-12 lg:px-24 lg:py-20 xl:px-36 2xl:px-48">
-            <div class="grid w-full items-center gap-12 lg:grid-cols-[1fr_1.05fr]">
+    <section id="nosotros" class="scroll-mt-32 px-5 py-12 sm:py-16 lg:px-8">
+        <div class="relative mx-auto max-w-7xl overflow-hidden rounded-3xl border border-edge bg-panel px-6 py-10 sm:px-12 sm:py-12 lg:px-20 lg:py-20">
+            <div class="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-neon/20 blur-[100px]" aria-hidden="true"></div>
+            <div class="relative grid w-full items-center gap-12 lg:grid-cols-[1fr_1.05fr]">
                 <div>
-                    <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-600">"Por que elegir Overshark"</p>
-                    <h2 class="mt-5 max-w-xl text-3xl font-black leading-tight tracking-normal sm:text-4xl lg:text-5xl">
+                    <p class="text-[11px] font-medium uppercase tracking-[0.32em] text-neon-soft">Por qué elegir Overshark</p>
+                    <h2 class="mt-5 max-w-xl text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">
                         Calidad que se nota,<br class="hidden sm:block">
-                        comodidad que se siente
+                        <span class="font-display font-normal italic text-mist">comodidad que se siente</span>
                     </h2>
-                    <div class="mt-6 h-0.5 w-14 bg-amber-400"></div>
-                    <p class="mt-8 max-w-lg text-base leading-8 text-slate-500 sm:text-lg">
-                        Polos disenados para el uso diario con materiales que garantizan durabilidad, frescura y confort.
+                    <div class="mt-6 h-0.5 w-14 bg-gradient-to-r from-neon to-neon-soft"></div>
+                    <p class="mt-8 max-w-lg text-base leading-8 text-mist sm:text-lg">
+                        Polos diseñados para el uso diario con materiales que garantizan durabilidad, frescura y confort.
                     </p>
                 </div>
 
-                <div class="-mx-5 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+                <div class="-mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
                     @foreach ([
-                        [
-                            'title' => 'No destine',
-                            'copy' => 'Mantiene su color lavado tras lavado.',
-                            'icon' => 'gota.svg',
-                        ],
-                        [
-                            'title' => 'No encoge',
-                            'copy' => 'Conserva su forma original siempre.',
-                            'icon' => 'polo.svg',
-                        ],
-                        [
-                            'title' => 'No hace bolitas',
-                            'copy' => 'Mayor durabilidad en el uso diario.',
-                            'icon' => 'bolitas.svg',
-                        ],
+                        ['title' => 'No destiñe', 'copy' => 'Mantiene su color lavado tras lavado.', 'icon' => 'gota.svg'],
+                        ['title' => 'No encoge', 'copy' => 'Conserva su forma original siempre.', 'icon' => 'polo.svg'],
+                        ['title' => 'No hace bolitas', 'copy' => 'Mayor durabilidad en el uso diario.', 'icon' => 'bolitas.svg'],
                     ] as $benefit)
                         <article class="basis-[54vw] shrink-0 snap-start text-center sm:basis-auto">
-                            <div class="relative mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#F7F7F7]">
-                                <img src="{{ asset('images/iconos/'.$benefit['icon']) }}" alt="" class="h-10 w-10 object-contain" aria-hidden="true">
+                            <div class="mx-auto grid h-20 w-20 place-items-center rounded-full border border-edge-strong bg-panel-2 shadow-[0_0_30px_rgb(47_111_208/25%)]">
+                                <img src="{{ asset('images/iconos/'.$benefit['icon']) }}" alt="" class="h-10 w-10 object-contain brightness-0 invert" aria-hidden="true">
                             </div>
                             <h3 class="mt-6 text-base font-black">{{ $benefit['title'] }}</h3>
-                            <p class="mx-auto mt-4 max-w-[150px] text-sm leading-6 text-slate-500">{{ $benefit['copy'] }}</p>
+                            <p class="mx-auto mt-3 max-w-[150px] text-sm leading-6 text-haze">{{ $benefit['copy'] }}</p>
                         </article>
                     @endforeach
                 </div>
@@ -379,16 +283,20 @@
         </div>
     </section>
 
-    <section id="telas" class="bg-white px-5 pb-24 text-slate-950 lg:px-8">
+    <section id="telas" class="px-5 pb-24 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
                 @foreach ([
-                    ['name' => 'Pique', 'image' => 'Frame 859.jpg'],
-                    ['name' => 'Waffle', 'image' => 'Frame 858.jpg'],
-                    ['name' => 'Jersey', 'image' => 'Frame 857.jpg'],
+                    ['name' => 'Pique', 'class' => 'fabric-pique'],
+                    ['name' => 'Waffle', 'class' => 'fabric-waffle'],
+                    ['name' => 'Jersey', 'class' => 'fabric-jersey'],
                 ] as $fabric)
-                    <article class="basis-[82vw] shrink-0 snap-start lg:basis-auto">
-                        <img src="{{ asset('images/tela/'.$fabric['image']) }}" alt="Tela {{ $fabric['name'] }}" class="h-auto w-full object-contain">
+                    <article class="grid min-h-60 basis-[82vw] shrink-0 snap-start grid-cols-2 overflow-hidden rounded-2xl border border-edge bg-panel lg:basis-auto">
+                        <div class="flex flex-col justify-center px-6">
+                            <p class="text-[10px] font-medium uppercase tracking-[0.3em] text-haze">Tela</p>
+                            <h3 class="mt-2 text-xl font-black uppercase tracking-wide">{{ $fabric['name'] }}</h3>
+                        </div>
+                        <div class="fabric-texture {{ $fabric['class'] }}" role="img" aria-label="Textura de tela {{ $fabric['name'] }}"></div>
                     </article>
                 @endforeach
             </div>

@@ -46,4 +46,9 @@ return [
         'timeout' => (int) env('ZAZU_TIMEOUT', 30),
     ],
 
+    'storefront' => [
+        'live_url' => env('STOREFRONT_LIVE_URL'),
+        'chat_url' => env('STOREFRONT_CHAT_URL'),
+    ],
+
 ];
