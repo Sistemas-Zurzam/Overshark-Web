@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Admin\Combo;
 use App\Models\Admin\Producto;
+use App\Http\Middleware\AuthenticateJwt;
 use App\Services\ComboCatalogImportService;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -120,6 +122,33 @@ class ComboManagementTest extends TestCase
             ->assertSee('5x99')
             ->assertSee('Negro')
             ->assertSee('Azul');
+    }
+
+    public function test_admin_can_search_combos_by_name_brand_modality_or_included_product(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class);
+        $this->actingAs(User::factory()->create());
+
+        Combo::query()->create([
+            'name' => 'Combo Bravos',
+            'brand' => 'BRAVOS',
+            'modality' => 'Promoción',
+            'items' => [['zazu' => 'POLO NERU', 'cantidad' => 2]],
+            'status' => true,
+        ]);
+        Combo::query()->create([
+            'name' => 'Combo Girls',
+            'brand' => 'OVERSHARK GIRLS',
+            'modality' => 'Live',
+            'items' => [['zazu' => 'BABY TY', 'cantidad' => 1]],
+            'status' => true,
+        ]);
+
+        $this->get(route('admin.combos.index', ['search' => 'POLO NERU']))
+            ->assertOk()
+            ->assertSee('Combo Bravos')
+            ->assertDontSee('Combo Girls')
+            ->assertSee('Limpiar');
     }
 
     private function png(): string

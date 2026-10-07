@@ -158,14 +158,33 @@
                 <h2 class="text-lg font-black text-slate-950">Catálogo de combos</h2>
                 <p class="mt-1 text-sm text-slate-500">Cada tarjeta conserva el precio y la composición definida en tu matriz.</p>
             </div>
-            <p class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500">{{ $combos->count() }} registros</p>
+            <p class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500">{{ $combos->count() }} {{ $combos->count() === 1 ? 'registro' : 'registros' }}</p>
         </div>
+
+        <form action="{{ route('admin.combos.index') }}" method="GET" class="mt-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-end" role="search">
+            <label class="min-w-0 flex-1">
+                <span class="mb-2 block text-sm font-bold text-slate-700">Buscar combos</span>
+                <input type="search" name="search" value="{{ $search }}" placeholder="Nombre, marca, modalidad o producto incluido" autocomplete="off" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" aria-label="Buscar combos">
+            </label>
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-100">Buscar</button>
+                @if ($search !== '')
+                    <a href="{{ route('admin.combos.index') }}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition hover:border-slate-500 hover:text-slate-950 focus:outline-none focus:ring-4 focus:ring-cyan-100">Limpiar</a>
+                @endif
+            </div>
+        </form>
 
         @if ($combos->isEmpty())
             <div class="mt-6 grid min-h-64 place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center">
                 <div>
+                    @if ($search !== '')
+                        <p class="font-bold text-slate-700">No encontramos combos para “{{ $search }}”.</p>
+                        <p class="mt-1 text-sm text-slate-400">Prueba con otro nombre, marca, modalidad o producto incluido.</p>
+                        <a href="{{ route('admin.combos.index') }}" class="mt-4 inline-flex rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-cyan-500 hover:text-cyan-700">Ver todos los combos</a>
+                    @else
                     <p class="font-bold text-slate-700">No hay combos registrados.</p>
                     <p class="mt-1 text-sm text-slate-400">Usa “Cargar catálogo base” para crear las promociones de la matriz.</p>
+                    @endif
                 </div>
             </div>
         @else

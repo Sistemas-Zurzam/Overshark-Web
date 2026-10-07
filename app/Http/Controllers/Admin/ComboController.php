@@ -15,10 +15,26 @@ use Illuminate\View\View;
 
 class ComboController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('search', ''));
+
         return view('admin.combos.index', [
-            'combos' => Combo::query()->latest()->get(),
+            'combos' => Combo::query()
+                ->when($search !== '', function ($query) use ($search): void {
+                    $like = "%{$search}%";
+
+                    $query->where(function ($searchQuery) use ($like): void {
+                        $searchQuery
+                            ->where('name', 'like', $like)
+                            ->orWhere('brand', 'like', $like)
+                            ->orWhere('modality', 'like', $like)
+                            ->orWhere('items', 'like', $like);
+                    });
+                })
+                ->latest()
+                ->get(),
+            'search' => $search,
             'productOptions' => Producto::query()
                 ->selectRaw('MIN(id) as id, name, MAX(empresa_nombre) as empresa_nombre')
                 ->whereNotNull('name')
