@@ -17,7 +17,7 @@
     $cartItems = collect(session('cart.items', []));
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $storeLine = request()->query('linea') === 'mujer' ? 'mujer' : 'hombre';
+    $storeLine = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
     $homeUrl = route('web.home');
 @endphp
 <!DOCTYPE html>
@@ -40,7 +40,7 @@
     <header class="fixed inset-x-0 top-0 z-50 border-b border-edge/60 bg-ink/85 text-white backdrop-blur-md">
         <div class="flex h-9 items-center justify-center sm:h-10">
             <nav class="flex rounded-full border border-edge bg-panel/80 p-0.5 text-[10px] font-bold uppercase tracking-[0.22em] sm:text-[11px]" aria-label="Línea de colección">
-                <a href="{{ $homeUrl }}" @class([
+                <a href="{{ route('web.home', ['linea' => 'hombre']) }}" @class([
                     'rounded-full px-5 py-1 transition sm:px-7',
                     'bg-white text-ink' => $storeLine === 'hombre',
                     'text-mist hover:text-white' => $storeLine !== 'hombre',

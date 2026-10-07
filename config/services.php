@@ -49,6 +49,7 @@ return [
     'storefront' => [
         'live_url' => env('STOREFRONT_LIVE_URL'),
         'chat_url' => env('STOREFRONT_CHAT_URL'),
+        'outfit_ai_url' => env('STOREFRONT_OUTFIT_AI_URL'),
     ],
 
 ];

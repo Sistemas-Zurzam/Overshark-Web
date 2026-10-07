@@ -28,7 +28,10 @@ class BannerManagementTest extends TestCase
         $banner = BannerPortada::query()->firstOrFail();
 
         Storage::disk('public')->assertExists($banner->image_path);
-        $this->get('/')->assertOk()->assertSee($banner->imageUrl());
+        $this->withSession(['storefront.line' => 'hombre'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee($banner->imageUrl());
     }
 
     private function png(): string

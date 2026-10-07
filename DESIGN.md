@@ -107,12 +107,12 @@ Money is displayed as `S/ 99.00`; quantities use `×N`. “Composición pendient
 
 The public storefront (`layouts/web.blade.php`, `body.theme-neon`) follows the Figma frame "Inicio · Neón · Hombre" (file *Overshark-Girls*). Admin keeps the light theme above; `.theme-neon` overrides only apply inside the storefront.
 
-- **Tokens** (`@theme` in `resources/css/app.css`): `ink` #030A1C page, `panel` #0A1838 cards, `panel-2` #0F2148 raised/inputs, `edge` #1B3366 / `edge-strong` #2A4A8C borders, `neon` #2F6FD0 actions, `neon-soft` #5E9BEA accents/links, `mist` #B9CDE8 secondary text, `haze` #8299BF muted text, `frame` #E6EDF7 product photo frames, `live` #E5484D live-commerce red. Use these utilities (`bg-panel`, `text-mist`, `border-edge`…) in storefront views, never `slate-*`/`white` surfaces.
+- **Tokens** (`@theme` in `resources/css/app.css`): `ink` #030A1C page, `panel` #0A1838 cards, `panel-2` #0F2148 raised/inputs, `edge` #1B3366 / `edge-strong` #2A4A8C borders, `neon` #2F6FD0 actions, `neon-soft` #5E9BEA accents/links, `mist` #B9CDE8 secondary text, `haze` #8299BF muted text, `frame` #E6EDF7 product photo frames, `live` #E5484D live-commerce red, `aqua` #2DD4BF "Outfit con IA". Use these utilities (`bg-panel`, `text-mist`, `border-edge`…) in storefront views, never `slate-*`/`white` surfaces.
 - **Type:** headings stay heavy sans uppercase; the italic serif `font-display` (Playfair Display) is reserved for hero/editorial accents such as "hecho para *dominar*".
 - **Buttons:** pills. `btn-primary` is the blue gradient, `btn-secondary` an outlined pill, `btn-light` the white hero CTA.
 - **Hero:** banners from Admin › Banners render on the right side with a soft mask. Upload cut-out PNGs with transparent background to match Figma; photos with light backgrounds show as a glowing panel.
-- **Live / chat cards:** links come from `STOREFRONT_LIVE_URL` and `STOREFRONT_CHAT_URL`; without them the buttons jump to the footer contact.
-- **HOMBRE / MUJER:** `?linea=mujer` switches the collection copy. Products have no gender attribute yet, so it does not filter the catalog.
+- **Live / chat / outfit cards:** links come from `STOREFRONT_LIVE_URL`, `STOREFRONT_CHAT_URL` and `STOREFRONT_OUTFIT_AI_URL`; without them the buttons jump to the footer contact.
+- **HOMBRE / MUJER:** a first visit to `/` shows the "¿Qué quieres explorar?" selector (`web/explore.blade.php`, also at `/explorar`). Choosing a card, the header toggle or `?linea=hombre|mujer` stores the line in session and switches the hero copy. Products have no gender attribute yet, so it does not filter the catalog. The selector uses `font-condensed` (Bebas Neue) for its headings.
 
 ## Do's and Don'ts
 

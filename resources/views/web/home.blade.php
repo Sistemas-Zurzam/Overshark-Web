@@ -3,9 +3,67 @@
 @section('title', 'Overshark | Tienda')
 
 @php
-    $storeLine = request()->query('linea') === 'mujer' ? 'mujer' : 'hombre';
-    $liveUrl = config('services.storefront.live_url');
-    $chatUrl = config('services.storefront.chat_url');
+    $hero = [
+        'hombre' => [
+            'title' => 'Nacido del océano,',
+            'lead' => 'hecho para',
+            'accent' => 'dominar',
+            'copy' => 'Prendas esenciales con carácter, precisión y fuerza.',
+            'image' => 'images/default-hero-banner.png',
+            'imageClass' => '',
+            'alt' => 'Modelos Overshark usando polos de la colección',
+        ],
+        'mujer' => [
+            'title' => 'Nacida del océano,',
+            'lead' => 'hecha para',
+            'accent' => 'brillar',
+            'copy' => 'Básicos suaves y versátiles para todos los días.',
+            'image' => 'images/colecciones/mujer.jpg',
+            'imageClass' => 'neon-hero-image--portrait mx-auto max-w-[520px]',
+            'alt' => 'Modelo con baby tee y buzo rosado de la colección mujer',
+        ],
+    ][$storeLine];
+    $channels = [
+        [
+            'badge' => 'En vivo ahora',
+            'title' => 'Compras en vivo',
+            'copy' => 'Compra mientras transmitimos y aprovecha precios exclusivos del live.',
+            'cta' => 'Ver live',
+            'url' => config('services.storefront.live_url'),
+            'icon' => '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/>',
+            'card' => 'border-live/70 from-live/15 shadow-[0_0_40px_rgb(229_72_77/15%)]',
+            'iconClass' => 'bg-live text-white shadow-[0_0_24px_rgb(229_72_77/55%)]',
+            'badgeClass' => 'bg-live/15 text-[#ff8a8e]',
+            'ctaClass' => 'bg-live text-white hover:shadow-[0_10px_26px_rgb(229_72_77/45%)]',
+            'live' => true,
+        ],
+        [
+            'badge' => 'Responde en 1 min',
+            'title' => 'Asesoría personalizada',
+            'copy' => 'Habla con un asesor en la web y arma tu outfit con su ayuda.',
+            'cta' => 'Iniciar chat',
+            'url' => config('services.storefront.chat_url'),
+            'icon' => '<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2.5-4 2.5h-2"/>',
+            'card' => 'border-neon/70 from-neon/15 shadow-[0_0_40px_rgb(47_111_208/18%)]',
+            'iconClass' => 'bg-neon text-white shadow-[0_0_24px_rgb(47_111_208/60%)]',
+            'badgeClass' => 'bg-neon/20 text-neon-soft',
+            'ctaClass' => 'bg-neon text-white hover:bg-neon-soft hover:shadow-[0_10px_26px_rgb(47_111_208/45%)]',
+            'live' => false,
+        ],
+        [
+            'badge' => 'Nuevo',
+            'title' => 'Outfit con IA',
+            'copy' => 'Crea tu modelo virtual y prueba prendas antes de comprar.',
+            'cta' => 'Crear modelo',
+            'url' => config('services.storefront.outfit_ai_url'),
+            'icon' => '<circle cx="10" cy="8.5" r="3.5"/><path d="M3.5 20.5c.6-4 3.1-6 6.5-6s5.9 2 6.5 6"/><path d="m18.5 2.5.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/>',
+            'card' => 'border-aqua/70 from-aqua/15 shadow-[0_0_40px_rgb(45_212_191/14%)]',
+            'iconClass' => 'bg-aqua text-ink shadow-[0_0_24px_rgb(45_212_191/50%)]',
+            'badgeClass' => 'bg-aqua/15 text-aqua',
+            'ctaClass' => 'bg-aqua text-ink hover:shadow-[0_10px_26px_rgb(45_212_191/40%)]',
+            'live' => false,
+        ],
+    ];
     $heroSlides = $banners->isNotEmpty()
         ? $banners
         : collect([null]);
@@ -26,10 +84,10 @@
                     Colección {{ $storeLine }} · Overshark
                 </p>
                 <h1 class="mt-6">
-                    <span class="block text-[27px] font-light uppercase leading-none tracking-[0.05em] sm:text-5xl lg:whitespace-nowrap lg:text-[52px] xl:text-[60px]">Nacido del océano,</span>
-                    <span class="mt-2 block font-display text-[40px] italic leading-[1.05] sm:text-6xl lg:whitespace-nowrap lg:text-[72px] xl:text-[84px]">hecho para <span class="neon-hero-title-accent">dominar</span></span>
+                    <span class="block text-[27px] font-light uppercase leading-none tracking-[0.05em] sm:text-5xl lg:whitespace-nowrap lg:text-[52px] xl:text-[60px]">{{ $hero['title'] }}</span>
+                    <span class="mt-2 block font-display text-[40px] italic leading-[1.05] sm:text-6xl lg:whitespace-nowrap lg:text-[72px] xl:text-[84px]">{{ $hero['lead'] }} <span class="neon-hero-title-accent">{{ $hero['accent'] }}</span></span>
                 </h1>
-                <p class="mt-6 max-w-md text-sm text-mist sm:text-base">Prendas esenciales con carácter, precisión y fuerza.</p>
+                <p class="mt-6 max-w-md text-sm text-mist sm:text-base">{{ $hero['copy'] }}</p>
 
                 <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
                     <a href="#categorias" class="btn-light px-6 py-3.5">
@@ -65,9 +123,9 @@
                 @foreach ($heroSlides as $banner)
                     <div class="{{ $loop->first ? 'block' : 'hidden' }} relative w-full" data-carousel-item>
                         <img
-                            src="{{ $banner?->imageUrl() ?? asset('images/default-hero-banner.png') }}"
-                            class="neon-hero-image block h-auto w-full"
-                            alt="{{ $banner?->name ?? 'Modelos Overshark usando polos de la colección' }}"
+                            src="{{ $banner?->imageUrl() ?? asset($hero['image']) }}"
+                            class="neon-hero-image block h-auto w-full {{ $banner ? '' : $hero['imageClass'] }}"
+                            alt="{{ $banner?->name ?? $hero['alt'] }}"
                             @if ($loop->first) fetchpriority="high" @else loading="lazy" @endif
                         >
                         @foreach ($banner?->buttons ?? [] as $button)
@@ -94,39 +152,28 @@
             </div>
         </div>
 
-        <div class="relative z-10 mx-auto grid max-w-7xl gap-5 px-5 pb-14 sm:px-10 md:grid-cols-2 lg:-mt-6 lg:px-8">
-            <article class="flex flex-col gap-4 rounded-2xl border border-live/70 bg-gradient-to-r from-live/15 via-panel/90 to-panel/90 p-5 shadow-[0_0_40px_rgb(229_72_77/15%)] backdrop-blur sm:flex-row sm:items-center">
-                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-live text-white shadow-[0_0_24px_rgb(229_72_77/55%)]" aria-hidden="true">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-live/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ff8a8e]">
-                        <span class="neon-live-dot h-1.5 w-1.5 rounded-full bg-live" aria-hidden="true"></span>
-                        En vivo ahora
+        <div class="relative z-10 mx-auto grid max-w-7xl gap-5 px-5 pb-14 sm:px-10 lg:-mt-6 lg:grid-cols-3 lg:px-8">
+            @foreach ($channels as $channel)
+                <article class="flex flex-col gap-4 rounded-2xl border bg-gradient-to-r via-panel/90 to-panel/90 p-5 backdrop-blur sm:flex-row sm:items-center lg:flex-col lg:items-start {{ $channel['card'] }}">
+                    <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full {{ $channel['iconClass'] }}" aria-hidden="true">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">{!! $channel['icon'] !!}</svg>
                     </span>
-                    <h2 class="mt-2 text-base font-black uppercase tracking-wide">Compras en vivo</h2>
-                    <p class="mt-1 text-xs leading-5 text-mist">Compra mientras transmitimos y aprovecha precios exclusivos del live.</p>
-                </div>
-                <a href="{{ $liveUrl ?: '#contacto' }}" @if ($liveUrl) target="_blank" rel="noopener" @endif class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-live px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgb(229_72_77/45%)]">
-                    Ver live
-                    <span aria-hidden="true">→</span>
-                </a>
-            </article>
-
-            <article class="flex flex-col gap-4 rounded-2xl border border-neon/70 bg-gradient-to-r from-neon/15 via-panel/90 to-panel/90 p-5 shadow-[0_0_40px_rgb(47_111_208/18%)] backdrop-blur sm:flex-row sm:items-center">
-                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-neon text-white shadow-[0_0_24px_rgb(47_111_208/60%)]" aria-hidden="true">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2.5-4 2.5h-2"/></svg>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <span class="inline-flex rounded-full bg-neon/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-neon-soft">Responde en 1 min</span>
-                    <h2 class="mt-2 text-base font-black uppercase tracking-wide">Asesoría personalizada</h2>
-                    <p class="mt-1 text-xs leading-5 text-mist">Habla con un asesor en la web y arma tu outfit con su ayuda.</p>
-                </div>
-                <a href="{{ $chatUrl ?: '#contacto' }}" @if ($chatUrl) target="_blank" rel="noopener" @endif class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-neon px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-neon-soft hover:shadow-[0_10px_26px_rgb(47_111_208/45%)]">
-                    Iniciar chat
-                    <span aria-hidden="true">→</span>
-                </a>
-            </article>
+                    <div class="min-w-0 flex-1">
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] {{ $channel['badgeClass'] }}">
+                            @if ($channel['live'])
+                                <span class="neon-live-dot h-1.5 w-1.5 rounded-full bg-live" aria-hidden="true"></span>
+                            @endif
+                            {{ $channel['badge'] }}
+                        </span>
+                        <h2 class="mt-2 text-base font-black uppercase tracking-wide">{{ $channel['title'] }}</h2>
+                        <p class="mt-1 text-xs leading-5 text-mist">{{ $channel['copy'] }}</p>
+                    </div>
+                    <a href="{{ $channel['url'] ?: '#contacto' }}" @if ($channel['url']) target="_blank" rel="noopener" @endif class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] transition hover:-translate-y-0.5 {{ $channel['ctaClass'] }}">
+                        {{ $channel['cta'] }}
+                        <span aria-hidden="true">→</span>
+                    </a>
+                </article>
+            @endforeach
         </div>
     </section>
 

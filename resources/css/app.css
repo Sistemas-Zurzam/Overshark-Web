@@ -49,6 +49,7 @@
 
     /* Tienda pública · tema Neón (Figma "Inicio · Neón") */
     --font-display: 'Playfair Display', 'Bodoni Moda', Georgia, serif;
+    --font-condensed: 'Bebas Neue', 'Oswald', 'Arial Narrow', sans-serif;
     --color-ink: #030a1c;
     --color-night: #061230;
     --color-panel: #0a1838;
@@ -61,6 +62,7 @@
     --color-haze: #8299bf;
     --color-frame: #e6edf7;
     --color-live: #e5484d;
+    --color-aqua: #2dd4bf;
 }
 
 @layer base {
@@ -509,6 +511,121 @@
 
     @media (prefers-reduced-motion: reduce) {
         .neon-live-dot {
+            animation: none;
+        }
+    }
+
+    /* Foto vertical de respaldo (línea Mujer): difumina todos los bordes por igual. */
+    .neon-hero-image--portrait {
+        -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%);
+        mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%);
+    }
+
+    /* Pantalla inicial: elegir línea Hombre / Mujer. */
+    .explore-ocean {
+        position: relative;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        background:
+            radial-gradient(ellipse 55% 38% at 50% -6%, rgb(228 240 255 / 88%), rgb(150 192 238 / 32%) 48%, transparent 76%),
+            radial-gradient(ellipse 60% 55% at 94% 106%, rgb(150 44 112 / 55%), transparent 70%),
+            radial-gradient(ellipse 55% 60% at 2% 58%, rgb(18 98 172 / 50%), transparent 70%),
+            linear-gradient(180deg, #2a5d8c 0%, #0f3156 28%, #081a36 62%, #0d0c25 100%);
+        color: #ffffff;
+    }
+
+    .explore-ocean__rays {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 80vh;
+        pointer-events: none;
+        background: repeating-conic-gradient(from 0deg at 50% -30%, transparent 0deg 3deg, rgb(214 232 255 / 14%) 4deg 5deg, transparent 6deg 11deg);
+        filter: blur(6px);
+        -webkit-mask-image: radial-gradient(ellipse 60% 90% at 50% 0%, #000 8%, transparent 78%);
+        mask-image: radial-gradient(ellipse 60% 90% at 50% 0%, #000 8%, transparent 78%);
+        transform-origin: 50% 0;
+        animation: ocean-rays 16s ease-in-out infinite alternate;
+    }
+
+    .explore-bubble {
+        position: absolute;
+        top: var(--y);
+        left: var(--x);
+        width: var(--size);
+        height: var(--size);
+        border: 1.5px solid rgb(255 255 255 / 42%);
+        border-radius: 9999px;
+        background: radial-gradient(circle at 32% 30%, rgb(255 255 255 / 22%), transparent 60%);
+        pointer-events: none;
+        animation: bubble-float var(--duration, 7s) ease-in-out var(--delay, 0s) infinite;
+    }
+
+    .explore-card {
+        display: block;
+        overflow: hidden;
+        border: 1.5px solid var(--card-border);
+        border-radius: 1.25rem;
+        background: var(--card-panel);
+        box-shadow: 0 24px 60px rgb(3 10 30 / 45%);
+        transition: transform 350ms cubic-bezier(.22, 1, .36, 1), box-shadow 350ms ease;
+    }
+
+    .explore-card[data-collection='hombre'] {
+        --card-border: #3b8fe6;
+        --card-panel: #0d2340;
+        --card-glow: rgb(59 143 230 / 45%);
+        --card-arrow: #45a6f5;
+        --card-arrow-text: #071830;
+    }
+
+    .explore-card[data-collection='mujer'] {
+        --card-border: #e58db3;
+        --card-panel: #f9dbe6;
+        --card-glow: rgb(240 130 180 / 45%);
+        --card-arrow: #8c1d52;
+        --card-arrow-text: #ffffff;
+    }
+
+    .explore-card:hover,
+    .explore-card:focus-visible {
+        transform: translateY(-6px);
+        box-shadow: 0 30px 70px rgb(3 10 30 / 50%), 0 0 45px var(--card-glow);
+    }
+
+    .explore-card:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 4px;
+    }
+
+    .explore-card__arrow {
+        display: grid;
+        flex: none;
+        width: 3.5rem;
+        height: 3.5rem;
+        place-items: center;
+        border-radius: 9999px;
+        background: var(--card-arrow);
+        color: var(--card-arrow-text);
+        transition: transform 300ms cubic-bezier(.22, 1, .36, 1);
+    }
+
+    .explore-card:hover .explore-card__arrow {
+        transform: translateX(4px);
+    }
+
+    @keyframes ocean-rays {
+        from { transform: rotate(-2.5deg); opacity: .8; }
+        to { transform: rotate(2.5deg); opacity: 1; }
+    }
+
+    @keyframes bubble-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-14px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .explore-ocean__rays,
+        .explore-bubble {
             animation: none;
         }
     }

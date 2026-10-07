@@ -31,7 +31,8 @@ class ComboManagementTest extends TestCase
         $combo = Combo::query()->firstOrFail();
 
         Storage::disk('public')->assertExists($combo->imagen);
-        $this->get('/')
+        $this->withSession(['storefront.line' => 'hombre'])
+            ->get('/')
             ->assertOk()
             ->assertSee('Combo verano')
             ->assertSee('/productos');

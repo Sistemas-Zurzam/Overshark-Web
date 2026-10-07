@@ -492,7 +492,21 @@ Route::get('/buscar', function (Request $request) {
     ]);
 })->name('web.products.search');
 
-Route::get('/', function () {
+Route::get('/explorar', fn () => view('web.explore'))->name('web.explore');
+
+Route::get('/', function (Request $request) {
+    $storeLines = ['hombre', 'mujer'];
+
+    if (in_array($request->query('linea'), $storeLines, true)) {
+        session(['storefront.line' => $request->query('linea')]);
+    }
+
+    $storeLine = session('storefront.line');
+
+    if (! in_array($storeLine, $storeLines, true)) {
+        return view('web.explore');
+    }
+
     $fallbackImage = asset('images/default-hero-banner.png');
     $productCacheVersion = Producto::cacheVersion();
     $bestSellingProducts = Cache::remember(
@@ -532,6 +546,7 @@ Route::get('/', function () {
     });
 
     return view('web.home', [
+        'storeLine' => $storeLine,
         'banners' => BannerPortada::activeForHome(),
         'combos' => Combo::activeForMenu(),
         'bestSellingProducts' => $bestSellingProducts,
