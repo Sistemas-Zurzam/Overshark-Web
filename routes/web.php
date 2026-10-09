@@ -9,10 +9,12 @@ use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\TipoDocumento;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
+use App\Http\Controllers\OutfitBuilderController;
 use App\Support\ProductCards;
+use App\Support\SessionCart;
+use App\Support\StorefrontCategories;
 use App\Services\ComboSelectionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -117,30 +119,7 @@ Route::post('/carrito', function (Request $request) {
         ->where('stock', '>', 0)
         ->firstOrFail();
 
-    $maxQty = max(1, (int) $variant->stock);
-    $qty = min((int) $validated['qty'], $maxQty);
-    $galleryImages = ProductoColorImage::query()
-        ->where('product_name', $variant->name)
-        ->where('color', $variant->color)
-        ->first()
-        ?->imageUrls() ?? [];
-    $image = $galleryImages[0] ?? $variant->imageUrl() ?? $producto->imageUrl() ?? asset('images/default-hero-banner.png');
-    $items = session('cart.items', []);
-    $key = (string) $variant->id;
-    $newQty = min(($items[$key]['qty'] ?? 0) + $qty, $maxQty);
-
-    $items[$key] = [
-        'producto_id' => $producto->id,
-        'variant_id' => $variant->id,
-        'producto' => $variant->name,
-        'qty' => $newQty,
-        'price' => (float) $variant->price,
-        'color' => $variant->color,
-        'talla' => $variant->talla,
-        'image' => $image,
-    ];
-
-    session(['cart.items' => $items]);
+    SessionCart::addVariant($variant, (int) $validated['qty'], $producto);
 
     if ($request->boolean('checkout')) {
         return redirect()->route('web.cart.index');
@@ -356,6 +335,22 @@ Route::get('/checkout/courier-agencies', function (Request $request) {
     return response()->json(['agencies' => $agencies]);
 })->name('web.checkout.courier-agencies');
 
+Route::prefix('arma-tu-outfit')->name('web.outfit.')->controller(OutfitBuilderController::class)->group(function (): void {
+    Route::get('/', 'show')->name('show');
+    Route::post('/foto', 'storePhoto')->middleware('throttle:10,1')->name('photo.store');
+    Route::get('/foto', 'showPhoto')->name('photo.show');
+    Route::delete('/foto', 'destroyPhoto')->name('photo.destroy');
+    Route::post('/modelo', 'generateModel')->middleware('throttle:5,1')->name('model.generate');
+    Route::get('/modelo/estado', 'modelStatus')->middleware('throttle:60,1')->name('model.status');
+    Route::get('/modelo/imagen', 'showModel')->name('model.show');
+    Route::post('/probar', 'tryOn')->middleware('throttle:5,1')->name('try-on');
+    Route::post('/resumen', 'summary')->middleware('throttle:30,1')->name('summary');
+    Route::post('/carrito', 'addToCart')->middleware('throttle:20,1')->name('cart');
+});
+
+// Overshark TV: maqueta del canal en vivo (datos de ejemplo, sin streaming ni chat reales).
+Route::view('/tv', 'web.tv')->name('web.tv');
+
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
 
@@ -460,12 +455,14 @@ Route::get('/buscar', function (Request $request) {
     $fallbackImage = asset('images/default-hero-banner.png');
     $search = trim((string) $request->query('q', ''));
     $marca = trim((string) $request->query('marca', ''));
+    $categoria = StorefrontCategories::find($request->query('categoria')) ? (string) $request->query('categoria') : '';
+    $orden = in_array($request->query('orden'), ['novedades', 'populares'], true) ? (string) $request->query('orden') : '';
     $products = collect();
 
-    if ($search !== '' || $marca !== '') {
+    if ($search !== '' || $marca !== '' || $categoria !== '' || $orden !== '') {
         $products = ProductCards::make(
             Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen, MIN(created_at) as first_seen_at')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
                 ->when($search !== '', function ($query) use ($search): void {
@@ -477,9 +474,14 @@ Route::get('/buscar', function (Request $request) {
                     });
                 })
                 ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
+                ->when($categoria !== '', fn ($query) => StorefrontCategories::apply($query, $categoria))
                 ->groupBy('zazu_company_id', 'name')
-                ->orderByDesc('total_stock')
-                ->limit(24)
+                ->when(
+                    $orden === 'novedades',
+                    fn ($query) => $query->orderByDesc('first_seen_at'),
+                    fn ($query) => $query->orderByDesc('total_stock'),
+                )
+                ->limit($search === '' && $marca === '' ? 48 : 24)
                 ->get(),
             $fallbackImage,
         );
@@ -489,6 +491,8 @@ Route::get('/buscar', function (Request $request) {
         'products' => $products,
         'search' => $search,
         'marca' => $marca,
+        'categoria' => $categoria,
+        'orden' => $orden,
     ]);
 })->name('web.products.search');
 
@@ -507,49 +511,8 @@ Route::get('/', function (Request $request) {
         return view('web.explore');
     }
 
-    $fallbackImage = asset('images/default-hero-banner.png');
-    $productCacheVersion = Producto::cacheVersion();
-    $bestSellingProducts = Cache::remember(
-        "home.best_selling_products.{$productCacheVersion}",
-        now()->addMinutes(30),
-        fn () => ProductCards::make(
-            Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->where('price', '>', 0)
-                ->where('stock', '>', 0)
-                ->groupBy('zazu_company_id', 'name')
-                ->orderByDesc('total_stock')
-                ->limit(4)
-                ->get(),
-            $fallbackImage,
-        ),
-    );
-    $shortSleeveProducts = Cache::remember("home.short_sleeve_products.{$productCacheVersion}", now()->addMinutes(30), function () use ($bestSellingProducts, $fallbackImage) {
-        $products = ProductCards::make(
-            Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->where('price', '>', 0)
-                ->where('stock', '>', 0)
-                ->where(function ($query) {
-                    $query->where('name', 'like', '%MANGA CORTA%')
-                        ->orWhere('name', 'like', '%CLASICO%')
-                        ->orWhere('name', 'like', '%WAFFLE%');
-                })
-                ->groupBy('zazu_company_id', 'name')
-                ->orderByDesc('total_stock')
-                ->limit(3)
-                ->get(),
-            $fallbackImage,
-        );
-
-        return $products->isEmpty() ? $bestSellingProducts->take(3) : $products;
-    });
-
     return view('web.home', [
         'storeLine' => $storeLine,
         'banners' => BannerPortada::activeForHome(),
-        'combos' => Combo::activeForMenu(),
-        'bestSellingProducts' => $bestSellingProducts,
-        'shortSleeveProducts' => $shortSleeveProducts,
     ]);
 })->name('web.home');

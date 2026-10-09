@@ -52,6 +52,7 @@
                 ['admin.medios-pago.index', 'Medios de Pago'],
                 ['admin.banners.index', 'Banners'],
                 ['admin.combos.index', 'Combos'],
+                ['admin.tv.index', 'Overshark TV'],
                 ['admin.brands.index', 'Marcas'],
                 ['admin.brand.edit', 'Logo e Icono'],
             ] as [$routeName, $label])

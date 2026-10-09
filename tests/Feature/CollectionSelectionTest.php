@@ -23,16 +23,17 @@ class CollectionSelectionTest extends TestCase
         $this->get(route('web.home', ['linea' => 'hombre']))
             ->assertOk()
             ->assertSessionHas('storefront.line', 'hombre')
-            ->assertSee('Nacido del océano,')
-            ->assertSee('dominar')
+            ->assertSee('Nacido del océano')
+            ->assertSee('Hecho para dominar')
             ->assertSee('Compras en vivo')
             ->assertSee('Asesoría personalizada')
-            ->assertSee('Outfit con IA');
+            ->assertSee('Compra manual')
+            ->assertSeeText('Arma tu outfit con IA');
 
         $this->get('/')
             ->assertOk()
             ->assertDontSee('¿Qué quieres explorar?')
-            ->assertSee('Outfit con IA');
+            ->assertSeeText('Arma tu outfit con IA');
     }
 
     public function test_women_line_uses_its_own_hero_copy(): void
@@ -40,8 +41,8 @@ class CollectionSelectionTest extends TestCase
         $this->withSession(['storefront.line' => 'mujer'])
             ->get('/')
             ->assertOk()
-            ->assertSee('Nacida del océano,')
-            ->assertSee('brillar')
+            ->assertSee('Nacida del océano')
+            ->assertSee('Hecha para brillar')
             ->assertDontSee('dominar');
     }
 
@@ -61,14 +62,12 @@ class CollectionSelectionTest extends TestCase
             ->assertSee('¿Qué quieres explorar?');
     }
 
-    public function test_outfit_card_links_to_its_configured_url(): void
+    public function test_outfit_card_links_to_the_outfit_builder(): void
     {
-        config(['services.storefront.outfit_ai_url' => 'https://outfit.example.com']);
-
         $this->withSession(['storefront.line' => 'hombre'])
             ->get('/')
             ->assertOk()
-            ->assertSee('https://outfit.example.com')
-            ->assertSee('Crear modelo');
+            ->assertSee('href="'.route('web.outfit.show').'"', false)
+            ->assertSee('Crear mi modelo');
     }
 }

@@ -180,7 +180,7 @@
                     @endif
                 </form>
 
-                <a href="{{ route('web.home') }}#productos" class="btn-secondary mt-4 w-full px-7 py-3.5">Ver productos disponibles</a>
+                <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="btn-secondary mt-4 w-full px-7 py-3.5">Ver productos disponibles</a>
             </div>
         </div>
     </section>

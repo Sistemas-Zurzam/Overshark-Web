@@ -44,15 +44,65 @@ if (cartDrawer?.dataset.open === 'true') {
 const webMenu = document.querySelector('[data-web-menu]');
 const webMenuToggle = document.querySelector('[data-web-menu-toggle]');
 
+const siteHeader = document.querySelector('.os-header');
+
+const syncHeaderBackground = () => {
+    siteHeader?.setAttribute('data-scrolled', String(window.scrollY > 8));
+};
+
+if (siteHeader) {
+    syncHeaderBackground();
+    window.addEventListener('scroll', syncHeaderBackground, { passive: true });
+}
+
+const setWebMenuOpen = (open) => {
+    webMenu?.classList.toggle('hidden', !open);
+    webMenuToggle?.setAttribute('aria-expanded', String(open));
+    webMenuToggle?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    webMenuToggle?.querySelector('[data-menu-icon-open]')?.classList.toggle('hidden', open);
+    webMenuToggle?.querySelector('[data-menu-icon-close]')?.classList.toggle('hidden', !open);
+};
+
 webMenuToggle?.addEventListener('click', () => {
-    const isHidden = webMenu?.classList.toggle('hidden');
-    webMenuToggle.setAttribute('aria-expanded', String(!isHidden));
+    const open = webMenuToggle.getAttribute('aria-expanded') !== 'true';
+    setWebMenuOpen(open);
+
+    if (open) {
+        webMenu?.querySelector('a, button')?.focus();
+    }
 });
 
 webMenu?.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', () => {
-        webMenu.classList.add('hidden');
-        webMenuToggle?.setAttribute('aria-expanded', 'false');
+    link.addEventListener('click', () => setWebMenuOpen(false));
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && webMenuToggle?.getAttribute('aria-expanded') === 'true') {
+        setWebMenuOpen(false);
+        webMenuToggle.focus();
+    }
+});
+
+document.querySelectorAll('[data-disclosure-toggle]').forEach((toggle) => {
+    const panel = document.getElementById(toggle.dataset.disclosureToggle);
+
+    const setOpen = (open) => {
+        panel?.classList.toggle('hidden', !open);
+        toggle.setAttribute('aria-expanded', String(open));
+    };
+
+    toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    panel?.addEventListener('click', (event) => event.stopPropagation());
+    document.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+            setOpen(false);
+            toggle.focus();
+        }
     });
 });
 

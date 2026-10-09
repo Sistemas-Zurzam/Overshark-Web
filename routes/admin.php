@@ -27,6 +27,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');
     Route::post('/productos/{producto}/guia-tallas', [ProductoController::class, 'updateSizeGuideImage'])->name('productos.size-guide');
     Route::post('/productos/{producto}/imagenes-color', [ProductoController::class, 'updateColorImages'])->name('productos.color-images');
+    Route::post('/productos/{producto}/probador', [ProductoController::class, 'updateFittingImage'])->name('productos.fitting-image');
+    Route::delete('/productos/{producto}/probador', [ProductoController::class, 'destroyFittingImage'])->name('productos.fitting-image.destroy');
     Route::get('/medios-pago', [MetodoPagoController::class, 'index'])->name('medios-pago.index');
     Route::post('/medios-pago', [MetodoPagoController::class, 'store'])->name('medios-pago.store');
     Route::patch('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'update'])->name('medios-pago.update');
@@ -38,6 +40,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/banners/{banner}/estado', [BannerController::class, 'toggle'])->name('banners.toggle');
     Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     Route::get('/combos', [ComboController::class, 'index'])->name('combos.index');
+    // Overshark TV: maqueta del estudio (sin backend todavía).
+    Route::view('/tv', 'admin.tv.index')->name('tv.index');
     Route::post('/combos/importar-catalogo', [ComboController::class, 'importCatalog'])->name('combos.import');
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
     Route::patch('/combos/{combo}/estado', [ComboController::class, 'toggle'])->name('combos.toggle');

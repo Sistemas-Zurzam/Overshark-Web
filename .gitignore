@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/public/vendor/mediapipe
+/public/vendor/onnx
+/public/models/depth-anything-v2-small

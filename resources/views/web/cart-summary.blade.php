@@ -108,7 +108,7 @@
                                 <div>
                                     <p class="text-xl font-black">Tu carrito esta vacio</p>
                                     <p class="mt-2 text-sm text-haze">Agrega productos para ver el resumen de compra.</p>
-                                    <a href="{{ route('web.home') }}#productos" class="btn-primary mt-6 px-6 py-3">Ver productos</a>
+                                    <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="btn-primary mt-6 px-6 py-3">Ver productos</a>
                                 </div>
                             </div>
                         @endforelse
@@ -173,7 +173,7 @@
                         <p>El costo de envio se calculara en el siguiente paso.</p>
                     </div>
 
-                    <a href="{{ route('web.home') }}#productos" class="mt-4 inline-flex items-center gap-2 px-1 text-sm font-semibold transition hover:text-neon-soft">
+                    <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="mt-4 inline-flex items-center gap-2 px-1 text-sm font-semibold transition hover:text-neon-soft">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
                         Seguir comprando
                     </a>

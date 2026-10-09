@@ -25,9 +25,27 @@
             <div class="mb-9 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p class="text-sm font-black uppercase tracking-[0.22em] text-neon-soft">Busqueda Overshark</p>
-                    <h1 class="mt-2 text-3xl font-black uppercase sm:text-4xl">Productos encontrados</h1>
+                    <h1 class="mt-2 text-3xl font-black uppercase sm:text-4xl">
+                        @if ($categoria !== '')
+                            {{ \App\Support\StorefrontCategories::label($categoria) }}
+                        @elseif ($orden === 'novedades')
+                            Novedades
+                        @elseif ($orden === 'populares' && $search === '' && $marca === '')
+                            Colección
+                        @else
+                            Productos encontrados
+                        @endif
+                    </h1>
                     <p class="mt-2 text-haze">
-                        @if ($marca !== '' && $search !== '')
+                        @if ($categoria !== '' && $search !== '')
+                            Resultados en {{ \App\Support\StorefrontCategories::label($categoria) }} para "{{ $search }}".
+                        @elseif ($categoria !== '')
+                            Modelos disponibles de {{ mb_strtolower(\App\Support\StorefrontCategories::label($categoria)) }}.
+                        @elseif ($orden === 'novedades' && $search === '' && $marca === '')
+                            Los últimos modelos incorporados al catálogo.
+                        @elseif ($orden === 'populares' && $search === '' && $marca === '')
+                            Todos los modelos disponibles, primero los de mayor stock.
+                        @elseif ($marca !== '' && $search !== '')
                             Resultados de {{ $marca }} para "{{ $search }}".
                         @elseif ($marca !== '')
                             Productos de la marca {{ $marca }}.
@@ -46,6 +64,9 @@
                             <svg class="h-4 w-4 text-haze" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
                         </div>
                         <input type="hidden" name="marca" value="{{ $marca }}">
+                        @if ($categoria !== '')
+                            <input type="hidden" name="categoria" value="{{ $categoria }}">
+                        @endif
                         <input type="text" id="simple-search" name="q" value="{{ $search }}" class="block w-full rounded-lg border border-edge-strong bg-panel py-2.5 pl-9 pr-3 text-sm font-semibold text-white outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25" placeholder="Buscar producto...">
                     </div>
                     <button type="submit" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neon text-white shadow-sm transition hover:bg-neon-soft focus:outline-none focus:ring-4 focus:ring-neon/25">

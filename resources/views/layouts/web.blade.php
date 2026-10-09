@@ -18,7 +18,21 @@
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
     $storeLine = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
+    $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
+    $outfitUrl = route('web.outfit.show');
+    $onSearch = request()->routeIs('web.products.search');
+    $navLinks = collect([
+        [
+            'label' => 'Novedades',
+            'url' => route('web.products.search', ['orden' => 'novedades']),
+            'active' => $onSearch && request('orden') === 'novedades' && ! request('categoria'),
+        ],
+    ])->concat(collect(\App\Support\StorefrontCategories::all())->map(fn (array $category, string $slug) => [
+        'label' => $category['label'],
+        'url' => route('web.products.search', ['categoria' => $slug]),
+        'active' => $onSearch && request('categoria') === $slug,
+    ])->values());
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -27,103 +41,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Overshark, tienda online">
     <meta name="theme-color" content="#030a1c">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Overshark')</title>
     @if ($brand->iconUrl())
         <link rel="icon" href="{{ $brand->iconUrl() }}">
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+    @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="theme-neon min-h-screen antialiased">
-    <header class="fixed inset-x-0 top-0 z-50 border-b border-edge/60 bg-ink/85 text-white backdrop-blur-md">
-        <div class="flex h-9 items-center justify-center sm:h-10">
-            <nav class="flex rounded-full border border-edge bg-panel/80 p-0.5 text-[10px] font-bold uppercase tracking-[0.22em] sm:text-[11px]" aria-label="Línea de colección">
-                <a href="{{ route('web.home', ['linea' => 'hombre']) }}" @class([
-                    'rounded-full px-5 py-1 transition sm:px-7',
-                    'bg-white text-ink' => $storeLine === 'hombre',
-                    'text-mist hover:text-white' => $storeLine !== 'hombre',
-                ]) @if ($storeLine === 'hombre') aria-current="page" @endif>Hombre</a>
-                <a href="{{ route('web.home', ['linea' => 'mujer']) }}" @class([
-                    'rounded-full px-5 py-1 transition sm:px-7',
-                    'bg-white text-ink' => $storeLine === 'mujer',
-                    'text-mist hover:text-white' => $storeLine !== 'mujer',
-                ]) @if ($storeLine === 'mujer') aria-current="page" @endif>Mujer</a>
-            </nav>
-        </div>
+    <a href="#contenido" class="sr-only z-[80] rounded-md bg-white px-4 py-2 font-bold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Saltar al contenido</a>
 
-        <div class="relative mx-auto flex h-16 max-w-[1440px] items-center justify-between px-3 sm:h-[72px] sm:px-5 lg:px-12">
-            <div class="flex items-center gap-8">
-                <button type="button" data-combos-toggle class="combo-trigger group hidden text-sm font-semibold sm:flex" aria-expanded="false" aria-controls="combos-menu">
-                    <img data-combo-flame class="combo-fire-icon" src="{{ asset('images/iconos/fuego_combo.svg') }}" alt="" aria-hidden="true">
-                    Combos
-                </button>
-
-                <nav class="hidden items-center gap-8 text-[15px] font-medium text-mist lg:flex" aria-label="Navegación principal">
-                    <a href="{{ $homeUrl }}#productos" class="transition hover:text-white">Productos</a>
-                    <div class="relative">
-                        <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-desktop" class="flex items-center gap-1.5 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-soft" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-desktop">
-                            Marcas
-                            <svg class="h-4 w-4 text-haze transition-transform" data-brands-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-                        </button>
-                        <div id="brands-menu-desktop" data-brands-menu data-state="closed" class="brands-panel absolute left-1/2 top-[calc(100%+22px)] z-50 w-72 -translate-x-1/2 rounded-2xl border border-edge bg-panel p-3 text-left shadow-2xl shadow-black/50">
-                            <div class="border-b border-edge px-3 pb-3">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-neon-soft">Nuestras marcas</p>
-                                <p class="mt-1 text-xs text-haze">Explora productos por marca.</p>
-                            </div>
-                            <div class="mt-2 max-h-64 overflow-y-auto">
-                                @forelse ($menuBrands as $menuBrand)
-                                    <a href="{{ route('web.brands.show', $menuBrand) }}" class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white/5 hover:text-neon-soft">
-                                        <span>{{ $menuBrand->name }}</span>
-                                        <span class="h-3 w-3 rounded-full border border-edge-strong" style="background-color: {{ $menuBrand->primary_color }}" aria-hidden="true"></span>
-                                        <span class="text-neon-soft" aria-hidden="true">-&gt;</span>
-                                    </a>
-                                @empty
-                                    <p class="px-3 py-4 text-sm text-haze">Aún no hay marcas asignadas.</p>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                    <a href="{{ $homeUrl }}#nosotros" class="transition hover:text-white">Nosotros</a>
-                </nav>
+    <header class="os-header fixed inset-x-0 top-0 z-50 text-white">
+        @hasSection('header-bar')
+            @yield('header-bar')
+        @else
+        <div class="mx-auto flex h-14 max-w-[1440px] items-center gap-4 px-4 sm:px-6 xl:h-[52px] xl:px-16">
+            <div class="relative flex min-w-0 shrink-0 items-center">
+                <a href="{{ $homeUrl }}" class="os-focus block rounded" aria-label="{{ $brandPageContext?->name ?: 'Overshark' }}, ir al inicio">
+                    @if ($publicBrandLogo)
+                        <img src="{{ $publicBrandLogo }}" alt="" class="h-6 w-auto max-w-[170px] object-contain sm:h-7 sm:max-w-[190px]">
+                    @else
+                        <span class="block font-heading text-[21px] font-extrabold leading-none tracking-tight sm:text-[23px]" aria-hidden="true">OVER<span class="text-electric">SHARK</span></span>
+                    @endif
+                </a>
+                @if ($selectedLine)
+                    {{-- Cuelga del borde inferior de la barra, como en la referencia. --}}
+                    <span class="os-line-badge absolute left-0 top-[calc(100%+6px)]">{{ $selectedLine }}</span>
+                @endif
             </div>
 
-            <a href="{{ $homeUrl }}" class="absolute left-1/2 flex h-14 w-40 -translate-x-1/2 items-center justify-center overflow-hidden text-xl font-black tracking-normal sm:h-16 sm:w-56 sm:text-2xl lg:w-64 lg:text-[28px]" aria-label="Overshark inicio">
-                @if ($publicBrandLogo)
-                    <img src="{{ $publicBrandLogo }}" alt="{{ $brandPageContext?->name ?: 'Overshark' }}" class="h-12 w-full object-contain sm:h-14 sm:scale-125 lg:h-16 lg:scale-150">
-                @else
-                    <span class="uppercase italic tracking-tight">Overshark</span>
-                @endif
-            </a>
+            <nav class="ml-auto hidden items-center gap-8 xl:flex 2xl:gap-10" aria-label="Navegación principal">
+                @foreach ($navLinks as $navLink)
+                    <a href="{{ $navLink['url'] }}" class="os-nav-link os-focus" @if ($navLink['active']) aria-current="page" @endif>{{ $navLink['label'] }}</a>
+                @endforeach
+                <a href="{{ $outfitUrl }}" class="os-btn-outfit os-focus h-[34px] px-4">Arma tu outfit</a>
+            </nav>
 
-            <div class="flex items-center gap-0.5 sm:gap-2">
-                <button type="button" data-search-toggle class="grid h-10 w-10 place-items-center rounded-full text-mist transition hover:bg-white/5 hover:text-white" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+            <div class="ml-auto flex items-center gap-1 sm:gap-2 xl:ml-5">
+                <button type="button" data-search-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
                 </button>
-                <a href="{{ route('admin.dashboard') }}" class="hidden h-10 w-10 place-items-center rounded-full text-mist transition hover:bg-white/5 hover:text-white sm:grid" aria-label="Mi cuenta">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="7" r="3.5"/><path d="M5.5 21c.4-5 2.6-7.5 6.5-7.5s6.1 2.5 6.5 7.5"/></svg>
-                </a>
-                <button type="button" data-cart-open class="relative grid h-10 w-10 place-items-center rounded-full text-mist transition hover:bg-white/5 hover:text-white" aria-label="Bolsa de compras">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                <div class="relative hidden xl:block">
+                    <button type="button" data-disclosure-toggle="account-panel" class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Mi cuenta" aria-expanded="false" aria-controls="account-panel">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7.5" r="3.75"/><path d="M4.75 20.5c.5-4.5 3.2-7 7.25-7s6.75 2.5 7.25 7"/></svg>
+                    </button>
+                    <div id="account-panel" data-disclosure-panel class="absolute right-0 top-[calc(100%+14px)] hidden w-72 rounded-xl border border-edge bg-panel p-4 text-left shadow-2xl shadow-black/50">
+                        <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta · Próximamente</p>
+                        <p class="mt-2 text-sm leading-6 text-mist">Las cuentas de cliente aún no están disponibles. Puedes comprar como invitado y te pediremos tus datos en el checkout.</p>
+                    </div>
+                </div>
+                <button type="button" data-cart-open class="os-focus relative grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.1"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></svg>
                     @if ($cartCount > 0)
-                        <span class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-neon px-1 text-[11px] font-black leading-none text-white">{{ $cartCount }}</span>
+                        <span class="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-electric px-1 text-[11px] font-black leading-none text-white" aria-hidden="true">{{ $cartCount }}</span>
                     @endif
                 </button>
-                <button type="button" data-web-menu-toggle class="grid h-10 w-10 place-items-center rounded-full text-mist transition hover:bg-white/5 hover:text-white lg:hidden" aria-label="Abrir menú" aria-expanded="false">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                <span class="ml-2 mr-4 hidden h-6 w-px bg-white/30 xl:block" aria-hidden="true"></span>
+                <a href="{{ route('web.explore') }}" class="os-focus hidden rounded-sm text-[11px] font-medium uppercase tracking-[0.02em] text-white underline decoration-white/70 underline-offset-[5px] transition hover:decoration-electric-soft xl:inline-block">Cambiar selección</a>
+                <button type="button" data-web-menu-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10 xl:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
+                    <svg class="h-6 w-6" data-menu-icon-open viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                    <svg class="hidden h-6 w-6" data-menu-icon-close viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
         </div>
+        @endif
 
-        <div id="search-panel" data-search-panel class="hidden border-t border-edge/60 bg-ink/95 px-3 py-4 sm:px-5">
-            <form action="{{ route('web.products.search') }}" method="GET" class="mx-auto flex max-w-2xl items-center gap-2">
+        <div id="search-panel" data-search-panel class="hidden border-t border-edge/60 bg-abyss/95 px-4 py-4 sm:px-6">
+            <form action="{{ route('web.products.search') }}" method="GET" class="mx-auto flex max-w-2xl items-center gap-2" role="search">
                 <label for="product-search" class="sr-only">Buscar productos</label>
                 <div class="relative w-full">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <svg class="h-4 w-4 text-haze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
                     </div>
-                    <input type="text" id="product-search" name="q" value="{{ request('q') }}" class="block w-full rounded-full border border-edge-strong bg-panel py-3 pl-10 pr-4 text-sm font-semibold text-white outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25" placeholder="Buscar polos, camiseros, waffle..." required>
+                    <input type="text" id="product-search" name="q" value="{{ request('q') }}" class="block w-full rounded-full border border-edge-strong bg-panel py-3 pl-10 pr-4 text-sm font-semibold text-white outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25" placeholder="Buscar polos, camisas, pantalones..." required>
                 </div>
                 <button type="submit" class="btn-primary h-11 shrink-0 px-6">Buscar</button>
             </form>
@@ -133,7 +127,7 @@
             <div class="mx-auto grid max-w-[1440px] gap-4 px-5 py-6 sm:grid-cols-2 lg:grid-cols-3 lg:px-12">
                 @forelse ($menuCombos as $combo)
                     <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="combo-card group relative min-h-48 overflow-hidden rounded-2xl border border-edge bg-panel transition hover:border-neon-soft">
-                        <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110">
+                        <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110" loading="lazy">
                         <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent"></div>
                         <div class="relative flex h-full min-h-48 items-end p-5">
                             <div>
@@ -153,16 +147,18 @@
             </div>
         </div>
 
-        <nav data-web-menu class="hidden border-t border-edge/60 bg-ink px-5 py-4 text-sm font-semibold lg:hidden" aria-label="Navegación móvil">
+        <nav id="web-menu" data-web-menu class="hidden max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-edge/60 bg-abyss px-4 py-4 text-sm font-semibold sm:px-6 xl:hidden" aria-label="Navegación móvil">
             <div class="mx-auto flex max-w-[1440px] flex-col gap-1">
-                <button type="button" data-combos-toggle class="flex items-center justify-between rounded-lg px-3 py-3 text-left hover:bg-white/5" aria-expanded="false" aria-controls="combos-menu">
+                @foreach ($navLinks as $navLink)
+                    <a href="{{ $navLink['url'] }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ $navLink['active'] ? 'text-electric-soft' : '' }}" @if ($navLink['active']) aria-current="page" @endif>{{ $navLink['label'] }}</a>
+                @endforeach
+                <a href="{{ $outfitUrl }}" class="os-btn-outfit os-focus my-2 h-11 justify-center px-4">Arma tu outfit</a>
+                <button type="button" data-combos-toggle class="os-focus flex items-center justify-between rounded-lg px-3 py-3 text-left uppercase tracking-wide hover:bg-white/5" aria-expanded="false" aria-controls="combos-menu">
                     Combos
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
                 </button>
-                <a href="{{ $homeUrl }}#productos" class="rounded-lg px-3 py-3 hover:bg-white/5">Productos</a>
-                <a href="{{ $homeUrl }}#categorias" class="rounded-lg px-3 py-3 hover:bg-white/5">Categorías</a>
                 <div>
-                    <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-mobile" class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-soft" aria-expanded="false" aria-haspopup="true" aria-controls="brands-menu-mobile">
+                    <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-mobile" class="os-focus flex w-full items-center justify-between rounded-lg px-3 py-3 text-left uppercase tracking-wide hover:bg-white/5" aria-expanded="false" aria-controls="brands-menu-mobile">
                         Marcas
                         <svg class="h-4 w-4 text-haze transition-transform" data-brands-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
                     </button>
@@ -171,20 +167,22 @@
                             <a href="{{ route('web.brands.show', $menuBrand) }}" class="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-mist hover:bg-white/5 hover:text-white">
                                 <span>{{ $menuBrand->name }}</span>
                                 <span class="h-3 w-3 rounded-full border border-edge-strong" style="background-color: {{ $menuBrand->primary_color }}" aria-hidden="true"></span>
-                                <span aria-hidden="true">-&gt;</span>
                             </a>
                         @empty
                             <p class="px-3 py-3 text-sm text-haze">Aún no hay marcas asignadas.</p>
                         @endforelse
                     </div>
                 </div>
-                <a href="{{ $homeUrl }}#nosotros" class="rounded-lg px-3 py-3 hover:bg-white/5">Nosotros</a>
-                <a href="{{ route('admin.dashboard') }}" class="rounded-lg px-3 py-3 hover:bg-white/5">Mi cuenta</a>
+                <a href="{{ route('web.explore') }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5">Cambiar selección</a>
+                <div class="mt-2 rounded-lg border border-edge bg-panel/60 px-3 py-3">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta · Próximamente</p>
+                    <p class="mt-1 text-xs font-medium leading-5 text-mist">Por ahora puedes comprar como invitado.</p>
+                </div>
             </div>
         </nav>
     </header>
 
-    <main class="pt-[100px] sm:pt-[112px]">@yield('content')</main>
+    <main id="contenido" class="pt-14 xl:pt-[52px]" tabindex="-1">@yield('content')</main>
 
     <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-black/60" aria-hidden="true"></div>
     <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-full translate-x-full flex-col border-l border-edge bg-ink text-white shadow-2xl shadow-black/60 transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
@@ -314,17 +312,25 @@
             <section>
                 <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Comprar</h2>
                 <nav class="mt-5 flex flex-col gap-3 text-sm text-mist">
-                    <a href="{{ route('web.products.search', ['q' => 'polo']) }}" class="transition hover:text-white">Polos</a>
+                    <a href="{{ route('web.products.search', ['categoria' => 'polos']) }}" class="transition hover:text-white">Polos</a>
                     <a href="{{ route('web.products.search', ['q' => 'media']) }}" class="transition hover:text-white">Medias</a>
-                    <a href="{{ $homeUrl }}#combos" class="flex items-center gap-2 transition hover:text-white">
+                    <button type="button" data-combos-toggle class="os-focus flex w-fit items-center gap-2 text-left transition hover:text-white" aria-expanded="false" aria-controls="combos-menu">
                         Combos
                         <img src="{{ asset('images/iconos/Fire.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
-                    </a>
+                    </button>
                     <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="flex items-center gap-2 transition hover:text-white">
                         Para ellas
                         <img src="{{ asset('images/iconos/Heart.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
                     </a>
                 </nav>
+                @if ($menuBrands->isNotEmpty())
+                    <h2 class="mt-8 text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Marcas</h2>
+                    <nav class="mt-5 flex flex-col gap-3 text-sm text-mist" aria-label="Marcas">
+                        @foreach ($menuBrands as $menuBrand)
+                            <a href="{{ route('web.brands.show', $menuBrand) }}" class="transition hover:text-white">{{ $menuBrand->name }}</a>
+                        @endforeach
+                    </nav>
+                @endif
             </section>
 
             <section>
