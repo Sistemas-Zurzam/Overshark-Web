@@ -1,4 +1,6 @@
 import './bootstrap';
+import './ocean-particles';
+import './line-transition';
 
 const sidebar = document.querySelector('[data-sidebar]');
 const overlay = document.querySelector('[data-sidebar-overlay]');

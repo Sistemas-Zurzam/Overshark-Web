@@ -36,13 +36,22 @@ class CollectionSelectionTest extends TestCase
             ->assertSeeText('Arma tu outfit con IA');
     }
 
+    public function test_women_products_page_keeps_the_girls_design(): void
+    {
+        $this->get(route('web.girls.products'))
+            ->assertOk()
+            ->assertSee('Overshark Girls · Productos')
+            ->assertSee('images/girls/logo-girls.png', false)
+            ->assertSessionHas('storefront.line', 'mujer');
+    }
+
     public function test_women_line_uses_its_own_hero_copy(): void
     {
         $this->withSession(['storefront.line' => 'mujer'])
             ->get('/')
             ->assertOk()
-            ->assertSee('Nacida del océano')
-            ->assertSee('Hecha para brillar')
+            ->assertSee('libre como la marea')
+            ->assertSee('Overshark Girls')
             ->assertDontSee('dominar');
     }
 

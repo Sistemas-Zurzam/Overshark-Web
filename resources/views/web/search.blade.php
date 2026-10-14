@@ -79,8 +79,13 @@
             @if ($products->isEmpty())
                 <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-edge bg-panel-2 px-5 text-center">
                     <div>
-                        <p class="text-lg font-black text-mist">No hay productos disponibles</p>
-                        <p class="mt-1 text-sm text-haze">Prueba otra búsqueda o elige una marca diferente.</p>
+                        @if (session('storefront.line') === 'mujer' && $marca === '')
+                            <p class="text-lg font-black text-mist">Aún no hay productos Overshark Girls disponibles</p>
+                            <p class="mt-1 text-sm text-haze">Pronto publicaremos la colección mujer. También puedes ver la colección hombre.</p>
+                        @else
+                            <p class="text-lg font-black text-mist">No hay productos disponibles</p>
+                            <p class="mt-1 text-sm text-haze">Prueba otra búsqueda o elige una marca diferente.</p>
+                        @endif
                     </div>
                 </div>
             @else

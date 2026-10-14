@@ -79,6 +79,7 @@
         <section id="home-carousel" class="relative isolate -mt-14 overflow-hidden xl:-mt-[52px]" data-carousel="slide" aria-labelledby="home-hero-title">
             <x-storefront.ocean-backdrop class="-z-10"/>
             <div class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(2_7_19/40%)_0%,rgb(2_7_19/12%)_45%,transparent_70%),linear-gradient(0deg,#030c1e_0%,transparent_30%)]" aria-hidden="true"></div>
+            <canvas class="pointer-events-none absolute inset-0 -z-10 h-full w-full" data-ocean-particles aria-hidden="true"></canvas>
 
             <div class="mx-auto grid max-w-[1440px] grid-cols-1 items-end px-4 sm:px-6 lg:min-h-[500px] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)] lg:px-10 xl:min-h-[540px] xl:px-24">
                 <div class="min-w-0 self-center pb-6 pt-[6.5rem] sm:pt-[7.5rem] lg:self-start lg:pb-24 lg:pt-[min(14vw,230px)]">

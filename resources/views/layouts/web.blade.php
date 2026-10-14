@@ -9,6 +9,11 @@
             ->filter(fn ($menuCombo) => mb_strtoupper(trim((string) $menuCombo->brand)) === $brandPageName)
             ->values();
     }
+    if (! $brandPageContext && session('storefront.line') === 'mujer') {
+        $menuCombos = $menuCombos
+            ->filter(fn ($menuCombo) => str_contains(mb_strtolower($menuCombo->brand.' '.$menuCombo->name), 'girl'))
+            ->values();
+    }
     $menuBrands = \App\Models\Brand::query()
         ->active()
         ->orderBy('sort_order')
@@ -18,6 +23,7 @@
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
     $storeLine = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
+    $otherLine = $storeLine === 'mujer' ? 'hombre' : 'mujer';
     $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
     $outfitUrl = route('web.outfit.show');
@@ -35,8 +41,10 @@
     ])->values());
 @endphp
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-line="{{ $storeLine }}">
 <head>
+    {{-- Si se viene de cambiar de colección, la cortina arranca cerrada antes del primer pintado (ver resources/js/line-transition.js). --}}
+    <script>try{var l=sessionStorage.getItem('os-line-wipe');if(l==='hombre'||l==='mujer'){document.documentElement.classList.add('line-wipe-in');document.documentElement.dataset.lineWipe=l;}}catch(e){}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Overshark, tienda online">
@@ -52,17 +60,19 @@
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="theme-neon min-h-screen antialiased">
+<body class="@yield('body-class', $storeLine === 'mujer' ? 'theme-neon theme-girls' : 'theme-neon') min-h-screen antialiased">
     <a href="#contenido" class="sr-only z-[80] rounded-md bg-white px-4 py-2 font-bold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Saltar al contenido</a>
 
-    <header class="os-header fixed inset-x-0 top-0 z-50 text-white">
+    <header class="@yield('header-class', 'os-header fixed inset-x-0 top-0 z-50 text-white')">
         @hasSection('header-bar')
             @yield('header-bar')
         @else
         <div class="mx-auto flex h-14 max-w-[1440px] items-center gap-4 px-4 sm:px-6 xl:h-[52px] xl:px-16">
             <div class="relative flex min-w-0 shrink-0 items-center">
                 <a href="{{ $homeUrl }}" class="os-focus block rounded" aria-label="{{ $brandPageContext?->name ?: 'Overshark' }}, ir al inicio">
-                    @if ($publicBrandLogo)
+                    @if ($storeLine === 'mujer' && ! $brandPageContext)
+                        <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-8 w-auto max-w-[170px] object-contain sm:h-9">
+                    @elseif ($publicBrandLogo)
                         <img src="{{ $publicBrandLogo }}" alt="" class="h-6 w-auto max-w-[170px] object-contain sm:h-7 sm:max-w-[190px]">
                     @else
                         <span class="block font-heading text-[21px] font-extrabold leading-none tracking-tight sm:text-[23px]" aria-hidden="true">OVER<span class="text-electric">SHARK</span></span>
@@ -101,7 +111,7 @@
                     @endif
                 </button>
                 <span class="ml-2 mr-4 hidden h-6 w-px bg-white/30 xl:block" aria-hidden="true"></span>
-                <a href="{{ route('web.explore') }}" class="os-focus hidden rounded-sm text-[11px] font-medium uppercase tracking-[0.02em] text-white underline decoration-white/70 underline-offset-[5px] transition hover:decoration-electric-soft xl:inline-block">Cambiar selección</a>
+                <a href="{{ route('web.home', ['linea' => $otherLine]) }}" class="os-focus hidden rounded-sm text-[11px] font-medium uppercase tracking-[0.02em] text-white underline decoration-white/70 underline-offset-[5px] transition hover:decoration-electric-soft xl:inline-block">Cambiar a {{ $otherLine }}</a>
                 <button type="button" data-web-menu-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10 xl:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
                     <svg class="h-6 w-6" data-menu-icon-open viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
                     <svg class="hidden h-6 w-6" data-menu-icon-close viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -111,7 +121,7 @@
         @endif
 
         <div id="search-panel" data-search-panel class="hidden border-t border-edge/60 bg-abyss/95 px-4 py-4 sm:px-6">
-            <form action="{{ route('web.products.search') }}" method="GET" class="mx-auto flex max-w-2xl items-center gap-2" role="search">
+            <form action="{{ $storeLine === 'mujer' && ! $brandPageContext ? route('web.girls.products') : route('web.products.search') }}" method="GET" class="mx-auto flex max-w-2xl items-center gap-2" role="search">
                 <label for="product-search" class="sr-only">Buscar productos</label>
                 <div class="relative w-full">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -141,7 +151,7 @@
                     </a>
                 @empty
                     <div class="col-span-full rounded-2xl border border-dashed border-edge bg-panel px-5 py-10 text-center text-sm font-semibold text-haze">
-                        Aún no hay combos activos.
+                        {{ session('storefront.line') === 'mujer' ? 'Aún no hay combos Overshark Girls publicados.' : 'Aún no hay combos activos.' }}
                     </div>
                 @endforelse
             </div>
@@ -173,7 +183,7 @@
                         @endforelse
                     </div>
                 </div>
-                <a href="{{ route('web.explore') }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5">Cambiar selección</a>
+                <a href="{{ route('web.home', ['linea' => $otherLine]) }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5">Cambiar a {{ $otherLine }}</a>
                 <div class="mt-2 rounded-lg border border-edge bg-panel/60 px-3 py-3">
                     <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta · Próximamente</p>
                     <p class="mt-1 text-xs font-medium leading-5 text-mist">Por ahora puedes comprar como invitado.</p>
@@ -182,7 +192,7 @@
         </nav>
     </header>
 
-    <main id="contenido" class="pt-14 xl:pt-[52px]" tabindex="-1">@yield('content')</main>
+    <main id="contenido" class="@yield('main-class', 'pt-14 xl:pt-[52px]')" tabindex="-1">@yield('content')</main>
 
     <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-black/60" aria-hidden="true"></div>
     <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-full translate-x-full flex-col border-l border-edge bg-ink text-white shadow-2xl shadow-black/60 transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
@@ -297,6 +307,10 @@
         </div>
     </aside>
 
+    {{-- Una página puede traer su propio footer (p. ej. la home de Overshark Girls). --}}
+    @hasSection('footer')
+        @yield('footer')
+    @else
     <footer id="contacto" class="border-t border-edge bg-ink text-white">
         <div class="border-b border-edge px-5 py-7">
             <a href="{{ $homeUrl }}" class="mx-auto flex w-fit items-center justify-center" aria-label="Overshark inicio">
@@ -381,6 +395,7 @@
             </div>
         </div>
     </footer>
+    @endif
     @yield('scripts')
 </body>
 </html>

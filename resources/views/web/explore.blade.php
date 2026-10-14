@@ -1,32 +1,28 @@
 @php
     $brand = \App\Models\BrandSetting::current();
-    $bubbles = [
-        ['x' => '5%', 'y' => '76%', 'size' => '18px', 'duration' => '7s', 'delay' => '0s'],
-        ['x' => '7%', 'y' => '87%', 'size' => '10px', 'duration' => '9s', 'delay' => '-2s'],
-        ['x' => '9%', 'y' => '70%', 'size' => '7px', 'duration' => '6s', 'delay' => '-4s'],
-        ['x' => '91%', 'y' => '32%', 'size' => '8px', 'duration' => '8s', 'delay' => '-1s'],
-        ['x' => '94%', 'y' => '40%', 'size' => '13px', 'duration' => '7s', 'delay' => '-3s'],
-        ['x' => '90%', 'y' => '47%', 'size' => '8px', 'duration' => '10s', 'delay' => '-5s'],
-        ['x' => '92%', 'y' => '56%', 'size' => '22px', 'duration' => '9s', 'delay' => '-2s'],
-        ['x' => '88%', 'y' => '64%', 'size' => '9px', 'duration' => '6s', 'delay' => '-1s'],
-        ['x' => '92%', 'y' => '72%', 'size' => '15px', 'duration' => '8s', 'delay' => '-6s'],
-        ['x' => '89%', 'y' => '82%', 'size' => '26px', 'duration' => '11s', 'delay' => '-3s'],
-    ];
     $collections = [
         [
             'key' => 'hombre',
             'name' => 'Hombre',
             'items' => 'Polos · Buzos · Básicos',
-            'image' => 'images/colecciones/hombre.jpg',
-            'alt' => 'Modelo con polo azul marino y buzo gris de la colección hombre',
+            'image' => 'images/explorar/hombre-modelos.png',
+            'alt' => 'Modelos con polos de la colección hombre de Overshark',
+            'color' => '#2F6FD0',
         ],
         [
             'key' => 'mujer',
             'name' => 'Mujer',
             'items' => 'Baby tees · Tops · Buzos',
-            'image' => 'images/colecciones/mujer.jpg',
-            'alt' => 'Modelo con baby tee y buzo rosado de la colección mujer',
+            'image' => 'images/explorar/mujer-modelos.jpg',
+            'alt' => 'Modelos con básicos de la colección mujer de Overshark',
+            'color' => '#D63A78',
         ],
+    ];
+    $perks = [
+        ['label' => 'Compras en vivo', 'color' => '#EF4444'],
+        ['label' => 'Asesoría personalizada', 'color' => '#5E9BEA'],
+        ['label' => 'Outfit con IA', 'color' => '#2DD4BF'],
+        ['label' => 'Envíos a todo el Perú', 'color' => '#FFFFFF'],
     ];
 @endphp
 <!DOCTYPE html>
@@ -39,50 +35,83 @@
     @if ($brand->iconUrl())
         <link rel="icon" href="{{ $brand->iconUrl() }}">
     @endif
-    <meta name="theme-color" content="#081a36">
+    <meta name="theme-color" content="#03111E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preload" as="image" href="{{ asset('images/explorar/mar.jpg') }}">
+    @vite(['resources/css/app.css', 'resources/css/explore.css', 'resources/js/explore.js'])
 </head>
-<body class="explore-ocean antialiased">
-    <div class="explore-ocean__rays" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        @foreach ($bubbles as $bubble)
-            <span class="explore-bubble" style="--x: {{ $bubble['x'] }}; --y: {{ $bubble['y'] }}; --size: {{ $bubble['size'] }}; --duration: {{ $bubble['duration'] }}; --delay: {{ $bubble['delay'] }};"></span>
-        @endforeach
+<body class="ex antialiased">
+    {{-- Cortina de transición al elegir una colección (la anima explore.js) --}}
+    <div class="ex-wipe" aria-hidden="true">
+        <div class="ex-wipe__layer ex-wipe__layer--a"></div>
+        <div class="ex-wipe__layer ex-wipe__layer--b"><span class="ex-wipe__logo">OVERSHARK</span></div>
     </div>
 
-    <main class="relative z-10 mx-auto flex min-h-dvh max-w-5xl flex-col items-center px-4 pb-14 pt-8 sm:px-6 sm:pt-10">
-        <p class="text-sm font-black uppercase tracking-[0.5em] text-white drop-shadow sm:text-base">Overshark</p>
+    <main class="ex-view">
+        <div class="ex-sea" aria-hidden="true">
+            <div class="ex-sea__img" style="background-image: url('{{ asset('images/explorar/mar.jpg') }}')"></div>
+            <div class="ex-sea__rays"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="ex-sea__glow ex-sea__glow--blue"></div>
+            <div class="ex-sea__glow ex-sea__glow--pink"></div>
+            <canvas class="ex-bubbles"></canvas>
+            <div class="ex-sea__vignette"></div>
+        </div>
 
-        <h1 class="mt-8 text-center font-condensed text-[clamp(2.9rem,8vw,5.25rem)] uppercase leading-[0.95] tracking-wide drop-shadow-[0_4px_18px_rgb(4_16_40_/_55%)] sm:mt-12">
-            ¿Qué quieres explorar?
-        </h1>
-        <p class="mt-3 text-center text-sm font-medium text-white/90 drop-shadow sm:text-base">Básicos para todos los días: baby tees, tops, polos y buzos.</p>
+        <div class="ex-selector">
+            <a class="ex-brand" href="{{ route('web.explore') }}" aria-label="Overshark, inicio">
+                <img src="{{ $brand->logoUrl() ?? asset('images/explorar/logo-overshark.png') }}" alt="Overshark" width="176" height="30">
+            </a>
 
-        <div class="mt-9 grid w-full max-w-[880px] gap-6 sm:mt-12 sm:grid-cols-2 sm:gap-8">
-            @foreach ($collections as $item)
-                <a href="{{ route('web.home', ['linea' => $item['key']]) }}" class="explore-card group" data-collection="{{ $item['key'] }}" aria-label="Explorar colección {{ $item['name'] }}">
-                    <div class="aspect-[16/11] overflow-hidden sm:aspect-[414/320]">
-                        <img src="{{ asset($item['image']) }}" alt="{{ $item['alt'] }}" class="h-full w-full object-cover object-top transition duration-700 group-hover:scale-105">
-                    </div>
-                    <div class="flex items-center justify-between gap-4 px-6 py-5">
-                        <div>
-                            @if ($item['key'] === 'mujer')
-                                <p class="font-display text-5xl font-bold italic leading-none text-[#8c1d52] sm:text-[3.4rem]">{{ $item['name'] }}</p>
-                                <p class="mt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#a8336d]">{{ $item['items'] }}</p>
-                            @else
-                                <p class="font-condensed text-[3.4rem] uppercase leading-none tracking-wide text-white sm:text-6xl">{{ $item['name'] }}</p>
-                                <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#7cc4ff]">{{ $item['items'] }}</p>
-                            @endif
+            <header class="ex-head">
+                <p class="ex-eyebrow"><span></span>Bienvenido a Overshark<span></span></p>
+                <h1 class="ex-title">
+                    <span class="ex-title__light js-split">¿Qué quieres</span>
+                    <span class="ex-title__serif ex-line-mask"><span class="ex-line-inner">explorar <em>hoy?</em></span></span>
+                </h1>
+                <p class="ex-sub">Básicos para todos los días: baby tees, tops, polos y buzos. Elige una colección para empezar.</p>
+            </header>
+
+            <div class="ex-choices">
+                @foreach ($collections as $item)
+                    <a
+                        href="{{ route('web.home', ['linea' => $item['key']]) }}"
+                        class="ex-choice ex-choice--{{ $item['key'] }}"
+                        data-collection="{{ $item['key'] }}"
+                        data-color="{{ $item['color'] }}"
+                        aria-label="Explorar colección {{ $item['name'] }}"
+                    >
+                        <div class="ex-choice__media">
+                            <div class="ex-choice__sea" style="--sea: url('{{ asset('images/explorar/mar.jpg') }}')"></div>
+                            <img
+                                class="ex-choice__models {{ $item['key'] === 'mujer' ? 'ex-choice__models--photo' : '' }}"
+                                src="{{ asset($item['image']) }}"
+                                alt="{{ $item['alt'] }}"
+                                loading="eager"
+                            >
+                            <div class="ex-choice__fade"></div>
                         </div>
-                        <span class="explore-card__arrow" aria-hidden="true">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-                        </span>
-                    </div>
-                </a>
-            @endforeach
+                        <div class="ex-choice__label">
+                            <div>
+                                <h2 class="ex-choice__name">{{ $item['key'] === 'hombre' ? 'HOMBRE' : 'Mujer' }}</h2>
+                                <p class="ex-choice__cats">{{ $item['items'] }}</p>
+                            </div>
+                            <span class="ex-pill">
+                                Ver colección
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+
+            <ul class="ex-perks" aria-label="En ambas colecciones">
+                <li class="ex-perks__title">En ambas colecciones</li>
+                @foreach ($perks as $perk)
+                    <li><i style="--c: {{ $perk['color'] }}"></i>{{ $perk['label'] }}</li>
+                @endforeach
+            </ul>
         </div>
     </main>
 </body>

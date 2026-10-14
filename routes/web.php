@@ -10,6 +10,7 @@ use App\Models\Admin\TipoDocumento;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
 use App\Http\Controllers\OutfitBuilderController;
+use App\Support\GirlsHome;
 use App\Support\ProductCards;
 use App\Support\SessionCart;
 use App\Support\StorefrontCategories;
@@ -475,6 +476,7 @@ Route::get('/buscar', function (Request $request) {
                 })
                 ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
                 ->when($categoria !== '', fn ($query) => StorefrontCategories::apply($query, $categoria))
+                ->when(session('storefront.line') === 'mujer' && $marca === '', fn ($query) => GirlsHome::onlyGirls($query))
                 ->groupBy('zazu_company_id', 'name')
                 ->when(
                     $orden === 'novedades',
@@ -496,6 +498,34 @@ Route::get('/buscar', function (Request $request) {
     ]);
 })->name('web.products.search');
 
+// Catálogo de la colección mujer, con el diseño de Overshark Girls.
+Route::get('/mujer/productos', function (Request $request) {
+    session(['storefront.line' => 'mujer']);
+    $search = trim((string) $request->query('q', ''));
+
+    return view('web.girls-products', [
+        'search' => $search,
+        'products' => ProductCards::make(
+            GirlsHome::onlyGirls(Producto::query())
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->where('price', '>', 0)
+                ->where('stock', '>', 0)
+                ->when($search !== '', function ($query) use ($search): void {
+                    $query->where(function ($searchQuery) use ($search): void {
+                        $searchQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('default_code', 'like', "%{$search}%")
+                            ->orWhere('color', 'like', "%{$search}%");
+                    });
+                })
+                ->groupBy('zazu_company_id', 'name')
+                ->orderByDesc('total_stock')
+                ->limit(48)
+                ->get(),
+            asset('images/default-hero-banner.png'),
+        ),
+    ]);
+})->name('web.girls.products');
+
 Route::get('/explorar', fn () => view('web.explore'))->name('web.explore');
 
 Route::get('/', function (Request $request) {
@@ -509,6 +539,10 @@ Route::get('/', function (Request $request) {
 
     if (! in_array($storeLine, $storeLines, true)) {
         return view('web.explore');
+    }
+
+    if ($storeLine === 'mujer') {
+        return view('web.home-mujer', GirlsHome::data());
     }
 
     return view('web.home', [

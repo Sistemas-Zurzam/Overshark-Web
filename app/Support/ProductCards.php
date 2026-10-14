@@ -39,8 +39,17 @@ class ProductCards
                 })
                 ->values();
 
+            // Foto principal: la de un color que tenga fotos propias (aunque ese color aún no tenga precio),
+            // antes que la imagen general del producto o la de reemplazo.
+            $galleryImage = $galleries
+                ->only($colors->pluck('name')->all())
+                ->concat($galleries)
+                ->map(fn (ProductoColorImage $gallery) => $gallery->imageUrls()[0] ?? null)
+                ->filter()
+                ->first();
+
             $product->setAttribute('display_colors', $colors);
-            $product->setAttribute('display_image', $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage);
+            $product->setAttribute('display_image', $galleryImage ?? $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage);
         });
 
         return $products;

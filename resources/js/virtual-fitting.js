@@ -169,6 +169,7 @@ export function renderOutfit(canvas, analysis, garments) {
             }
             dctx.filter = 'none';
             dctx.drawImage(silhouette, 0, 0);
+            sharpenAlpha(dctx, width, height);
 
             layerCtx.globalCompositeOperation = 'destination-in';
             layerCtx.drawImage(dilated, 0, 0);
@@ -222,11 +223,87 @@ export function anchorsFromAlpha(image, slot) {
         };
     }
 
-    return {
+    return measureTop(image, bounds) ?? {
         bounds,
         tl: { x: x + w * 0.27, y: y + h * 0.07 }, tr: { x: x + w * 0.73, y: y + h * 0.07 },
         bl: { x: x + w * 0.26, y: y + h }, br: { x: x + w * 0.74, y: y + h },
         sleeveL: { x: -1, y: 0.9 }, sleeveR: { x: 1, y: 0.9 },
+    };
+}
+
+/**
+ * Mide la silueta real de una prenda superior (foto plana de frente): el cuerpo se toma del
+ * ancho del bajo, los hombros de donde empieza la tela sobre los costados del cuerpo y la
+ * dirección de cada manga del centro de la tela que sobresale a cada lado. Así una camisa
+ * con mangas abiertas o cuello alto no se deforma. Devuelve null si la forma no es reconocible.
+ */
+function measureTop(image, bounds) {
+    const { alpha, width } = readAlpha(image);
+    const solid = (px, py) => alpha[Math.round(py) * width + Math.round(px)] > 96;
+    const { x, y, w, h } = bounds;
+    const cx = x + w / 2;
+
+    // Tramo opaco continuo que contiene el centro, en una fila.
+    const spanAt = (py) => {
+        if (!solid(cx, py)) return null;
+        let left = cx;
+        let right = cx;
+        while (left > x && solid(left - 1, py)) left -= 1;
+        while (right < x + w && solid(right + 1, py)) right += 1;
+        return { left, right };
+    };
+
+    // Cuerpo: mediana del ancho cerca del bajo (sin puños que lleguen a esa altura).
+    const hemSpans = [0.86, 0.9, 0.94].map((f) => spanAt(y + h * f)).filter(Boolean);
+    if (hemSpans.length === 0) return null;
+    hemSpans.sort((a, b) => (a.right - a.left) - (b.right - b.left));
+    const hem = hemSpans[Math.floor(hemSpans.length / 2)];
+    const bodyW = hem.right - hem.left;
+    if (bodyW < w * 0.3) return null;
+
+    // Hombros: primera fila con tela sobre cada costado del cuerpo (un poco hacia adentro).
+    const topAt = (px) => {
+        for (let py = y; py < y + h * 0.5; py += 1) {
+            if (solid(px, py)) return py;
+        }
+        return null;
+    };
+    const inset = bodyW * 0.06;
+    const shoulderLY = topAt(hem.left + inset);
+    const shoulderRY = topAt(hem.right - inset);
+    if (shoulderLY === null || shoulderRY === null) return null;
+
+    // Mangas: centro de la tela que sobresale a cada lado del cuerpo, bajo la línea de hombros.
+    const sleeveDir = (fromX, toX, origin, sign) => {
+        let sx = 0;
+        let sy = 0;
+        let n = 0;
+        const step = Math.max(1, Math.round(w / 160));
+        for (let py = Math.min(shoulderLY, shoulderRY); py < y + h; py += step) {
+            for (let px = fromX; px < toX; px += step) {
+                if (solid(px, py)) {
+                    sx += px;
+                    sy += py;
+                    n += 1;
+                }
+            }
+        }
+        if (n < 20) return { x: sign, y: 1.4 }; // sin mangas visibles: casi pegadas al cuerpo
+        return { x: sx / n - origin.x, y: sy / n - origin.y };
+    };
+
+    const tl = { x: hem.left, y: shoulderLY };
+    const tr = { x: hem.right, y: shoulderRY };
+
+    return {
+        bounds,
+        measured: true,
+        tl,
+        tr,
+        bl: { x: hem.left, y: y + h },
+        br: { x: hem.right, y: y + h },
+        sleeveL: sleeveDir(Math.round(x), Math.round(hem.left - inset), tl, -1),
+        sleeveR: sleeveDir(Math.round(hem.right + inset), Math.round(x + w), tr, 1),
     };
 }
 
@@ -291,8 +368,9 @@ function topMapper(a, body) {
     };
 
     const sourceW = distance(a.tl, a.tr);
-    // Las mangas se agrandan un 30 %: así cubren la manga de la ropa original.
-    const k = (distance(target.tl, target.tr) / sourceW) * 1.3;
+    // Las mangas se agrandan para cubrir la manga de la ropa original: 30 % en las ilustraciones,
+    // menos en prendas medidas (su manga ya tiene el ancho real y se veía inflada).
+    const k = (distance(target.tl, target.tr) / sourceW) * (a.measured ? 1.12 : 1.3);
     const sleeve = (sourcePoint, origin, targetOrigin, sourceDir, elbow) => {
         const armDir = elbow ? unit(sub(elbow, targetOrigin)) : unit(add(down, scale(sub(targetOrigin, shoulderMid), 0.002)));
         const angle = Math.atan2(armDir.y, armDir.x) - Math.atan2(sourceDir.y, sourceDir.x);
@@ -301,7 +379,10 @@ function topMapper(a, body) {
 
     return (p) => {
         const { u, v } = quadCoords(p, a.tl, a.tr, a.bl, a.br);
-        const flat = bilinear(target, u, v);
+        // El cuello de la prenda (sobre la línea de hombros y al centro) se acorta: con la escala del
+        // torso subía hasta la barbilla. Hacia los hombros no se acorta, para que cubran la ropa original.
+        const collar = clamp(1 - Math.abs(u - 0.5) / 0.3, 0, 1);
+        const flat = bilinear(target, u, v < 0 ? v * (1 - 0.6 * collar) : v);
 
         if (u >= 0 && u <= 1) {
             return flat;
@@ -426,24 +507,72 @@ function drawTriangle(ctx, image, p0, p1, p2) {
 
 // ---- Acabado ----
 
+/**
+ * Pasa a la prenda la luz y los pliegues de la ropa que la persona lleva en la foto:
+ * - pliegues: luminancia de la foto dividida por su versión desenfocada (detalle local);
+ * - luz general: versión muy desenfocada dividida por su promedio (lado más claro / más oscuro);
+ * - sombra suave hacia los bordes de la prenda, para que no parezca una calcomanía.
+ */
 function shadeWithPhoto(layer, base) {
-    const alpha = document.createElement('canvas');
-    alpha.width = layer.width;
-    alpha.height = layer.height;
-    alpha.getContext('2d').drawImage(layer, 0, 0);
+    const { width, height } = layer;
+    const luminance = (source, scaleDown) => {
+        const w = Math.max(1, Math.round(width / scaleDown));
+        const h = Math.max(1, Math.round(height / scaleDown));
+        const small = document.createElement('canvas');
+        small.width = w;
+        small.height = h;
+        const sctx = small.getContext('2d');
+        sctx.imageSmoothingQuality = 'high';
+        sctx.filter = 'grayscale(1)';
+        sctx.drawImage(source, 0, 0, w, h);
+        const full = document.createElement('canvas');
+        full.width = width;
+        full.height = height;
+        const fctx = full.getContext('2d', { willReadFrequently: true });
+        fctx.imageSmoothingQuality = 'high';
+        fctx.drawImage(small, 0, 0, width, height);
+        return fctx.getImageData(0, 0, width, height).data;
+    };
 
-    const ctx = layer.getContext('2d');
-    ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.globalAlpha = 0.5;
-    ctx.filter = 'grayscale(1) brightness(1.35) contrast(1.15)';
-    ctx.drawImage(base, 0, 0);
-    ctx.restore();
+    const detail = luminance(base, 1);
+    const folds = luminance(base, 28);
+    const light = luminance(base, 9);
 
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(alpha, 0, 0);
-    ctx.restore();
+    // Sombra de borde: alfa de la prenda desenfocado (cerca del borde baja el valor).
+    const edge = document.createElement('canvas');
+    edge.width = width;
+    edge.height = height;
+    const ectx = edge.getContext('2d', { willReadFrequently: true });
+    ectx.filter = `blur(${Math.max(4, Math.round(width / 70))}px)`;
+    ectx.drawImage(layer, 0, 0);
+    const edgeAlpha = ectx.getImageData(0, 0, width, height).data;
+
+    const ctx = layer.getContext('2d', { willReadFrequently: true });
+    const image = ctx.getImageData(0, 0, width, height);
+    const { data } = image;
+
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 200) {
+            sum += light[i];
+            count += 1;
+        }
+    }
+    const mean = count ? sum / count : 128;
+
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 0) continue;
+        const foldShade = clamp((detail[i] + 6) / (folds[i] + 6), 0.55, 1.06) ** 1.25; // aclarar poco: entre brazo y torso asoma el fondo
+        const lightShade = clamp((light[i] + 10) / (mean + 10), 0.7, 1) ** 0.6; // solo oscurece: fuera del cuerpo el fondo es claro
+        const edgeShade = 0.82 + 0.18 * (edgeAlpha[i + 3] / 255);
+        const k = foldShade * lightShade * edgeShade;
+        data[i] = Math.min(255, data[i] * k);
+        data[i + 1] = Math.min(255, data[i + 1] * k);
+        data[i + 2] = Math.min(255, data[i + 2] * k);
+    }
+
+    ctx.putImageData(image, 0, 0);
 }
 
 /** Vuelve a pintar la cabeza encima para que el cuello de la prenda no tape la barbilla. */
@@ -507,6 +636,33 @@ function maskToCanvas(mask) {
 
     ctx.putImageData(data, 0, 0);
     return canvas;
+}
+
+/**
+ * Convierte el borde difuso de la silueta dilatada en uno nítido (con 1–2 px de suavizado):
+ * así una prenda holgada no se ve "desenfocada" donde sobresale del cuerpo.
+ */
+function sharpenAlpha(ctx, width, height) {
+    const image = ctx.getImageData(0, 0, width, height);
+    const { data } = image;
+    for (let i = 3; i < data.length; i += 4) {
+        data[i] = Math.round(clamp((data[i] - 70) / 40, 0, 1) * 255);
+    }
+    ctx.putImageData(image, 0, 0);
+}
+
+function readAlpha(image) {
+    const canvas = document.createElement('canvas');
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0);
+    const { data } = ctx.getImageData(0, 0, width, height);
+    const alpha = new Uint8Array(width * height);
+    for (let i = 0; i < alpha.length; i += 1) alpha[i] = data[i * 4 + 3];
+    return { alpha, width, height };
 }
 
 function alphaBounds(image) {

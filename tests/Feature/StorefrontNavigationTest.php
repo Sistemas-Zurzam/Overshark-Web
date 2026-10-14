@@ -21,7 +21,7 @@ class StorefrontNavigationTest extends TestCase
             ->assertSee(route('web.products.search', ['categoria' => 'camisas']), false)
             ->assertSee(route('web.products.search', ['categoria' => 'pantalones']), false)
             ->assertSee(route('web.products.search', ['categoria' => 'accesorios']), false)
-            ->assertSee(route('web.explore'), false)
+            ->assertSee(route('web.home', ['linea' => 'mujer']), false)
             ->assertSee('Mi cuenta · Próximamente')
             ->assertDontSee(route('admin.dashboard'), false);
     }
