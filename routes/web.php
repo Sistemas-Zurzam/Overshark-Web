@@ -9,7 +9,6 @@ use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\TipoDocumento;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
-use App\Http\Controllers\OutfitBuilderController;
 use App\Support\GirlsHome;
 use App\Support\ProductCards;
 use App\Support\SessionCart;
@@ -205,7 +204,7 @@ Route::get('/checkout/entrega-y-pago', function () {
 
     $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
     $igv = $subtotal * 0.18;
-    $shipping = 12;
+    $shipping = \App\Support\Shipping::costFor($subtotal);
 
     return view('web.checkout-delivery', [
         'items' => $items,
@@ -227,7 +226,7 @@ Route::get('/checkout/pago', function () {
 
     $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
     $igv = $subtotal * 0.18;
-    $shipping = 12;
+    $shipping = \App\Support\Shipping::costFor($subtotal);
 
     return view('web.checkout-payment', [
         'items' => $items,
@@ -336,18 +335,25 @@ Route::get('/checkout/courier-agencies', function (Request $request) {
     return response()->json(['agencies' => $agencies]);
 })->name('web.checkout.courier-agencies');
 
-Route::prefix('arma-tu-outfit')->name('web.outfit.')->controller(OutfitBuilderController::class)->group(function (): void {
-    Route::get('/', 'show')->name('show');
-    Route::post('/foto', 'storePhoto')->middleware('throttle:10,1')->name('photo.store');
-    Route::get('/foto', 'showPhoto')->name('photo.show');
-    Route::delete('/foto', 'destroyPhoto')->name('photo.destroy');
-    Route::post('/modelo', 'generateModel')->middleware('throttle:5,1')->name('model.generate');
-    Route::get('/modelo/estado', 'modelStatus')->middleware('throttle:60,1')->name('model.status');
-    Route::get('/modelo/imagen', 'showModel')->name('model.show');
-    Route::post('/probar', 'tryOn')->middleware('throttle:5,1')->name('try-on');
-    Route::post('/resumen', 'summary')->middleware('throttle:30,1')->name('summary');
-    Route::post('/carrito', 'addToCart')->middleware('throttle:20,1')->name('cart');
-});
+// Arma tu outfit: combos de outfit (modalidad "Outfit" en Admin → Combos).
+Route::get('/arma-tu-outfit', fn (\App\Support\OutfitBuilder $builder) => view('web.outfit', [
+    'combos' => $builder->combos(),
+]))->name('web.outfit');
+
+// Nosotros: proceso de fabricación + unas prendas reales de la colección.
+Route::get('/nosotros', fn () => view('web.nosotros', [
+    'c' => \App\Support\AboutPage::content(),
+    'products' => ProductCards::make(
+        Producto::query()
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+            ->where('price', '>', 0)->where('stock', '>', 0)
+            ->groupBy('zazu_company_id', 'name')->orderByDesc('total_stock')->limit(3)->get(),
+        asset('images/default-hero-banner.png'),
+    ),
+]))->name('web.nosotros');
+
+Route::get('/contacto', [\App\Http\Controllers\ContactController::class, 'create'])->name('web.contact');
+Route::post('/contacto', [\App\Http\Controllers\ContactController::class, 'store'])->middleware('throttle:5,1')->name('web.contact.store');
 
 // Overshark TV: maqueta del canal en vivo (datos de ejemplo, sin streaming ni chat reales).
 Route::view('/tv', 'web.tv')->name('web.tv');
@@ -410,6 +416,8 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     $colorOptions = $variants
         ->whereNotNull('color')
         ->groupBy('color')
+        // Mismo orden que la tarjeta del catálogo: primero el color con más stock.
+        ->sortByDesc(fn ($items) => $items->sum('stock'))
         ->map(function ($items, string $color) use ($galleries, $producto, $fallbackImage) {
             $galleryImages = $galleries->get($color)?->imageUrls() ?? [];
 

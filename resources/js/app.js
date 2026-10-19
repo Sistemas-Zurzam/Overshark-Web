@@ -1,6 +1,7 @@
 import './bootstrap';
 import './ocean-particles';
 import './line-transition';
+import './product-page';
 
 const sidebar = document.querySelector('[data-sidebar]');
 const overlay = document.querySelector('[data-sidebar-overlay]');
@@ -316,6 +317,7 @@ const bindComboProductRow = (row) => {
         } else {
             row.querySelector('select').value = '';
             row.querySelector('input[type="number"]').value = '1';
+            row.querySelectorAll('input[type="text"]').forEach((input) => { input.value = ''; });
         }
     });
 };
@@ -335,11 +337,12 @@ comboProductAdd?.addEventListener('click', () => {
 
     clone.querySelectorAll('select, input').forEach((field) => {
         field.name = field.name.replace(/products\[\d+\]/, `products[${index}]`);
-        if (field.tagName === 'SELECT') {
-            field.value = '';
-        } else {
+        if (field.type === 'number') {
             field.value = '1';
+        } else if (field.tagName === 'SELECT') {
+            field.value = '';
         }
+        // La prenda se mantiene: lo normal es agregar otra alternativa de la misma prenda.
     });
 
     comboProductRows.appendChild(clone);

@@ -19,7 +19,6 @@
         ['primary' => true, 'icon' => 'bag', 'badge' => 'Toda la tienda', 'title' => 'Comprar ahora', 'copy' => 'Explora todos los productos: baby tees, tops, buzos y más.', 'cta' => 'Ver productos', 'url' => $catalogUrl, 'style' => ''],
         ['live' => true, 'icon' => 'video', 'badge' => 'En vivo ahora', 'title' => 'Compras en vivo', 'copy' => 'Compra mientras transmitimos y aprovecha precios exclusivos del live.', 'cta' => 'Ver live', 'url' => route('web.tv'), 'style' => '--ac: linear-gradient(135deg,#FF6F9F,#D63A78); --ac-line: #E0569A; --ac-text: #B52A62;'],
         ['icon' => 'headset', 'badge' => 'Responde en 1 min', 'title' => 'Asesoría personalizada', 'copy' => 'Habla con una asesora en la web y arma tu outfit con su ayuda.', 'cta' => 'Iniciar chat', 'url' => config('services.storefront.chat_url') ?: '#contacto', 'external' => (bool) config('services.storefront.chat_url'), 'style' => '--ac: linear-gradient(135deg,#E07AA0,#A9456B); --ac-line: #E07AA0; --ac-text: #8F3A5B;'],
-        ['icon' => 'userai', 'badge' => 'Nuevo', 'title' => 'Outfit con IA', 'copy' => 'Crea tu modelo virtual y prueba prendas antes de comprar.', 'cta' => 'Crear modelo', 'url' => route('web.outfit.show', ['linea' => 'mujer']), 'style' => '--ac: linear-gradient(135deg,#C98AE8,#9457C4); --ac-line: #B57BD6; --ac-text: #7A43A6;'],
     ];
     $categories = [
         ['name' => 'Baby tees', 'image' => 'm-cat-baby-tees.jpg', 'q' => 'baby ty'],
@@ -190,7 +189,6 @@
                         <p class="gl-sec__eyebrow">Inspírate</p>
                         <h2 id="gl-looks" class="gl-sec__title" data-gl-split-sec>Arma tu <em>look</em></h2>
                     </div>
-                    <a class="gl-more" href="{{ route('web.outfit.show', ['linea' => 'mujer']) }}">Pruébalo con IA <svg class="gl-i" aria-hidden="true"><use href="#gl-i-arrow"/></svg></a>
                 </div>
                 <div class="gl-looks">
                     @foreach ($looks as $look)

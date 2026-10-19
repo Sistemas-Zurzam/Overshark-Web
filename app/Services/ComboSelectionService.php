@@ -21,16 +21,20 @@ class ComboSelectionService
 
             return [
                 'name' => $name,
+                // "grupo" (opcional): varios productos alternativos para una misma prenda del combo
+                // (p. ej. grupo "Polo" con CLASICO, SLIM FIT y WAFFLE); el cliente elige uno.
+                'group' => trim((string) ($item['grupo'] ?? '')),
                 'quantity' => max(1, (int) ($item['cantidad'] ?? 1)),
                 'variants' => $this->availableVariants($name, $baseProduct),
             ];
         })->filter(fn (array $group): bool => $group['name'] !== '');
 
         $groups = $groups
-            ->groupBy(fn (array $group): string => $this->normalize($group['name']))
+            ->groupBy(fn (array $group): string => $group['group'] !== '' ? 'grupo:'.$this->normalize($group['group']) : $this->normalize($group['name']))
             ->map(fn (Collection $sameNameGroups): array => [
-                'name' => $sameNameGroups->first()['name'],
-                'quantity' => $sameNameGroups->sum('quantity'),
+                'name' => $sameNameGroups->first()['group'] ?: $sameNameGroups->first()['name'],
+                // En un grupo los productos son alternativas: la cantidad es la de la prenda, no la suma.
+                'quantity' => $sameNameGroups->first()['group'] !== '' ? $sameNameGroups->max('quantity') : $sameNameGroups->sum('quantity'),
                 'variants' => $sameNameGroups
                     ->flatMap(fn (array $group): Collection => $group['variants'])
                     ->unique('id')

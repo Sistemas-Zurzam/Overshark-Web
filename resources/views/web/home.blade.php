@@ -76,7 +76,7 @@
 
 @section('content')
     <div class="os-ocean">
-        <section id="home-carousel" class="relative isolate -mt-14 overflow-hidden xl:-mt-[52px]" data-carousel="slide" aria-labelledby="home-hero-title">
+        <section id="home-carousel" class="relative isolate mt-[calc(var(--header-h)*-1)] overflow-hidden" data-carousel="slide" aria-labelledby="home-hero-title">
             <x-storefront.ocean-backdrop class="-z-10"/>
             <div class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(2_7_19/40%)_0%,rgb(2_7_19/12%)_45%,transparent_70%),linear-gradient(0deg,#030c1e_0%,transparent_30%)]" aria-hidden="true"></div>
             <canvas class="pointer-events-none absolute inset-0 -z-10 h-full w-full" data-ocean-particles aria-hidden="true"></canvas>
@@ -156,8 +156,7 @@
         </section>
 
         <div class="relative z-10 mx-auto -mt-3 max-w-[1300px] px-4 pb-16 sm:px-6 sm:pb-20 lg:-mt-8 lg:px-10">
-            <x-storefront.virtual-fitting :ai-available="app(\App\Services\OutfitAi\OutfitAiGenerator::class)->isAvailable()"/>
-            <div class="mt-5 grid gap-5 lg:grid-cols-3" aria-label="Formas de comprar" role="group">
+            <div class="grid gap-5 lg:grid-cols-3" aria-label="Formas de comprar" role="group">
                 @foreach ($channels as $channel)
                     <article class="flex flex-col gap-4 rounded-2xl border bg-gradient-to-r via-panel/90 to-panel/90 p-5 backdrop-blur sm:flex-row sm:items-center lg:flex-col lg:items-start {{ $channel['card'] }}">
                         <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full {{ $channel['iconClass'] }}" aria-hidden="true">

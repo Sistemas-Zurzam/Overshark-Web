@@ -26,8 +26,17 @@
     $otherLine = $storeLine === 'mujer' ? 'hombre' : 'mujer';
     $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
-    $outfitUrl = route('web.outfit.show');
     $onSearch = request()->routeIs('web.products.search');
+    $storeMenu = [
+        ['label' => 'Inicio', 'url' => route('web.home', ['linea' => $storeLine]), 'active' => request()->routeIs('web.home')],
+        ['label' => 'Tienda', 'url' => route('web.products.search', ['orden' => 'populares']), 'active' => $onSearch],
+        ['label' => '¡Arma tu Outfit!', 'url' => route('web.outfit'), 'active' => request()->routeIs('web.outfit')],
+        ['label' => 'Nosotros', 'url' => route('web.nosotros'), 'active' => request()->routeIs('web.nosotros')],
+        ['label' => 'Contacto', 'url' => route('web.contact'), 'active' => request()->routeIs('web.contact')],
+    ];
+    $freeShippingFrom = \App\Support\Shipping::freeFrom();
+    $freeShippingLeft = max(0, $freeShippingFrom - $cartTotal);
+    $freeShippingProgress = $freeShippingFrom > 0 ? min(100, round($cartTotal / $freeShippingFrom * 100)) : 0;
     $navLinks = collect([
         [
             'label' => 'Novedades',
@@ -47,7 +56,7 @@
     <script>try{var l=sessionStorage.getItem('os-line-wipe');if(l==='hombre'||l==='mujer'){document.documentElement.classList.add('line-wipe-in');document.documentElement.dataset.lineWipe=l;}}catch(e){}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Overshark, tienda online">
+    <meta name="description" content="@yield('meta_description', 'Overshark, tienda online')">
     <meta name="theme-color" content="#030a1c">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Overshark')</title>
@@ -60,64 +69,67 @@
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="@yield('body-class', $storeLine === 'mujer' ? 'theme-neon theme-girls' : 'theme-neon') min-h-screen antialiased">
+<body style="--header-h: {{ $freeShippingFrom > 0 ? 100 : 64 }}px" class="@yield('body-class', $storeLine === 'mujer' ? 'theme-neon theme-girls' : 'theme-neon') min-h-screen antialiased">
     <a href="#contenido" class="sr-only z-[80] rounded-md bg-white px-4 py-2 font-bold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Saltar al contenido</a>
 
     <header class="@yield('header-class', 'os-header fixed inset-x-0 top-0 z-50 text-white')">
         @hasSection('header-bar')
             @yield('header-bar')
         @else
-        <div class="mx-auto flex h-14 max-w-[1440px] items-center gap-4 px-4 sm:px-6 xl:h-[52px] xl:px-16">
-            <div class="relative flex min-w-0 shrink-0 items-center">
-                <a href="{{ $homeUrl }}" class="os-focus block rounded" aria-label="{{ $brandPageContext?->name ?: 'Overshark' }}, ir al inicio">
-                    @if ($storeLine === 'mujer' && ! $brandPageContext)
-                        <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-8 w-auto max-w-[170px] object-contain sm:h-9">
-                    @elseif ($publicBrandLogo)
-                        <img src="{{ $publicBrandLogo }}" alt="" class="h-6 w-auto max-w-[170px] object-contain sm:h-7 sm:max-w-[190px]">
-                    @else
-                        <span class="block font-heading text-[21px] font-extrabold leading-none tracking-tight sm:text-[23px]" aria-hidden="true">OVER<span class="text-electric">SHARK</span></span>
-                    @endif
+        {{-- Barra principal: logos de marca · menú central · búsqueda y carrito. Debajo, el avance hacia el envío gratis. --}}
+        <div class="mx-auto grid h-16 max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[1fr_auto_1fr] xl:px-12">
+            <div class="flex min-w-0 items-center gap-4">
+                <a href="{{ route('web.home', ['linea' => 'hombre']) }}" class="os-focus block shrink-0 rounded" aria-label="Overshark, ir al inicio">
+                    <span class="block font-heading text-[21px] font-extrabold leading-none tracking-tight" aria-hidden="true">OVER<span class="text-electric">SHARK</span></span>
                 </a>
-                @if ($selectedLine)
-                    {{-- Cuelga del borde inferior de la barra, como en la referencia. --}}
-                    <span class="os-line-badge absolute left-0 top-[calc(100%+6px)]">{{ $selectedLine }}</span>
-                @endif
+                <span class="hidden h-7 w-px bg-white/25 sm:block" aria-hidden="true"></span>
+                <nav class="hidden min-w-0 items-center gap-5 sm:flex" aria-label="Nuestras marcas">
+                    <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="os-focus os-store-brand rounded" aria-label="Overshark Girls, colección mujer" @if ($storeLine === 'mujer') aria-current="true" @endif>
+                        <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-7 w-auto object-contain">
+                    </a>
+                </nav>
             </div>
 
-            <nav class="ml-auto hidden items-center gap-8 xl:flex 2xl:gap-10" aria-label="Navegación principal">
-                @foreach ($navLinks as $navLink)
-                    <a href="{{ $navLink['url'] }}" class="os-nav-link os-focus" @if ($navLink['active']) aria-current="page" @endif>{{ $navLink['label'] }}</a>
+            <nav class="hidden items-center gap-8 xl:flex" aria-label="Navegación principal">
+                @foreach ($storeMenu as $item)
+                    <a href="{{ $item['url'] }}" class="os-store-link os-focus" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                 @endforeach
-                <a href="{{ $outfitUrl }}" class="os-btn-outfit os-focus h-[34px] px-4">Arma tu outfit</a>
             </nav>
 
-            <div class="ml-auto flex items-center gap-1 sm:gap-2 xl:ml-5">
+            <div class="flex items-center justify-end gap-1 sm:gap-3">
                 <button type="button" data-search-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
                 </button>
-                <div class="relative hidden xl:block">
-                    <button type="button" data-disclosure-toggle="account-panel" class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Mi cuenta" aria-expanded="false" aria-controls="account-panel">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7.5" r="3.75"/><path d="M4.75 20.5c.5-4.5 3.2-7 7.25-7s6.75 2.5 7.25 7"/></svg>
-                    </button>
-                    <div id="account-panel" data-disclosure-panel class="absolute right-0 top-[calc(100%+14px)] hidden w-72 rounded-xl border border-edge bg-panel p-4 text-left shadow-2xl shadow-black/50">
-                        <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta · Próximamente</p>
-                        <p class="mt-2 text-sm leading-6 text-mist">Las cuentas de cliente aún no están disponibles. Puedes comprar como invitado y te pediremos tus datos en el checkout.</p>
-                    </div>
-                </div>
-                <button type="button" data-cart-open class="os-focus relative grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.1"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></svg>
-                    @if ($cartCount > 0)
-                        <span class="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-electric px-1 text-[11px] font-black leading-none text-white" aria-hidden="true">{{ $cartCount }}</span>
-                    @endif
+                <button type="button" data-cart-open class="os-focus flex items-center gap-2.5 rounded-full py-1.5 pl-2 pr-1.5 text-white transition hover:bg-white/10" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}, total S/{{ number_format($cartTotal, 2) }}">
+                    <span class="hidden text-sm font-bold sm:inline">S/{{ number_format($cartTotal, 2) }}</span>
+                    <span class="relative grid h-8 w-8 place-items-center">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>
+                        @if ($cartCount > 0)
+                            <span class="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-electric px-1 text-[10px] font-black leading-none text-white ring-2 ring-ink" aria-hidden="true">{{ $cartCount }}</span>
+                        @endif
+                    </span>
                 </button>
-                <span class="ml-2 mr-4 hidden h-6 w-px bg-white/30 xl:block" aria-hidden="true"></span>
-                <a href="{{ route('web.home', ['linea' => $otherLine]) }}" class="os-focus hidden rounded-sm text-[11px] font-medium uppercase tracking-[0.02em] text-white underline decoration-white/70 underline-offset-[5px] transition hover:decoration-electric-soft xl:inline-block">Cambiar a {{ $otherLine }}</a>
                 <button type="button" data-web-menu-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10 xl:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
                     <svg class="h-6 w-6" data-menu-icon-open viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
                     <svg class="hidden h-6 w-6" data-menu-icon-close viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
         </div>
+
+        @if ($freeShippingFrom > 0)
+            <div class="os-shipping-strip" role="status">
+                <div class="mx-auto flex h-9 max-w-[1440px] items-center justify-center gap-4 px-4 text-[13px] text-white/75">
+                    @if ($freeShippingLeft > 0)
+                        <p>Te faltan <b class="font-bold text-white">S/{{ number_format($freeShippingLeft, 2) }}</b> para tener <b class="font-bold text-white">envío gratis</b></p>
+                    @else
+                        <p><b class="font-bold text-white">¡Tienes envío gratis!</b> en tu pedido</p>
+                    @endif
+                    <span class="hidden h-1.5 w-56 overflow-hidden rounded-full bg-white/15 sm:block" aria-hidden="true">
+                        <span class="block h-full rounded-full bg-electric" style="width: {{ $freeShippingProgress }}%"></span>
+                    </span>
+                </div>
+            </div>
+        @endif
         @endif
 
         <div id="search-panel" data-search-panel class="hidden border-t border-edge/60 bg-abyss/95 px-4 py-4 sm:px-6">
@@ -159,10 +171,9 @@
 
         <nav id="web-menu" data-web-menu class="hidden max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-edge/60 bg-abyss px-4 py-4 text-sm font-semibold sm:px-6 xl:hidden" aria-label="Navegación móvil">
             <div class="mx-auto flex max-w-[1440px] flex-col gap-1">
-                @foreach ($navLinks as $navLink)
-                    <a href="{{ $navLink['url'] }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ $navLink['active'] ? 'text-electric-soft' : '' }}" @if ($navLink['active']) aria-current="page" @endif>{{ $navLink['label'] }}</a>
+                @foreach ($storeMenu as $item)
+                    <a href="{{ $item['url'] }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ $item['active'] ? 'text-electric-soft' : '' }}" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                 @endforeach
-                <a href="{{ $outfitUrl }}" class="os-btn-outfit os-focus my-2 h-11 justify-center px-4">Arma tu outfit</a>
                 <button type="button" data-combos-toggle class="os-focus flex items-center justify-between rounded-lg px-3 py-3 text-left uppercase tracking-wide hover:bg-white/5" aria-expanded="false" aria-controls="combos-menu">
                     Combos
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
@@ -192,7 +203,7 @@
         </nav>
     </header>
 
-    <main id="contenido" class="@yield('main-class', 'pt-14 xl:pt-[52px]')" tabindex="-1">@yield('content')</main>
+    <main id="contenido" class="@yield('main-class', 'pt-[var(--header-h)]')" tabindex="-1">@yield('content')</main>
 
     <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-black/60" aria-hidden="true"></div>
     <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-full translate-x-full flex-col border-l border-edge bg-ink text-white shadow-2xl shadow-black/60 transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
@@ -311,6 +322,7 @@
     @hasSection('footer')
         @yield('footer')
     @else
+    <span id="nosotros" aria-hidden="true"></span>
     <footer id="contacto" class="border-t border-edge bg-ink text-white">
         <div class="border-b border-edge px-5 py-7">
             <a href="{{ $homeUrl }}" class="mx-auto flex w-fit items-center justify-center" aria-label="Overshark inicio">

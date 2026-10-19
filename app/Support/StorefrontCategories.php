@@ -54,18 +54,6 @@ class StorefrontCategories
         return null;
     }
 
-    /**
-     * Tipo de prenda para armar un outfit: una superior, una inferior y complementos.
-     */
-    public static function slotFor(?string $slug): string
-    {
-        return match ($slug) {
-            'polos', 'camisas' => 'top',
-            'pantalones' => 'bottom',
-            default => 'extra',
-        };
-    }
-
     public static function apply(Builder $query, string $slug): Builder
     {
         $terms = self::CATEGORIES[$slug]['terms'] ?? [];

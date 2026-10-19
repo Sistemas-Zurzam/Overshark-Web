@@ -120,7 +120,7 @@ body.gl {
 
 /* ---------- Accesos ---------- */
 .gl-access { position: relative; z-index: 2; margin-top: -40px; padding-bottom: 24px; }
-.gl-access__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.gl-access__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .gl-acc {
     --ac: linear-gradient(135deg, var(--pink-hot), var(--pink)); --ac-line: var(--rose); --ac-text: var(--pink);
     position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 264px;

@@ -3,8 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "node scripts/copy-mediapipe-wasm.mjs && node scripts/prepare-depth-model.mjs && vite build",
-        "dev": "node scripts/copy-mediapipe-wasm.mjs && node scripts/prepare-depth-model.mjs && vite"
+        "build": "vite build",
+        "dev": "vite"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -15,10 +15,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "@huggingface/transformers": "4.3.0",
-        "@mediapipe/tasks-vision": "1.0.1",
         "flowbite": "^4.0.2",
-        "gsap": "^3.13.0",
-        "three": "0.186.1"
+        "gsap": "^3.13.0"
     }
 }

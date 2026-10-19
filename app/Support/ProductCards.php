@@ -28,6 +28,8 @@ class ProductCards
             $galleries = $galleriesByProduct->get($product->name, collect())->keyBy('color');
             $colors = $variantsByProduct->get(self::productKey($product->name, $product->zazu_company_id), collect())
                 ->groupBy('color')
+                // Primero el color con más stock (es la foto de la tarjeta): así no todos salen del mismo color.
+                ->sortByDesc(fn ($variants) => $variants->sum('stock'))
                 ->map(function ($variants, string $color) use ($galleries, $product, $fallbackImage) {
                     $gallery = $galleries->get($color);
                     $galleryImages = $gallery?->imageUrls() ?? [];
@@ -41,9 +43,11 @@ class ProductCards
 
             // Foto principal: la de un color que tenga fotos propias (aunque ese color aún no tenga precio),
             // antes que la imagen general del producto o la de reemplazo.
-            $galleryImage = $galleries
-                ->only($colors->pluck('name')->all())
-                ->concat($galleries)
+            // (No usar ->only(): en una colección Eloquent filtra por id del registro, no por color.)
+            $galleryImage = $colors->pluck('name')
+                ->map(fn (string $color) => $galleries->get($color))
+                ->concat($galleries->values())
+                ->filter()
                 ->map(fn (ProductoColorImage $gallery) => $gallery->imageUrls()[0] ?? null)
                 ->filter()
                 ->first();

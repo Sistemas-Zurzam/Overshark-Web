@@ -5,252 +5,216 @@
 @section('content')
     @php
         $oldPrice = $price > 0 ? $price / 0.8 : 0;
-        $selectedSize = $sizes->first();
         $swatches = [
             'azul' => '#1d4f91',
             'beige' => '#ddcdbd',
             'perla' => '#e8e0d6',
-            'cemento' => '#9b9b95',
+            'cemento' => '#5f5f5c',
             'negro' => '#111111',
             'vino' => '#7b1028',
             'botella' => '#0f4f3b',
             'plomo' => '#9a9aa0',
             'pacay' => '#8c9b73',
-            'denim' => '#526f91',
+            'denim' => '#7d94c9',
             'blanco' => '#f7f7f2',
             'p. rosa' => '#e8b8bd',
+            'melange o.' => '#b9bbc0',
+            'topo' => '#8b7d72',
         ];
+        $brandName = $variants->first()?->empresa_nombre;
+        $brandName = $brandName ? \Illuminate\Support\Str::of($brandName)->replace(['S.A.C', 'PERU'], '')->trim()->title() : 'Overshark';
+        $sizeOrder = ['XS' => 0, 'S' => 1, 'M' => 2, 'L' => 3, 'XL' => 4, 'XXL' => 5];
+        $allSizes = $sizes->sortBy(fn ($size) => $sizeOrder[mb_strtoupper($size)] ?? 99)->values();
+        // Stock real por color y talla: habilita solo las tallas que existen en el color elegido.
+        $stockByColor = $variants->whereNotNull('color')->groupBy('color')
+            ->map(fn ($items) => $items->groupBy('talla')->map(fn ($rows) => (int) $rows->sum('stock')));
+        $firstColor = $colorOptions->first()['name'] ?? null;
+        $firstSize = $allSizes->first(fn ($size) => ($stockByColor[$firstColor][$size] ?? 0) > 0) ?? $allSizes->first();
+        $freeShippingFrom = \App\Support\Shipping::freeFrom();
     @endphp
 
-    <section class="px-4 py-6 text-white sm:px-5 sm:py-8 lg:px-8">
-        <article class="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.8fr)] xl:gap-10">
-            <div class="space-y-8">
-                <div class="grid gap-4 sm:grid-cols-[92px_1fr]">
-                    <div data-product-thumbnails class="order-2 flex gap-3 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
-                        @foreach (array_slice($mainImages, 0, 4) as $image)
-                            <button type="button" data-product-thumbnail data-image="{{ $image }}" class="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-edge bg-frame p-1 transition hover:border-neon-soft sm:h-28 sm:w-full">
-                                <img src="{{ $image }}" alt="{{ $producto->name }}" class="h-full w-full rounded-lg object-cover">
-                            </button>
+    <div class="os-pdp px-4 pb-16 pt-4 text-white sm:px-6 lg:px-10 lg:pt-8" data-pdp
+        data-pdp-stock='@json($stockByColor)'>
+        <div class="mx-auto max-w-[1240px]">
+            <nav class="mb-4 flex lg:hidden flex-wrap items-center gap-2 text-xs text-haze" aria-label="Ruta">
+                <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
+                <span aria-hidden="true">/</span>
+                <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="hover:text-white">Tienda</a>
+                <span aria-hidden="true">/</span>
+                <span class="text-mist">{{ \Illuminate\Support\Str::title(mb_strtolower($producto->name)) }}</span>
+            </nav>
+
+            @if (session('status'))
+                <div class="mb-6 rounded-xl border border-neon/40 bg-neon/10 px-4 py-3 text-sm font-bold text-neon-soft" role="status">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.85fr)] lg:gap-12">
+                {{-- Galería editorial: foto grande del alto de la pantalla, flechas y puntos --}}
+                <div data-product-zoom-frame class="os-pdp-stage">
+                    <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $producto->name }}" class="h-full w-full origin-center object-contain transition-transform duration-200">
+                    <span class="absolute left-5 top-5 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white">-20%</span>
+                    <button type="button" data-pdp-step="-1" class="os-pdp-arrow left-4" aria-label="Foto anterior">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+                    </button>
+                    <button type="button" data-pdp-step="1" class="os-pdp-arrow right-4" aria-label="Foto siguiente">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                    </button>
+                    <div data-pdp-thumbs class="absolute inset-x-0 bottom-5 flex justify-center gap-2">
+                        @foreach (array_slice($mainImages, 0, 5) as $image)
+                            <button type="button" data-pdp-thumb data-image="{{ $image }}" @class(['os-pdp-dot', 'is-active' => $loop->first]) aria-label="Ver foto {{ $loop->iteration }}"></button>
                         @endforeach
                     </div>
-
-                    <div data-product-zoom-frame class="order-1 relative aspect-[4/5] w-full self-start overflow-hidden rounded-3xl bg-frame sm:order-2 lg:h-[740px] lg:aspect-auto xl:h-[800px]">
-                        <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $producto->name }}" class="h-full w-full origin-center object-contain object-center transition-transform duration-200">
-                        <button type="button" data-product-lens-toggle class="absolute bottom-5 right-5 grid h-12 w-12 place-items-center rounded-full bg-panel text-white shadow-lg transition hover:scale-105" aria-label="Activar zoom de imagen" aria-pressed="false">
-                            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/><path d="M10.5 7.5v6M7.5 10.5h6"/></svg>
-                        </button>
-                    </div>
+                    <button type="button" data-product-lens-toggle class="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-ink/85 text-white shadow-lg backdrop-blur transition hover:scale-105" aria-label="Activar zoom de imagen" aria-pressed="false">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/><path d="M10.5 7.5v6M7.5 10.5h6"/></svg>
+                    </button>
                 </div>
 
-                <section data-product-info-tabs>
-                    <div class="grid grid-cols-3 border-b border-edge text-sm font-black uppercase">
-                        @foreach (['descripcion' => 'Descripcion', 'composicion' => 'Composicion', 'cuidados' => 'Cuidados'] as $tab => $label)
-                            <button type="button" data-product-info-tab="{{ $tab }}" @class([
-                                'border-b-2 px-3 py-4 text-center transition hover:text-white',
-                                'border-neon-soft text-white' => $loop->first,
-                                'border-transparent text-haze' => ! $loop->first,
-                            ])>{{ $label }}</button>
-                        @endforeach
+                {{-- Compra --}}
+                <div class="lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:self-start">
+                    <nav class="mb-6 hidden flex-wrap items-center gap-2 text-xs text-haze lg:flex" aria-label="Ruta">
+                        <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
+                        <span aria-hidden="true">/</span>
+                        <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="hover:text-white">Tienda</a>
+                        <span aria-hidden="true">/</span>
+                        <span class="text-mist">{{ \Illuminate\Support\Str::title(mb_strtolower($producto->name)) }}</span>
+                    </nav>
+                    <p class="text-xs font-black uppercase tracking-[0.22em] text-electric-soft">{{ $brandName }}</p>
+                    <h1 class="mt-2 font-heading text-3xl font-black uppercase leading-tight tracking-tight sm:text-4xl">{{ $producto->name }}</h1>
+
+                    <div class="mt-4 flex flex-wrap items-end gap-3">
+                        <p class="text-4xl font-black leading-none">S/ {{ number_format($price, 2) }}</p>
+                        @if ($oldPrice > 0)
+                            <p class="pb-0.5 text-base text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                            <span class="mb-0.5 rounded-md bg-red-500/15 px-2 py-1 text-xs font-black text-red-400">Ahorras S/ {{ number_format($oldPrice - $price, 2) }}</span>
+                        @endif
                     </div>
+                    @if ($freeShippingFrom > 0)
+                        <p class="mt-2 text-sm text-mist">Envío gratis en compras desde <b class="text-white">S/ {{ number_format($freeShippingFrom, 0) }}</b></p>
+                    @endif
 
-                    <div class="px-3 py-5 text-sm leading-7 text-mist sm:px-4">
-                        <div data-product-info-panel="descripcion">
-                            @if ($producto->descripcion)
-                                <div class="space-y-3">{!! nl2br(e($producto->descripcion)) !!}</div>
-                            @else
-                                <p>Descripcion pendiente de completar.</p>
-                            @endif
+                    <hr class="my-7 border-edge">
 
-                            <dl class="mt-6 grid gap-2 text-base sm:max-w-md">
-                                @foreach (['Material' => $producto->material, 'Fit' => $producto->fit, 'Sensacion' => $producto->sensacion] as $label => $value)
-                                    @if ($value)
-                                        <div class="grid grid-cols-[92px_1fr] gap-2">
-                                            <dt class="font-semibold text-white">{{ $label }}:</dt>
-                                            <dd>{{ $value }}</dd>
-                                        </div>
-                                    @endif
-                                @endforeach
-                            </dl>
-                        </div>
-
-                        <div data-product-info-panel="composicion" class="hidden">
-                            @if ($producto->composicion)
-                                <div class="space-y-3">{!! nl2br(e($producto->composicion)) !!}</div>
-                            @else
-                                <p>Composicion pendiente de completar.</p>
-                            @endif
-                        </div>
-
-                        <div data-product-info-panel="cuidados" class="hidden">
-                            @if ($producto->cuidados)
-                                <div class="space-y-3">{!! nl2br(e($producto->cuidados)) !!}</div>
-                            @else
-                                <p>Cuidados pendientes de completar.</p>
-                            @endif
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <div class="xl:pt-1">
-                @if (session('status'))
-                    <div class="mb-5 rounded-xl border border-neon/40 bg-neon/10 px-4 py-3 text-sm font-bold text-neon-soft">
-                        {{ session('status') }}
-                    </div>
-                @endif
-
-                <div class="flex items-start justify-between gap-4">
+                    {{-- Color --}}
                     <div>
-                        <h1 class="text-2xl font-black text-white">{{ $producto->name }}</h1>
-                        <div class="mt-1 flex flex-wrap items-center gap-3">
-                            <p class="text-4xl font-black leading-none sm:text-5xl">S/ {{ number_format($price, 2) }}</p>
-                            <span class="rounded-md bg-red-500/10 px-2 py-1 text-sm font-bold text-red-400">-20%</span>
-                            @if ($oldPrice > 0)
-                                <span class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</span>
-                            @endif
-                        </div>
-                        <span class="mt-3 inline-flex rounded-md bg-red-500/10 px-2 py-1 text-sm font-bold text-red-400">Ahorras S/ {{ number_format(max($oldPrice - $price, 0), 2) }}</span>
-                    </div>
-                </div>
-
-                <div class="mt-6 rounded-2xl border border-red-500/40 p-4">
-                    <div class="flex items-center gap-3 text-sm font-bold">
-                        <svg class="h-6 w-6 text-red-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 1.8c.7 4.4-2.2 5.8-2.2 8.7 0 1.2.7 2.1 1.7 2.1 1.6 0 2.5-1.5 2.1-3.5 2.6 2 4 4.4 4 7.1a7.1 7.1 0 0 1-14.2 0c0-3.8 2-7.3 5.8-10.5-.2 2.6.5 4.1 1.5 4.1 1.4 0 2.3-2.7 1.3-8Z"/></svg>
-                        Ahorra mas comprando en pack
-                    </div>
-                    <div class="mt-4 space-y-3">
-                        @foreach ([['3 por S/ 49.00', 'Equivale a S/ 16.33 c/u', 'Ahorra S/ 10.70'], ['3 por S/ 49.00', 'Equivale a S/ 16.33 c/u', 'Ahorra S/ 10.70']] as [$pack, $equiv, $save])
-                            <button type="button" class="flex w-full flex-col gap-3 rounded-xl border border-red-500/40 px-4 py-3 text-left transition hover:border-red-400 sm:flex-row sm:items-center sm:justify-between">
-                                <span>
-                                    <span class="block text-lg font-black">{{ $pack }}</span>
-                                    <span class="mt-1 block text-sm text-haze">{{ $equiv }}</span>
-                                </span>
-                                <span class="w-fit rounded-md bg-red-500/10 px-2 py-1 text-sm font-bold text-red-400">{{ $save }}</span>
-                            </button>
-                        @endforeach
-                    </div>
-                    <a href="#packs" class="mt-3 flex justify-end text-sm font-bold underline">Ver mas packs -></a>
-                </div>
-
-                <div class="mt-6">
-                    <p class="text-sm text-mist">Color: <span data-product-selected-color class="font-medium text-white">{{ $colorOptions->first()['name'] ?? 'Selecciona color' }}</span></p>
-                    <div class="mt-3 flex flex-wrap gap-3">
-                        @foreach ($colorOptions as $color)
-                            @php
-                                $colorName = mb_strtolower($color['name']);
-                                $swatchColor = $swatches[$colorName] ?? '#b8b8bd';
-                            @endphp
-                            <button type="button" data-product-color data-image="{{ $color['images'][0] }}" data-images='@json($color['images'])' data-color-name="{{ $color['name'] }}" data-sizes='@json($color['sizes'])' class="h-5 w-5 rounded-full border border-edge-strong ring-offset-2 ring-offset-ink transition hover:ring-2 hover:ring-edge-strong" style="background-color: {{ $swatchColor }}" aria-label="Ver color {{ $color['name'] }}"></button>
-                        @endforeach
-                    </div>
-                </div>
-
-                <div class="mt-6 grid gap-6 sm:grid-cols-2">
-                    <div>
-                        <div class="flex items-center gap-2 text-sm">
-                            <span>Talla:</span>
-                            @if ($producto->sizeGuideImageUrl())
-                                <button type="button" data-size-guide-open class="font-bold text-haze underline transition hover:text-white">Guia de tallas</button>
-                            @else
-                                <span class="font-bold text-haze underline">Guia de tallas</span>
-                            @endif
-                        </div>
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            @foreach ($sizes as $size)
-                                <button type="button" data-product-size="{{ $size }}" @class([
-                                    'grid h-10 w-10 place-items-center border border-edge text-sm font-bold transition hover:border-neon-soft hover:bg-neon-soft hover:text-white',
-                                    'bg-neon text-white' => $size === $selectedSize,
-                                    'bg-panel text-white' => $size !== $selectedSize,
-                                ])>{{ $size }}</button>
+                        <p class="text-sm text-mist">Color: <b data-pdp-color-name class="font-bold uppercase text-white">{{ $firstColor ?? 'Elige un color' }}</b></p>
+                        <div class="mt-3 grid grid-cols-5 gap-2" role="radiogroup" aria-label="Color">
+                            @foreach ($colorOptions as $color)
+                                <button type="button" role="radio" aria-checked="{{ $loop->first ? 'true' : 'false' }}"
+                                    data-pdp-color="{{ $color['name'] }}" data-images='@json($color['images'])'
+                                    class="os-pdp-chip" aria-label="Color {{ $color['name'] }}" title="{{ $color['name'] }}">
+                                    <img src="{{ $color['images'][0] }}" alt="" loading="lazy" decoding="async">
+                                    <span class="os-pdp-chip__dot" style="--sw: {{ $swatches[mb_strtolower($color['name'])] ?? '#b8b8bd' }}" aria-hidden="true"></span>
+                                </button>
                             @endforeach
                         </div>
                     </div>
 
-                    <div>
-                        <p class="text-sm">Cantidad:</p>
-                        <div class="mt-4 flex w-28 items-center justify-between rounded-md border border-edge px-3 py-2">
-                            <button type="button" data-qty-dec class="text-2xl text-haze">-</button>
-                            <input data-qty-input value="1" readonly class="w-8 bg-transparent text-center text-sm outline-none">
-                            <button type="button" data-qty-inc class="text-2xl text-haze">+</button>
+                    {{-- Talla --}}
+                    <div class="mt-6">
+                        <div class="flex items-center justify-between text-sm">
+                            <p class="text-mist">Talla: <b data-pdp-size-name class="font-bold text-white">{{ $firstSize }}</b></p>
+                            @if ($producto->sizeGuideImageUrl())
+                                <button type="button" data-size-guide-open class="inline-flex items-center gap-1.5 font-semibold text-electric-soft underline-offset-4 hover:underline">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg>
+                                    Guía de tallas
+                                </button>
+                            @endif
                         </div>
+                        <div class="os-pdp-sizes mt-3" role="radiogroup" aria-label="Talla">
+                            @foreach ($allSizes as $size)
+                                <button type="button" role="radio" aria-checked="{{ $size === $firstSize ? 'true' : 'false' }}" data-pdp-size="{{ $size }}" class="os-pdp-size">{{ $size }}</button>
+                            @endforeach
+                        </div>
+                        <p data-pdp-stock-note class="mt-3 hidden text-sm font-semibold text-amber-300"></p>
                     </div>
-                </div>
 
-                <form action="{{ route('web.cart.store') }}" method="POST" data-cart-form class="mt-6 space-y-3">
-                    @csrf
-                    <input type="hidden" name="producto_id" value="{{ $producto->id }}">
-                    <input type="hidden" name="color" value="{{ $colorOptions->first()['name'] ?? '' }}" data-cart-color>
-                    <input type="hidden" name="talla" value="{{ $selectedSize }}" data-cart-size>
-                    <input type="hidden" name="qty" value="1" data-cart-qty>
+                    {{-- Cantidad + carrito --}}
+                    <form action="{{ route('web.cart.store') }}" method="POST" data-cart-form class="mt-7">
+                        @csrf
+                        <input type="hidden" name="producto_id" value="{{ $producto->id }}">
+                        <input type="hidden" name="color" value="{{ $firstColor }}" data-pdp-input-color>
+                        <input type="hidden" name="talla" value="{{ $firstSize }}" data-pdp-input-size>
+                        <input type="hidden" name="qty" value="1" data-pdp-input-qty>
 
-                    <button type="submit" class="btn-primary w-full gap-2 px-5 py-4">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
-                        Agregar al carrito
-                    </button>
-                    <button type="submit" name="checkout" value="1" class="btn-secondary w-full px-5 py-4">Comprar ahora</button>
-                </form>
-
-                <div class="mt-8 divide-y divide-edge border-y border-edge">
-                    @foreach ([
-                        ['Envios a todo el Peru', 'Lima: delivery o agencia · Provincia: agencia', 'S/ 14 costo unico'],
-                        ['Pago contraentrega', 'Paga cuando recibas tu pedido', null],
-                    ] as [$title, $copy, $badge])
-                        <div class="flex gap-4 py-4">
-                            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-edge">
-                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h11v9H4z"/><path d="M15 10h4l2 3v3h-6z"/><circle cx="8" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+                        <div class="flex gap-3">
+                            <div class="flex h-14 shrink-0 items-center rounded-xl border border-edge-strong">
+                                <button type="button" data-pdp-qty="-1" class="grid h-full w-11 place-items-center text-xl text-mist hover:text-white" aria-label="Quitar una unidad">−</button>
+                                <span data-pdp-qty-value class="w-8 text-center text-base font-bold" aria-live="polite">1</span>
+                                <button type="button" data-pdp-qty="1" class="grid h-full w-11 place-items-center text-xl text-mist hover:text-white" aria-label="Agregar una unidad">+</button>
                             </div>
-                            <div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <p class="text-sm font-black">{{ $title }}</p>
-                                    @if ($badge)
-                                        <span class="rounded-md bg-neon/15 px-2 py-1 text-xs font-black text-neon-soft">{{ $badge }}</span>
-                                    @endif
-                                </div>
-                                <p class="mt-1 text-xs text-haze">{{ $copy }}</p>
-                            </div>
+                            <button type="submit" data-pdp-submit class="btn-primary h-14 flex-1 gap-2 whitespace-nowrap px-4 text-[13px] tracking-[0.04em]">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 12H6Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>
+                                Agregar al carrito
+                            </button>
                         </div>
-                    @endforeach
+                        <button type="submit" name="checkout" value="1" data-pdp-submit class="os-pdp-buy mt-3 h-14 w-full text-sm">Comprar ahora</button>
+                    </form>
+
+                    {{-- Beneficios --}}
+                    <ul class="mt-7 grid gap-3 sm:grid-cols-3">
+                        @foreach ([
+                            ['M4 7h11v9H4zM15 10h4l2 3v3h-6z', 'Envíos a todo el Perú', 'Lima y provincias'],
+                            ['M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4', 'Cambios fáciles', 'Si la talla no te queda'],
+                            ['M12 3 4 6v5c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6Z', 'Pago seguro', 'O contraentrega'],
+                        ] as [$icon, $title, $copy])
+                            <li class="flex items-center gap-3 rounded-xl border border-edge bg-panel/60 px-3 py-3">
+                                <svg class="h-6 w-6 shrink-0 text-electric-soft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="{{ $icon }}"/></svg>
+                                <span><b class="block text-xs font-black">{{ $title }}</b><span class="text-[11px] text-haze">{{ $copy }}</span></span>
+                            </li>
+                        @endforeach
+                    </ul>
 
                     @if ($paymentMethods->isNotEmpty())
-                        <div class="flex gap-4 py-4">
-                            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-edge">
-                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16v10H4z"/><path d="M7 11h4"/><path d="M15 14h2"/></svg>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-black">Metodos de pago</p>
-                                <p class="mt-1 text-xs text-haze">Pagos 100% seguros</p>
-                                <div class="mt-3 flex flex-wrap items-center gap-3">
-                                    @foreach ($paymentMethods as $method)
-                                        <div class="flex items-center gap-2 rounded-full bg-panel-2 px-3 py-2">
-                                            @if ($method->imageUrl())
-                                                <img src="{{ $method->imageUrl() }}" alt="{{ $method->name }}" class="h-7 w-7 rounded-full object-contain">
-                                            @endif
-                                            <span class="text-xs font-black text-white">{{ $method->name }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
+                        <div class="mt-5 flex flex-wrap items-center gap-2">
+                            <span class="mr-1 text-xs text-haze">Aceptamos:</span>
+                            @foreach ($paymentMethods as $method)
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-panel-2 px-2.5 py-1.5 text-[11px] font-bold">
+                                    @if ($method->imageUrl())
+                                        <img src="{{ $method->imageUrl() }}" alt="" class="h-5 w-5 rounded-full object-contain">
+                                    @endif
+                                    {{ $method->name }}
+                                </span>
+                            @endforeach
                         </div>
                     @endif
 
-                    @foreach ([
-                        ['Material de alta calidad', 'No destine, no encoge y no hace bolitas'],
-                        ['Comoda y fresca', 'Ligera y transpirable'],
-                    ] as [$title, $copy])
-                        <div class="flex gap-4 py-4">
-                            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-edge">
-                                <svg class="h-5 w-5 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-black">{{ $title }}</p>
-                                <p class="mt-1 text-xs text-haze">{{ $copy }}</p>
-                            </div>
-                        </div>
-                    @endforeach
+                    {{-- Detalles --}}
+                    <div class="mt-7 divide-y divide-edge border-y border-edge">
+                        @foreach ([
+                            'Descripción' => $producto->descripcion,
+                            'Composición' => $producto->composicion,
+                            'Cuidados' => $producto->cuidados,
+                        ] as $label => $text)
+                            <details class="os-pdp-details group" @if ($loop->first) open @endif>
+                                <summary class="flex cursor-pointer list-none items-center justify-between py-4 text-sm font-black uppercase tracking-wide">
+                                    {{ $label }}
+                                    <svg class="h-4 w-4 text-haze transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                </summary>
+                                <div class="pb-5 text-sm leading-7 text-mist">
+                                    @if ($text)
+                                        {!! nl2br(e($text)) !!}
+                                    @else
+                                        <p>Muy pronto agregaremos esta información.</p>
+                                    @endif
+                                    @if ($loop->first)
+                                        <dl class="mt-3 grid gap-1">
+                                            @foreach (['Material' => $producto->material, 'Fit' => $producto->fit, 'Sensación' => $producto->sensacion] as $key => $value)
+                                                @if ($value)
+                                                    <div class="flex gap-2"><dt class="font-semibold text-white">{{ $key }}:</dt><dd>{{ $value }}</dd></div>
+                                                @endif
+                                            @endforeach
+                                        </dl>
+                                    @endif
+                                </div>
+                            </details>
+                        @endforeach
+                    </div>
                 </div>
             </div>
-        </article>
-    </section>
+        </div>
+    </div>
 
     @if ($recommendedProducts->isNotEmpty())
         <section class="px-5 pb-20 text-white lg:px-8">

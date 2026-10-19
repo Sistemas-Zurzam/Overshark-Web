@@ -44,6 +44,7 @@ class Combo extends Model
     {
         return Cache::remember(self::ACTIVE_CACHE_KEY, now()->addMinutes(30), fn () => static::query()
             ->where('status', true)
+            ->where(fn ($q) => $q->whereNull('modality')->orWhere('modality', '!=', 'Outfit'))
             ->whereNotNull('imagen')
             ->latest()
             ->get());
@@ -77,7 +78,10 @@ class Combo extends Model
             return "Elige {$this->selection_limit} unidades";
         }
 
-        $quantity = $this->displayItems()->sum('cantidad');
+        // Las filas con la misma "prenda" (grupo) son alternativas: cuentan una sola vez.
+        $quantity = $this->displayItems()
+            ->groupBy(fn (array $item) => ! empty($item['grupo']) ? 'grupo:'.mb_strtoupper($item['grupo']) : 'item:'.spl_object_id((object) $item))
+            ->sum(fn ($rows) => ! empty($rows->first()['grupo']) ? $rows->max('cantidad') : $rows->sum('cantidad'));
 
         if ($quantity === 0 && $this->selection_limit) {
             return "{$this->selection_limit} unidades";

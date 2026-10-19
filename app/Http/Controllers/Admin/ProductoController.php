@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Brand;
-use App\Support\FittingImages;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -76,8 +75,6 @@ class ProductoController extends Controller
             'variantsBySize' => $variants->groupBy(fn (Producto $variant) => $variant->talla ?: 'Sin talla'),
             'colors' => $variants->pluck('color')->filter()->unique()->values(),
             'colorImages' => $colorImages,
-            'fittingImages' => $variants->pluck('color')->filter()->unique()
-                ->mapWithKeys(fn (string $color) => [$color => FittingImages::url($producto->name, $color)]),
             'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->pluck('name'),
         ]);
     }
@@ -174,31 +171,6 @@ class ProductoController extends Controller
         ])->save();
 
         return back()->with('status', 'Imagenes del color actualizadas.');
-    }
-
-    public function updateFittingImage(Request $request, Producto $producto): RedirectResponse
-    {
-        $validated = $request->validate([
-            'color' => ['required', 'string', 'max:255'],
-            'imagen_probador' => ['required', 'image', 'mimes:png,webp', 'max:8192', 'dimensions:min_width=200,min_height=200,max_width=4000,max_height=4000'],
-        ], [
-            'imagen_probador.mimes' => 'La imagen del probador debe ser PNG o WebP con fondo transparente.',
-        ]);
-
-        abort_unless($this->variantsFor($producto)->where('color', $validated['color'])->exists(), 422);
-
-        FittingImages::store($validated['imagen_probador'], $producto->name, $validated['color']);
-
-        return back()->with('status', 'Imagen del probador guardada para '.$validated['color'].'.');
-    }
-
-    public function destroyFittingImage(Request $request, Producto $producto): RedirectResponse
-    {
-        $validated = $request->validate(['color' => ['required', 'string', 'max:255']]);
-
-        FittingImages::delete($producto->name, $validated['color']);
-
-        return back()->with('status', 'Imagen del probador eliminada.');
     }
 
     private function variantsFor(Producto $producto)

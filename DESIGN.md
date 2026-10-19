@@ -111,7 +111,7 @@ The public storefront (`layouts/web.blade.php`, `body.theme-neon`) follows the F
 - **Type:** headings stay heavy sans uppercase; the italic serif `font-display` (Playfair Display) is reserved for hero/editorial accents such as "hecho para *dominar*".
 - **Buttons:** pills. `btn-primary` is the blue gradient, `btn-secondary` an outlined pill, `btn-light` the white hero CTA.
 - **Hero:** banners from Admin › Banners render on the right side with a soft mask. Upload cut-out PNGs with transparent background to match Figma; photos with light backgrounds show as a glowing panel.
-- **Live / chat / outfit cards:** links come from `STOREFRONT_LIVE_URL`, `STOREFRONT_CHAT_URL` and `STOREFRONT_OUTFIT_AI_URL`; without them the buttons jump to the footer contact.
+- **Live / chat cards:** links come from `STOREFRONT_LIVE_URL` and `STOREFRONT_CHAT_URL`; without them the buttons jump to the footer contact.
 - **HOMBRE / MUJER:** a first visit to `/` shows the "¿Qué quieres explorar?" selector (`web/explore.blade.php`, also at `/explorar`). Choosing a card, the header toggle or `?linea=hombre|mujer` stores the line in session and switches the hero copy. Products have no gender attribute yet, so it does not filter the catalog. The selector uses `font-condensed` (Bebas Neue) for its headings.
 
 ## Do's and Don'ts

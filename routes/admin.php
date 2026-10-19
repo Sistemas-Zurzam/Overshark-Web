@@ -18,6 +18,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::view('/pedidos', 'admin.pedidos.index')->name('pedidos.index');
     Route::view('/clientes', 'admin.clientes.index')->name('clientes.index');
     Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
+    Route::get('/mensajes', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('messages.index');
+    Route::patch('/mensajes/{message}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'toggle'])->name('messages.toggle');
+    Route::delete('/mensajes/{message}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
     Route::view('/usuarios', 'admin.usuarios.index')->name('usuarios.index');
     Route::view('/bodegas', 'admin.bodegas.index')->name('bodegas.index');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
@@ -27,8 +30,6 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');
     Route::post('/productos/{producto}/guia-tallas', [ProductoController::class, 'updateSizeGuideImage'])->name('productos.size-guide');
     Route::post('/productos/{producto}/imagenes-color', [ProductoController::class, 'updateColorImages'])->name('productos.color-images');
-    Route::post('/productos/{producto}/probador', [ProductoController::class, 'updateFittingImage'])->name('productos.fitting-image');
-    Route::delete('/productos/{producto}/probador', [ProductoController::class, 'destroyFittingImage'])->name('productos.fitting-image.destroy');
     Route::get('/medios-pago', [MetodoPagoController::class, 'index'])->name('medios-pago.index');
     Route::post('/medios-pago', [MetodoPagoController::class, 'store'])->name('medios-pago.store');
     Route::patch('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'update'])->name('medios-pago.update');
@@ -40,10 +41,14 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/banners/{banner}/estado', [BannerController::class, 'toggle'])->name('banners.toggle');
     Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     Route::get('/combos', [ComboController::class, 'index'])->name('combos.index');
+    Route::get('/arma-tu-outfit', [ComboController::class, 'outfits'])->name('outfits.index');
+    Route::post('/arma-tu-outfit/flyer', [ComboController::class, 'updateFlyer'])->name('outfits.flyer');
     // Overshark TV: maqueta del estudio (sin backend todavía).
     Route::view('/tv', 'admin.tv.index')->name('tv.index');
     Route::post('/combos/importar-catalogo', [ComboController::class, 'importCatalog'])->name('combos.import');
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
+    Route::get('/combos/{combo}/editar', [ComboController::class, 'edit'])->name('combos.edit');
+    Route::put('/combos/{combo}', [ComboController::class, 'update'])->name('combos.update');
     Route::patch('/combos/{combo}/estado', [ComboController::class, 'toggle'])->name('combos.toggle');
     Route::delete('/combos/{combo}', [ComboController::class, 'destroy'])->name('combos.destroy');
     Route::get('/marcas', [BrandController::class, 'index'])->name('brands.index');
@@ -51,6 +56,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/marcas/{brand}', [BrandController::class, 'update'])->name('brands.update');
     Route::patch('/marcas/{brand}/estado', [BrandController::class, 'toggle'])->name('brands.toggle');
     Route::get('/identidad-visual', [BrandSettingController::class, 'edit'])->name('brand.edit');
+    Route::get('/pagina-nosotros', [\App\Http\Controllers\Admin\AboutPageController::class, 'edit'])->name('about.edit');
+    Route::put('/pagina-nosotros', [\App\Http\Controllers\Admin\AboutPageController::class, 'update'])->name('about.update');
+    Route::post('/pagina-nosotros/restaurar', [\App\Http\Controllers\Admin\AboutPageController::class, 'reset'])->name('about.reset');
     Route::put('/identidad-visual', [BrandSettingController::class, 'update'])->name('brand.update');
 
     Route::post('/refresh-token', [AuthController::class, 'refresh'])->name('token.refresh');

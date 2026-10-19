@@ -70,48 +70,6 @@
             </section>
 
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 class="text-lg font-black text-slate-950">Probador virtual</h2>
-                <p class="mt-1 text-sm text-slate-500">Una imagen por color: la prenda de frente, extendida y <strong>con fondo transparente</strong> (PNG o WebP). Sin ella, el probador usa una ilustración del color.</p>
-
-                @if ($fittingImages->isNotEmpty())
-                    <ul class="mt-4 grid grid-cols-3 gap-2">
-                        @foreach ($fittingImages as $color => $url)
-                            <li class="rounded-xl border border-slate-200 p-1.5 text-center">
-                                <div class="grid aspect-square place-items-center rounded-lg bg-[repeating-conic-gradient(#e2e8f0_0_25%,#fff_0_50%)] bg-[length:16px_16px]">
-                                    @if ($url)
-                                        <img src="{{ $url }}" alt="Probador {{ $color }}" class="max-h-full max-w-full object-contain">
-                                    @else
-                                        <span class="text-[10px] font-semibold text-slate-400">Sin imagen</span>
-                                    @endif
-                                </div>
-                                <p class="mt-1 truncate text-[11px] font-bold text-slate-600">{{ $color }}</p>
-                                @if ($url)
-                                    <form action="{{ route('admin.productos.fitting-image.destroy', $producto) }}" method="POST">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="color" value="{{ $color }}">
-                                        <button type="submit" class="text-[11px] font-bold text-red-500 hover:text-red-700">Quitar</button>
-                                    </form>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-
-                <form action="{{ route('admin.productos.fitting-image', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3">
-                    @csrf
-                    <select name="color" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
-                        <option value="">Selecciona color</option>
-                        @foreach ($colors as $color)
-                            <option value="{{ $color }}">{{ $color }}</option>
-                        @endforeach
-                    </select>
-                    <input type="file" name="imagen_probador" accept=".png,.webp" required class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
-                    <button type="submit" class="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700">Guardar imagen del probador</button>
-                </form>
-            </section>
-
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 class="text-lg font-black text-slate-950">Guia de tallas</h2>
                 <p class="mt-1 text-sm text-slate-500">Sube una imagen para mostrarla al hacer click en Guia de tallas.</p>
 

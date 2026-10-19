@@ -152,6 +152,51 @@ class ComboManagementTest extends TestCase
             ->assertSee('Limpiar');
     }
 
+    public function test_admin_edits_combo_with_garment_alternatives_for_the_outfit_page(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class);
+        $this->actingAs(User::factory()->create());
+
+        $make = fn (string $name, string $color, string $size) => Producto::query()->create([
+            'name' => $name, 'default_code' => "{$name}-{$color}-{$size}", 'color' => $color, 'talla' => $size,
+            'stock' => 5, 'price' => 49.9, 'zazu_company_id' => 1,
+        ]);
+        $clasico = $make('CLASICO', 'NEGRO', 'M');
+        $slim = $make('SLIM FIT', 'AZUL', 'L');
+        $pant = $make('PANTALON BRATZ', 'BEIGE', 'M');
+        $combo = Combo::query()->create(['name' => 'Borrador', 'items' => [], 'status' => false, 'selection_mode' => 'fixed']);
+
+        $this->get(route('admin.combos.edit', $combo))->assertOk()->assertSee('Mostrar en «Arma tu outfit»', false);
+
+        $this->put(route('admin.combos.update', $combo), [
+            'name' => 'Combo Polo', 'brand' => 'OVERSHARK', 'price' => 99, 'notes' => 'Polo + Pantalón',
+            'outfit' => 1, 'status' => 1,
+            'products' => [
+                ['producto_id' => $clasico->id, 'grupo' => 'Polo', 'cantidad' => 1],
+                ['producto_id' => $slim->id, 'grupo' => 'Polo', 'cantidad' => 1],
+                ['producto_id' => $pant->id, 'grupo' => '', 'cantidad' => 1],
+            ],
+        ])->assertRedirect(route('admin.outfits.index'));
+
+        $combo->refresh();
+        $this->assertSame('Outfit', $combo->modality);
+        $this->assertSame('2 unidades', $combo->quantityLabel());
+        $this->assertSame([
+            ['zazu' => 'CLASICO', 'cantidad' => 1, 'grupo' => 'Polo'],
+            ['zazu' => 'SLIM FIT', 'cantidad' => 1, 'grupo' => 'Polo'],
+            ['zazu' => 'PANTALON BRATZ', 'cantidad' => 1],
+        ], $combo->items);
+
+        // La prenda "Polo" ofrece los dos productos; el pantalón queda como prenda fija.
+        $slots = app(\App\Services\ComboSelectionService::class)->slots($combo);
+        $this->assertSame(['Polo', 'PANTALON BRATZ'], $slots->pluck('label')->all());
+        $this->assertEqualsCanonicalizing([$clasico->id, $slim->id], $slots[0]['variants']->pluck('id')->all());
+
+        $this->get(route('web.outfit'))->assertOk()->assertSee('Combo Polo')->assertSee('Polo + Pantalón');
+        $this->get(route('admin.outfits.index'))->assertOk()->assertSee('Combo Polo');
+        $this->get(route('admin.combos.index'))->assertOk()->assertDontSee('Combo Polo');
+    }
+
     private function png(): string
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');

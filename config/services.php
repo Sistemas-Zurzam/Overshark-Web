@@ -46,18 +46,12 @@ return [
         'timeout' => (int) env('ZAZU_TIMEOUT', 30),
     ],
 
-    // Probador virtual (https://docs.fashn.ai). Sin FASHN_API_KEY el probador funciona sin IA.
-    'fashn' => [
-        'api_key' => env('FASHN_API_KEY'),
-        'base_url' => env('FASHN_BASE_URL', 'https://api.fashn.ai/v1'),
-        'model' => env('FASHN_MODEL', 'tryon-v1.6'),
-        'mode' => env('FASHN_MODE', 'balanced'),
-        'timeout' => (int) env('FASHN_TIMEOUT', 20),
-    ],
 
     'storefront' => [
         'live_url' => env('STOREFRONT_LIVE_URL'),
         'chat_url' => env('STOREFRONT_CHAT_URL'),
+        // Envío gratis desde este subtotal (S/). 0 = sin envío gratis y sin barra en el header.
+        'free_shipping_from' => (float) env('STOREFRONT_FREE_SHIPPING_FROM', 0),
     ],
 
 ];

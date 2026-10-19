@@ -28,12 +28,12 @@ class CollectionSelectionTest extends TestCase
             ->assertSee('Compras en vivo')
             ->assertSee('Asesoría personalizada')
             ->assertSee('Compra manual')
-            ->assertSeeText('Arma tu outfit con IA');
+            ->assertDontSeeText('Arma tu outfit con IA');
 
         $this->get('/')
             ->assertOk()
             ->assertDontSee('¿Qué quieres explorar?')
-            ->assertSeeText('Arma tu outfit con IA');
+            ->assertDontSeeText('Arma tu outfit con IA');
     }
 
     public function test_women_products_page_keeps_the_girls_design(): void
@@ -71,12 +71,27 @@ class CollectionSelectionTest extends TestCase
             ->assertSee('¿Qué quieres explorar?');
     }
 
-    public function test_outfit_card_links_to_the_outfit_builder(): void
+    public function test_outfit_builder_lists_outfit_combos_with_their_garments(): void
     {
-        $this->withSession(['storefront.line' => 'hombre'])
-            ->get('/')
+        $polo = \App\Models\Admin\Producto::query()->create(['name' => 'CLASICO', 'default_code' => 'CL-N-M', 'color' => 'NEGRO', 'talla' => 'M', 'stock' => 4, 'price' => 52.9, 'zazu_company_id' => 1]);
+        $pant = \App\Models\Admin\Producto::query()->create(['name' => 'PANTALON BRATZ', 'default_code' => 'PB-B-L', 'color' => 'BEIGE', 'talla' => 'L', 'stock' => 3, 'price' => 85.9, 'zazu_company_id' => 1]);
+        $combo = \App\Models\Admin\Combo::query()->create([
+            'name' => 'Combo Básico', 'brand' => 'Overshark', 'modality' => 'Outfit', 'price' => 109,
+            'imagen' => 'combos/outfit-basico.jpg', 'status' => true, 'selection_mode' => 'fixed',
+            'items' => [['zazu' => 'CLASICO', 'cantidad' => 1], ['zazu' => 'PANTALON BRATZ', 'cantidad' => 1]],
+        ]);
+        $combo->productos()->sync([$polo->id => ['cantidad' => 1], $pant->id => ['cantidad' => 1]]);
+        \App\Models\Admin\Combo::query()->create([
+            'name' => 'Promo Live', 'brand' => 'Overshark', 'modality' => 'Live', 'price' => 99,
+            'imagen' => 'combos/x.jpg', 'status' => true, 'selection_mode' => 'fixed', 'items' => [],
+        ]);
+
+        $this->get(route('web.outfit'))
             ->assertOk()
-            ->assertSee('href="'.route('web.outfit.show').'"', false)
-            ->assertSee('Crear mi modelo');
+            ->assertSee('Combo Básico')
+            ->assertSee('S/109.00')
+            ->assertSee(str_replace('/', '\/', route('web.combos.cart.store', $combo)), false)
+            ->assertSee('Clasico', false)
+            ->assertDontSee('data-ob-pick="'.($combo->id + 1).'"', false); // el combo que no es de outfit no aparece
     }
 }

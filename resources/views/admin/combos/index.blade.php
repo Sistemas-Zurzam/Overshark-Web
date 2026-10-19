@@ -3,9 +3,6 @@
 @section('title', 'Combos')
 
 @section('content')
-    @php
-        $oldProducts = old('products', [['producto_id' => '', 'cantidad' => 1]]);
-    @endphp
 
     <div class="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
@@ -66,84 +63,7 @@
         <form action="{{ route('admin.combos.store') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-6" novalidate>
             @csrf
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <label class="block">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">Marca</span>
-                    <select id="combo-brand" name="brand" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
-                        <option value="">Selecciona una marca</option>
-                        @foreach ($brands as $brand)
-                            <option value="{{ $brand }}" @selected(old('brand', 'OVERSHARK') === $brand)>{{ $brand }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">Modalidad</span>
-                    <input id="combo-modality" type="text" name="modality" value="{{ old('modality', 'Promoción') }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="Live, Publicidad...">
-                </label>
-                <label class="block md:col-span-2">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">Nombre del combo</span>
-                    <input id="combo-name" type="text" name="name" value="{{ old('name') }}" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="Ej. 5x99 o Combo Waflera">
-                </label>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-3">
-                <label class="block">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">Precio total</span>
-                    <div class="relative">
-                        <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-bold text-slate-400">S/</span>
-                        <input id="combo-price" type="number" name="price" value="{{ old('price') }}" min="0" step="0.01" inputmode="decimal" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="99.00">
-                    </div>
-                </label>
-                <label class="block md:col-span-2">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">URL de destino <span class="font-normal text-slate-400">(opcional)</span></span>
-                    <input id="combo-url" type="text" name="url" value="{{ old('url') }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" placeholder="Se genera /combos/ID automáticamente">
-                </label>
-            </div>
-
-            <fieldset class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <legend class="px-2 text-sm font-black text-slate-950">Productos y cantidades</legend>
-                @if ($productOptions->isEmpty())
-                    <p class="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                        Aún no hay productos sincronizados. Puedes cargar el catálogo base ahora y vincular los productos después de sincronizar ZAZU.
-                    </p>
-                @endif
-                <div data-combo-product-rows class="space-y-3">
-                    @foreach ($oldProducts as $index => $productRow)
-                        <div data-combo-product-row class="grid gap-3 sm:grid-cols-[1fr_130px_auto]">
-                            <label class="block">
-                                <span class="sr-only">Producto {{ $index + 1 }}</span>
-                                <select name="products[{{ $index }}][producto_id]" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
-                                    <option value="">Selecciona un producto</option>
-                                    @foreach ($productOptions as $productOption)
-                                        <option value="{{ $productOption->id }}" @selected((string) ($productRow['producto_id'] ?? '') === (string) $productOption->id)>
-                                            {{ $productOption->name }}{{ $productOption->empresa_nombre ? ' · '.$productOption->empresa_nombre : '' }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="sr-only">Cantidad {{ $index + 1 }}</span>
-                                <input type="number" name="products[{{ $index }}][cantidad]" value="{{ $productRow['cantidad'] ?? 1 }}" min="1" max="99" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
-                            </label>
-                            <button type="button" data-combo-product-remove class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:border-red-300 hover:text-red-600" aria-label="Quitar producto">Quitar</button>
-                        </div>
-                    @endforeach
-                </div>
-                <button type="button" data-combo-product-add class="mt-4 rounded-xl border border-cyan-200 bg-white px-4 py-2.5 text-sm font-bold text-cyan-700 transition hover:bg-cyan-50">+ Agregar producto</button>
-            </fieldset>
-
-            <div class="grid gap-4 md:grid-cols-2">
-                <label class="block">
-                    <span class="mb-2 block text-sm font-bold text-slate-700">Imagen estándar o personalizada</span>
-                    <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
-                    <span class="mt-2 block text-xs text-slate-400">PNG, JPG, JPEG o WEBP; máximo 8 MB.</span>
-                </label>
-                <label class="flex items-start gap-3 pt-1 text-sm font-bold text-slate-700">
-                    <input type="hidden" name="status" value="0">
-                    <input type="checkbox" name="status" value="1" @checked(old('status', true)) class="mt-0.5 h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
-                    <span>Mostrar en el menú público</span>
-                </label>
-            </div>
+            @include('admin.combos._fields', ['combo' => null, 'productRows' => []])
 
             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-5">
                 <button type="button" data-combo-form-toggle class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 transition hover:border-slate-400">Cancelar</button>
@@ -199,7 +119,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h2 class="font-black text-slate-950">{{ $combo->name }}</h2>
-                                    <p class="mt-1 text-xs font-bold uppercase tracking-wide text-cyan-700">{{ $combo->modality ?: 'Promoción' }}</p>
+                                    <p class="mt-1 text-xs font-bold uppercase tracking-wide text-cyan-700">{{ $combo->modality === 'Outfit' ? 'Arma tu outfit' : ($combo->modality ?: 'Promoción') }}</p>
                                 </div>
                                 <span @class(['rounded-full px-2.5 py-1 text-xs font-bold', 'bg-emerald-50 text-emerald-700' => $combo->status, 'bg-slate-100 text-slate-500' => ! $combo->status])>{{ $combo->status ? 'Activo' : 'Inactivo' }}</span>
                             </div>
@@ -209,7 +129,7 @@
                             <p class="mt-1 text-xs font-semibold text-slate-400">{{ $combo->quantityLabel() }}</p>
                             <ul class="mt-4 space-y-1.5 text-sm text-slate-600">
                                 @forelse ($combo->displayItems() as $item)
-                                    <li class="flex items-start justify-between gap-3"><span>{{ $item['zazu'] }}</span><strong class="text-slate-950">×{{ $item['cantidad'] }}</strong></li>
+                                    <li class="flex items-start justify-between gap-3"><span>@if (! empty($item['grupo']))<b class="text-slate-950">{{ $item['grupo'] }}:</b> @endif{{ $item['zazu'] }}</span><strong class="text-slate-950">×{{ $item['cantidad'] }}</strong></li>
                                 @empty
                                     <li class="text-slate-400">Composición pendiente</li>
                                 @endforelse
@@ -219,6 +139,7 @@
                             @endif
                             <div class="mt-5 flex flex-wrap gap-2">
                                 <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700">Ver página</a>
+                                <a href="{{ route('admin.combos.edit', $combo) }}" class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-600">Editar</a>
                                 <form action="{{ route('admin.combos.toggle', $combo) }}" method="POST">
                                     @csrf
                                     @method('PATCH')
