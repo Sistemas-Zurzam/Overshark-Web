@@ -2,6 +2,7 @@
 
 namespace App\Models\Admin;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -57,6 +58,21 @@ class Producto extends Model
     public static function refreshCacheVersion(): void
     {
         Cache::forever(self::CACHE_VERSION_KEY, time());
+    }
+
+    /**
+     * Productos de una marca: los que tienen esa marca asignada en el admin o, si no tienen marca,
+     * los que vienen de la empresa de Zazu con ese nombre (p. ej. la empresa BRAVOS).
+     */
+    public function scopeOfBrand(Builder $query, string $brand): Builder
+    {
+        $name = mb_strtoupper(trim($brand));
+
+        return $query->where(fn (Builder $brandQuery) => $brandQuery
+            ->whereRaw('UPPER(TRIM(marca)) = ?', [$name])
+            ->orWhere(fn (Builder $companyQuery) => $companyQuery
+                ->where(fn (Builder $empty) => $empty->whereNull('marca')->orWhere('marca', ''))
+                ->whereRaw('UPPER(TRIM(empresa_nombre)) = ?', [$name])));
     }
 
     public function categoria()

@@ -1,0 +1,141 @@
+@extends('web.checkout.layout', ['step' => 2])
+
+{{--
+    C2 · Datos y entrega: compra como invitado, dirección (departamento → provincia → distrito), entrega a
+    domicilio (solo Lima) o recojo en agencia, y comprobante. Se guarda en sesión (web.checkout.personal.store).
+    Selects en cascada, agencias y factura: resources/js/checkout.js.
+--}}
+
+@section('title', 'Datos y entrega | Overshark')
+
+@push('head')
+    @vite('resources/js/checkout.js')
+@endpush
+
+@php
+    $value = fn (string $field, $default = '') => old($field, $customer[$field] ?? $default);
+    $distritoId = (int) $value('distrito_id', 0);
+    $delivery = $value('delivery', 'domicilio');
+    $invoice = $value('invoice', 'boleta');
+@endphp
+
+@section('checkout')
+    <h1 class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">DATOS Y ENTREGA</h1>
+
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
+        <form method="POST" action="{{ route('web.checkout.personal.store') }}" class="flex flex-col gap-6 text-[#0b1015]" novalidate
+            data-checkout-details data-ubigeo='@json($ubigeo)' data-distrito="{{ $distritoId }}" data-agencies-url="{{ route('web.checkout.courier-agencies') }}">
+            @csrf
+
+            @if ($errors->any())
+                <div class="bg-[#fdecec] px-4 py-3 text-[14px] text-[#a3261c]" role="alert">
+                    <p class="font-bold">Revisa estos datos:</p>
+                    <ul class="mt-1 list-disc pl-5">
+                        @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <section class="flex flex-col gap-4" aria-labelledby="ck-guest">
+                <div>
+                    <h2 id="ck-guest" class="text-[20px] font-bold leading-[1.45]">Compra como invitado</h2>
+                    <p class="mt-1 text-[13px] text-[#65717c]">Usaremos estos datos para enviarte tu pedido.</p>
+                </div>
+                <label class="os-ck-field">Correo electrónico
+                    <input type="email" name="email" value="{{ $value('email') }}" required autocomplete="email" placeholder="nombre@correo.com" class="os-ck-input">
+                </label>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="os-ck-field">Nombres
+                        <input type="text" name="nombres" value="{{ $value('nombres') }}" required autocomplete="given-name" placeholder="Ingresa tus nombres" class="os-ck-input">
+                    </label>
+                    <label class="os-ck-field">Apellidos
+                        <input type="text" name="apellidos" value="{{ $value('apellidos') }}" required autocomplete="family-name" placeholder="Ingresa tus apellidos" class="os-ck-input">
+                    </label>
+                    <label class="os-ck-field">Celular
+                        <input type="tel" name="phone" value="{{ $value('phone') }}" required autocomplete="tel-national" inputmode="numeric" maxlength="9" placeholder="999 999 999" class="os-ck-input">
+                    </label>
+                    <div class="os-ck-field">
+                        <span id="ck-doc">DNI / CE</span>
+                        <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-2" role="group" aria-labelledby="ck-doc">
+                            <select name="doc_type" class="os-ck-input" aria-label="Tipo de documento">
+                                @foreach (['DNI', 'CE'] as $docType)
+                                    <option value="{{ $docType }}" @selected($value('doc_type', 'DNI') === $docType)>{{ $docType }}</option>
+                                @endforeach
+                            </select>
+                            <input type="text" name="doc_number" value="{{ $value('doc_number') }}" required inputmode="numeric" maxlength="12" placeholder="Número de documento" class="os-ck-input" aria-label="Número de documento">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-4" aria-labelledby="ck-address">
+                <h2 id="ck-address" class="text-[20px] font-bold leading-[1.45]">Dirección de envío</h2>
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <label class="os-ck-field">Departamento
+                        <select class="os-ck-input" data-ck-departamento required><option value="">Elige</option></select>
+                    </label>
+                    <label class="os-ck-field">Provincia
+                        <select class="os-ck-input" data-ck-provincia required disabled><option value="">Elige</option></select>
+                    </label>
+                    <label class="os-ck-field">Distrito
+                        <select name="distrito_id" class="os-ck-input" data-ck-distrito required disabled><option value="">Selecciona tu distrito</option></select>
+                    </label>
+                </div>
+                <label class="os-ck-field">Dirección
+                    <input type="text" name="address" value="{{ $value('address') }}" required autocomplete="street-address" placeholder="Calle, número, interior o departamento" class="os-ck-input">
+                </label>
+                <label class="os-ck-field">Referencia (opcional)
+                    <input type="text" name="reference" value="{{ $value('reference') }}" placeholder="Ayúdanos a encontrar tu dirección" class="os-ck-input">
+                </label>
+            </section>
+
+            <fieldset class="flex flex-col gap-3">
+                <legend class="mb-3 text-[20px] font-bold leading-[1.45]">Entrega</legend>
+                <label class="os-ck-option" data-ck-home>
+                    <input type="radio" name="delivery" value="domicilio" @checked($delivery === 'domicilio') class="os-ck-radio">
+                    <span class="flex flex-col gap-1">
+                        <span class="text-[15px] font-bold">Envío a domicilio — S/ 14.00</span>
+                        <span class="text-[12px] text-[#65717c]" data-ck-home-note>Solo en Lima. Entrega estimada: 2 a 4 días hábiles.</span>
+                    </span>
+                </label>
+                <label class="os-ck-option">
+                    <input type="radio" name="delivery" value="agencia" @checked($delivery === 'agencia') class="os-ck-radio">
+                    <span class="flex flex-col gap-1">
+                        <span class="text-[15px] font-bold">Recojo en agencia — S/ 14.00</span>
+                        <span class="text-[12px] text-[#65717c]">Lima y provincias. Te avisamos cuando tu pedido llegue a la agencia.</span>
+                    </span>
+                </label>
+                <label class="os-ck-field hidden" data-ck-agency-field>Agencia de recojo
+                    <select name="agency" class="os-ck-input" data-ck-agency data-selected="{{ $value('agency') }}">
+                        <option value="">Elige primero tu distrito</option>
+                    </select>
+                </label>
+            </fieldset>
+
+            <fieldset class="flex flex-col gap-3">
+                <legend class="mb-3 text-[14px] font-bold">Comprobante</legend>
+                <div class="flex gap-6 text-[14px] font-bold">
+                    @foreach (['boleta' => 'Boleta', 'factura' => 'Factura'] as $invoiceValue => $invoiceLabel)
+                        <label class="flex cursor-pointer items-center gap-2"><input type="radio" name="invoice" value="{{ $invoiceValue }}" @checked($invoice === $invoiceValue) class="os-ck-radio" data-ck-invoice> {{ $invoiceLabel }}</label>
+                    @endforeach
+                </div>
+                <div @class(['grid gap-4 sm:grid-cols-2', 'hidden' => $invoice !== 'factura']) data-ck-company>
+                    <label class="os-ck-field">RUC
+                        <input type="text" name="ruc" value="{{ $value('ruc') }}" inputmode="numeric" maxlength="11" placeholder="20XXXXXXXXX" class="os-ck-input">
+                    </label>
+                    <label class="os-ck-field">Razón social
+                        <input type="text" name="razon_social" value="{{ $value('razon_social') }}" placeholder="Nombre de la empresa" class="os-ck-input">
+                    </label>
+                </div>
+            </fieldset>
+
+            <div class="flex flex-col gap-3">
+                <button type="submit" class="os-checkout-btn os-focus w-full">CONTINUAR AL PAGO</button>
+                <a href="{{ route('web.cart.index') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full">VOLVER AL CARRITO</a>
+            </div>
+        </form>
+
+        @component('web.checkout.partials.summary', compact('items', 'count', 'subtotal', 'shipping', 'total'))
+        @endcomponent
+    </div>
+@endsection

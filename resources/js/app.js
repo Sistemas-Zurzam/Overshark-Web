@@ -2,6 +2,7 @@ import './bootstrap';
 import './ocean-particles';
 import './line-transition';
 import './product-page';
+import { shrinkImage } from './shrink-image';
 
 const sidebar = document.querySelector('[data-sidebar]');
 const overlay = document.querySelector('[data-sidebar-overlay]');
@@ -1415,37 +1416,6 @@ document.querySelectorAll('[data-shop-price]').forEach((form) => {
 
 // Admin → Productos: antes de subir, las fotos se reducen en el navegador (máx. 2000 px, WebP) para que
 // entren en el límite de subida del servidor (PHP upload_max_filesize) y la tienda cargue más rápido.
-const shrinkImage = (file, maxSide = 2000, quality = 0.86) => new Promise((resolve) => {
-    if (!file.type.startsWith('image/')) {
-        resolve(file);
-        return;
-    }
-
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.naturalWidth * scale);
-        canvas.height = Math.round(img.naturalHeight * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-            // Si no se pudo convertir o no gana peso, se envía la original.
-            if (!blob || blob.size >= file.size) {
-                resolve(file);
-                return;
-            }
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' }));
-        }, 'image/webp', quality);
-    };
-    img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(file);
-    };
-    img.src = url;
-});
-
 document.querySelectorAll('form[data-compress-images]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
         if (form.dataset.compressed === 'true') {

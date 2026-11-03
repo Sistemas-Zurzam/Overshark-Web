@@ -16,12 +16,20 @@
     $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
     $onSearch = request()->routeIs('web.products.search');
+    // En Bravos (portada, tienda, ficha y outfit), Inicio, Tienda y Arma tu outfit llevan a las páginas de Bravos.
+    $bravosContext = $brandPageContext?->slug === 'bravos' || ($onSearch && mb_strtoupper(trim((string) request('marca'))) === 'BRAVOS');
     $storeMenu = [
-        ['label' => 'Inicio', 'url' => route('web.home', ['linea' => $storeLine]), 'active' => request()->routeIs('web.home')],
-        ['label' => 'Tienda', 'url' => route('web.products.search', ['orden' => 'populares']), 'active' => $onSearch],
-        ['label' => '¡Arma tu Outfit!', 'url' => route('web.outfit'), 'active' => request()->routeIs('web.outfit')],
-        ['label' => 'Nosotros', 'url' => route('web.nosotros'), 'active' => request()->routeIs('web.nosotros')],
-        ['label' => 'Contacto', 'url' => route('web.contact'), 'active' => request()->routeIs('web.contact')],
+        $bravosContext && ($bravosNavBrand = $menuBrands->firstWhere('slug', 'bravos'))
+            ? ['label' => 'Inicio', 'url' => route('web.brands.show', $bravosNavBrand), 'active' => request()->routeIs('web.brands.show')]
+            : ['label' => 'Inicio', 'url' => route('web.home', ['linea' => $storeLine]), 'active' => request()->routeIs('web.home')],
+        $bravosContext
+            ? ['label' => 'Tienda', 'url' => route('web.products.search', ['marca' => 'BRAVOS']), 'active' => $onSearch]
+            : ['label' => 'Tienda', 'url' => route('web.products.search', ['orden' => 'populares']), 'active' => $onSearch],
+        $bravosContext
+            ? ['label' => '¡Arma tu Outfit!', 'url' => route('web.bravos.outfit'), 'active' => request()->routeIs('web.bravos.outfit')]
+            : ['label' => '¡Arma tu Outfit!', 'url' => route('web.outfit'), 'active' => request()->routeIs('web.outfit')],
+        ['label' => 'Nosotros', 'url' => route('web.nosotros', $bravosContext ? ['marca' => 'bravos'] : []), 'active' => request()->routeIs('web.nosotros')],
+        ['label' => 'Contacto', 'url' => route('web.contact', $bravosContext ? ['marca' => 'bravos'] : []), 'active' => request()->routeIs('web.contact')],
     ];
     $navLinks = collect([
         [
@@ -51,7 +59,7 @@
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=Josefin+Sans:wght@600;700&family=Manrope:wght@500;700;800&family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Big+Shoulders+Display:wght@900&family=Josefin+Sans:wght@600;700&family=Manrope:wght@500;700;800&family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -64,20 +72,33 @@
         @else
         {{-- Barra principal (diseño Figma "Nav Principal / Overshark"): logos de marca · menú central · búsqueda, cuenta y bolsa. Debajo, franja de anuncios. --}}
         <div class="os-nav-bar">
-            <div class="mx-auto grid h-[72px] max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[1fr_auto_1fr] xl:px-[100px]">
-                <div class="flex min-w-0 items-center gap-4">
-                    <a href="{{ route('web.home', ['linea' => 'hombre']) }}" class="os-focus block shrink-0 rounded" aria-label="Overshark, ir al inicio">
-                        <span class="os-nav-logo" style="--os-logo: url('{{ asset('images/nav/overshark-wordmark.png') }}')" aria-hidden="true"></span>
-                    </a>
-                    <span class="hidden h-7 w-px bg-white/25 sm:block" aria-hidden="true"></span>
-                    <nav class="hidden min-w-0 items-center gap-5 sm:flex" aria-label="Nuestras marcas">
-                        <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="os-focus os-store-brand rounded" aria-label="Overshark Girls, colección mujer" @if ($storeLine === 'mujer') aria-current="true" @endif>
-                            <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-7 w-auto object-contain">
+            <div class="mx-auto grid h-[72px] max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[auto_1fr_auto] xl:gap-8 xl:px-[100px]">
+                {{-- Marcas (Figma "Nav Principal"): logos blancos a la misma altura; la marca activa va resaltada
+                     (y primero en Bravos, como en "Nav Principal / Bravos"). En celular solo se ve la activa. --}}
+                @php
+                    $navBravos = $menuBrands->first(fn ($menuBrand) => $menuBrand->slug === 'bravos');
+                    $activeBrand = $bravosContext ? 'bravos' : ($storeLine === 'mujer' && ! $brandPageContext ? 'girls' : 'overshark');
+                    $navBrandList = collect([
+                        'overshark' => ['url' => route('web.home', ['linea' => 'hombre']), 'label' => 'Overshark, colección hombre', 'logo' => 'logo-overshark.svg', 'w' => 95, 'h' => 16.1, 'class' => 'h-[22px]'],
+                        'girls' => ['url' => route('web.home', ['linea' => 'mujer']), 'label' => 'Overshark Girls, colección mujer', 'logo' => 'logo-girls.svg', 'w' => 88.3, 'h' => 26, 'class' => 'h-[26px]'],
+                        'bravos' => $navBravos ? ['url' => route('web.brands.show', $navBravos), 'label' => 'Bravos, urban clothing', 'logo' => 'logo-bravos.svg', 'w' => 80.2, 'h' => 25.6, 'class' => 'h-[25px]'] : null,
+                    ])->filter();
+                    if ($activeBrand === 'bravos') {
+                        $navBrandList = $navBrandList->sortBy(fn ($brandItem, $key) => $key === 'bravos' ? 0 : 1);
+                    }
+                @endphp
+                <nav class="os-brands flex min-w-0 items-center" aria-label="Nuestras marcas">
+                    @foreach ($navBrandList as $key => $brandItem)
+                        @unless ($loop->first)
+                            <span @class(['os-brands__divider', 'hidden sm:block']) aria-hidden="true"></span>
+                        @endunless
+                        <a href="{{ $brandItem['url'] }}" @class(['os-brands__item os-focus', 'is-active flex' => $key === $activeBrand, 'hidden sm:flex' => $key !== $activeBrand]) aria-label="{{ $brandItem['label'] }}" @if ($key === $activeBrand) aria-current="true" @endif>
+                            <img src="{{ asset('images/nav/'.$brandItem['logo']) }}" alt="" width="{{ $brandItem['w'] }}" height="{{ $brandItem['h'] }}" class="{{ $brandItem['class'] }} w-auto max-w-none">
                         </a>
-                    </nav>
-                </div>
+                    @endforeach
+                </nav>
 
-                <nav class="hidden items-center gap-9 xl:flex" aria-label="Navegación principal">
+                <nav class="hidden items-center justify-center gap-9 xl:flex" aria-label="Navegación principal">
                     @foreach ($storeMenu as $item)
                         <a href="{{ $item['url'] }}" class="os-store-link os-focus" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                     @endforeach
@@ -305,7 +326,7 @@
             </a>
         </div>
 
-        <div class="mx-auto grid max-w-[1094px] grid-cols-2 gap-x-6 gap-y-10 px-6 pb-10 pt-12 lg:grid-cols-4 lg:gap-x-16">
+        <div class="mx-auto grid max-w-[1094px] grid-cols-2 gap-x-4 gap-y-10 px-4 pb-10 pt-12 sm:gap-x-6 sm:px-6 lg:grid-cols-4 lg:gap-x-16">
             <section class="flex flex-col gap-4">
                 <h2 class="text-[16px] font-medium">Comprar</h2>
                 <nav class="flex flex-col gap-3 text-[14px] leading-6" aria-label="Comprar">
@@ -332,7 +353,7 @@
                 @if ($whatsappNumber = $brand->whatsappDisplay())
                     <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">WhatsApp:</span> <a href="{{ $brand->whatsappUrl() }}" target="_blank" rel="noopener" class="{{ $footerLink }}">{{ $whatsappNumber }}</a></p>
                 @endif
-                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Correo:</span> <a href="mailto:ventas@overshark.com" class="{{ $footerLink }} break-all">ventas@overshark.com</a></p>
+                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Correo:</span> <a href="mailto:ventas@overshark.com" class="{{ $footerLink }} whitespace-nowrap text-[13px] sm:text-[14px]">ventas@overshark.com</a></p>
                 <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Horario de atención:</span> 9am a 6pm L-V</p>
             </section>
 

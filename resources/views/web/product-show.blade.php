@@ -52,7 +52,7 @@
 
             <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.85fr)] lg:gap-12">
                 {{-- Galería editorial: foto grande del alto de la pantalla, flechas y puntos --}}
-                <div data-product-zoom-frame class="os-pdp-stage">
+                <div data-product-zoom-frame class="os-pdp-stage min-w-0">
                     <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $producto->name }}" class="h-full w-full origin-center object-contain transition-transform duration-200">
                     <span class="absolute left-5 top-5 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white">-20%</span>
                     <button type="button" data-pdp-step="-1" class="os-pdp-arrow left-4" aria-label="Foto anterior">
@@ -72,7 +72,7 @@
                 </div>
 
                 {{-- Compra --}}
-                <div class="lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:self-start">
+                <div class="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+2rem)] lg:self-start">
                     <nav class="mb-6 hidden flex-wrap items-center gap-2 text-xs text-haze lg:flex" aria-label="Ruta">
                         <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
                         <span aria-hidden="true">/</span>
@@ -140,11 +140,11 @@
 
                         <div class="flex gap-3">
                             <div class="flex h-14 shrink-0 items-center rounded-xl border border-edge-strong">
-                                <button type="button" data-pdp-qty="-1" class="grid h-full w-11 place-items-center text-xl text-mist hover:text-white" aria-label="Quitar una unidad">−</button>
+                                <button type="button" data-pdp-qty="-1" class="grid h-full w-9 place-items-center text-xl text-mist hover:text-white sm:w-11" aria-label="Quitar una unidad">−</button>
                                 <span data-pdp-qty-value class="w-8 text-center text-base font-bold" aria-live="polite">1</span>
-                                <button type="button" data-pdp-qty="1" class="grid h-full w-11 place-items-center text-xl text-mist hover:text-white" aria-label="Agregar una unidad">+</button>
+                                <button type="button" data-pdp-qty="1" class="grid h-full w-9 place-items-center text-xl text-mist hover:text-white sm:w-11" aria-label="Agregar una unidad">+</button>
                             </div>
-                            <button type="submit" data-pdp-submit class="btn-primary h-14 flex-1 gap-2 whitespace-nowrap px-4 text-[13px] tracking-[0.04em]">
+                            <button type="submit" data-pdp-submit class="btn-primary h-14 min-w-0 flex-1 gap-2 whitespace-nowrap px-3 text-[12px] tracking-[0.02em] sm:px-4 sm:text-[13px] sm:tracking-[0.04em]">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 12H6Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>
                                 Agregar al carrito
                             </button>

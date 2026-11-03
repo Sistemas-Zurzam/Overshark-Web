@@ -56,7 +56,7 @@ class CollectionSelectionTest extends TestCase
             ->assertSee('Nacida del arrecife')
             ->assertSee('Hecha para brillar')
             ->assertSee('os-hh--girls', false)
-            ->assertSeeInOrder(['9 prendas × S/ 99', 'Baby tees', 'Calidad que se nota', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
+            ->assertSeeInOrder(['9 prendas <span class="whitespace-nowrap">× S/ 99', 'Baby tees', 'Calidad que se nota', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
             ->assertDontSee('dominar');
     }
 

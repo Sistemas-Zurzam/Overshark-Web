@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BrandSettingController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductoController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,7 +16,9 @@ Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,
 
 Route::middleware('jwt.auth')->group(function () {
     Route::view('/', 'admin.dashboard')->name('dashboard');
-    Route::view('/pedidos', 'admin.pedidos.index')->name('pedidos.index');
+    Route::get('/pedidos', [OrderController::class, 'index'])->name('pedidos.index');
+    Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('pedidos.show');
+    Route::patch('/pedidos/{order}/estado', [OrderController::class, 'updateStatus'])->name('pedidos.status');
     Route::view('/clientes', 'admin.clientes.index')->name('clientes.index');
     Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
     Route::get('/mensajes', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('messages.index');

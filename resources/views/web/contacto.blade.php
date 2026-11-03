@@ -11,9 +11,12 @@
 
 @php
     $brand = \App\Models\BrandSetting::current();
+    // Desde Bravos (?marca=bravos): paleta negra y amarilla (.os-hh--bravos) e íconos en negro.
     // Línea mujer: paleta Overshark Girls (.os-hh--girls) e íconos en rosa.
-    $girls = session('storefront.line') === 'mujer';
-    $icon = fn (string $name) => asset('images/contacto/icon-'.$name.($girls ? '-girls' : '').'.svg');
+    $bravos = ($brandPage ?? null)?->slug === 'bravos';
+    $girls = ! $bravos && session('storefront.line') === 'mujer';
+    $icon = fn (string $name) => asset('images/contacto/icon-'.$name.($bravos ? '-bravos' : ($girls ? '-girls' : '')).'.svg');
+    $display = fn (string $hh, string $bv) => $bravos ? 'font-extrabold uppercase tracking-[-0.01em] '.$bv : 'os-hh-display '.$hh;
     $whatsappUrl = $brand->whatsappUrl();
     $email = 'ventas@overshark.com';
     $input = 'w-full border bg-[#f5f7fa] px-4 text-[14px] font-medium text-[#0b0f14] outline-none transition placeholder:text-[#8a93a0] focus:border-[var(--hh-accent)] focus:bg-white focus:ring-4 focus:ring-[var(--hh-accent)]/15';
@@ -27,17 +30,21 @@
     ];
 @endphp
 
+@if ($bravos)
+    @section('body-class', 'theme-neon theme-bravos')
+@endif
+
 @section('content')
-    <div @class(['os-hh', 'os-hh--girls' => $girls])>
+    <div @class(['os-hh', 'os-hh--girls' => $girls, 'os-hh--bravos' => $bravos])>
         {{-- Cabecera de página --}}
         <header class="[background:var(--shop-head)] py-12 text-white lg:py-14">
             <div class="os-hh-wrap flex flex-col items-start gap-3.5">
                 <nav aria-label="Ruta" class="text-[13px] font-semibold text-[var(--hh-muted)]">
-                    <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
+                    <a href="{{ $bravos ? route('web.brands.show', $brandPage) : route('web.home') }}" class="hover:text-white">Inicio</a>
                     <span class="mx-1.5" aria-hidden="true">›</span>
                     <span class="text-white">Contacto</span>
                 </nav>
-                <h1 class="os-hh-display text-[64px] leading-[0.95] sm:text-[112px] sm:leading-[104px]">Contáctanos</h1>
+                <h1 class="{{ $display('text-[54px] leading-[0.95] min-[400px]:text-[64px] sm:text-[112px] sm:leading-[104px]', 'text-[34px] leading-[1.05] min-[400px]:text-[40px] sm:text-[72px]') }}">Contáctanos</h1>
                 <p class="text-[16px] font-medium text-[var(--shop-intro)] sm:text-[18px]">¿Dudas con tu pedido, tallas o cambios? Te ayudamos antes, durante y después de tu compra.</p>
             </div>
         </header>
@@ -82,13 +89,13 @@
                         <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[var(--hh-soft)] text-[var(--hh-accent)]">
                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
                         </span>
-                        <h2 id="form-title" class="os-hh-display mt-4 text-[40px] leading-none">¡Mensaje enviado!</h2>
+                        <h2 id="form-title" class="{{ $display('mt-4 text-[40px] leading-none', 'mt-4 text-[28px] leading-[1.1]') }}">¡Mensaje enviado!</h2>
                         <p class="mx-auto mt-3 max-w-md text-[15px] font-medium text-[#545966]">Gracias por escribirnos. Revisaremos tu mensaje y te responderemos lo antes posible en nuestro horario de atención.</p>
-                        <a href="{{ route('web.contact') }}" class="os-hh-btn os-focus mt-6 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Enviar otro mensaje</a>
+                        <a href="{{ route('web.contact', $bravos ? ['marca' => 'bravos'] : []) }}" class="os-hh-btn os-focus mt-6 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Enviar otro mensaje</a>
                     </div>
                 @else
                     <div class="flex flex-col gap-1.5 border-b-2 border-[#0b0f14] pb-3">
-                        <h2 id="form-title" class="os-hh-display text-[44px] leading-[44px]">Escríbenos</h2>
+                        <h2 id="form-title" class="{{ $display('text-[44px] leading-[44px]', 'text-[30px] leading-[1.15]') }}">Escríbenos</h2>
                         <p class="text-[14px] font-medium text-[#545966]">Te respondemos por correo o WhatsApp en horario de atención.</p>
                     </div>
 
@@ -97,6 +104,7 @@
                     @endif
 
                     <form action="{{ route('web.contact.store') }}" method="POST" class="grid gap-5 sm:grid-cols-2" novalidate>
+                        @if ($bravos)<input type="hidden" name="marca" value="bravos">@endif
                         @csrf
                         <div class="hidden" aria-hidden="true">
                             <label>No llenes este campo <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
@@ -151,7 +159,7 @@
                 @if ($whatsappUrl)
                     <div class="flex flex-col items-start gap-3.5 bg-[var(--shop-deep)] px-8 py-9 text-white">
                         <p class="text-[12px] font-extrabold uppercase tracking-[2px] text-[var(--hh-bright)]">Respuesta rápida</p>
-                        <h2 class="os-hh-display text-[48px] leading-[46px]">¿Lo necesitas<br>ya mismo?</h2>
+                        <h2 class="{{ $display('text-[48px] leading-[46px]', 'text-[32px] leading-[1.15]') }}">¿Lo necesitas<br>ya mismo?</h2>
                         <p class="text-[15px] font-medium leading-[23px] text-[var(--hh-muted)]">Escríbenos por WhatsApp y un asesor te ayuda con tallas, stock y el estado de tu pedido.</p>
                         <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="os-hh-btn os-focus w-full bg-[var(--hh-bright)] text-[var(--shop-deep)] hover:bg-[var(--hh-bright-hover)]">Abrir WhatsApp →</a>
                     </div>

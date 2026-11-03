@@ -11,6 +11,8 @@ class Order extends Model
         'cliente_id', 'cliente_name', 'cliente_cel', 'cliente_doc_identidad',
         'tipo_documento_id', 'status_order_id', 'tipo_envio_id',
         'tipo_registro_id', 'distrito_id', 'direccion', 'cuenta_cliente',
+        'email', 'subtotal', 'envio', 'entrega', 'agencia', 'referencia', 'tipo_comprobante', 'ruc', 'razon_social',
+        'metodo_pago_nombre', 'comprobante_pago', 'checkout_token',
     ];
 
     protected function casts(): array
@@ -18,7 +20,15 @@ class Order extends Model
         return [
             'productos_json' => 'array',
             'precio_total' => 'decimal:2',
+            'subtotal' => 'decimal:2',
+            'envio' => 'decimal:2',
         ];
+    }
+
+    /** Número visible para la clienta, p. ej. OS-000012. */
+    public function code(): string
+    {
+        return 'OS-'.str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
     }
 
     public function cliente() { return $this->belongsTo(Cliente::class); }

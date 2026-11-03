@@ -8,7 +8,8 @@ namespace App\Support;
  */
 class Shipping
 {
-    public const COST = 12;
+    // Envío S/ 14 a todo el Perú (confirmado en el diseño del checkout; Lima delivery o agencia, provincia agencia).
+    public const COST = 14;
 
     public static function freeFrom(): float
     {

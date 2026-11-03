@@ -1,4 +1,4 @@
-// Ficha de producto (web/product-show.blade.php): galería, color, talla y cantidad.
+// Ficha de producto (web/product-show.blade.php y web/product-show-bravos.blade.php): galería, color, talla y cantidad.
 // Al elegir un color se muestran sus fotos y solo se habilitan las tallas con stock en ese color.
 const page = document.querySelector('[data-pdp]');
 
@@ -64,7 +64,7 @@ if (page) {
 
     const render = () => {
         $$('[data-pdp-color]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.pdpColor === color)));
-        $('[data-pdp-color-name]').textContent = color;
+        $$('[data-pdp-color-name]').forEach((el) => { el.textContent = color; });
 
         // Si la talla elegida no existe en este color, se pasa a la primera disponible.
         if (!available(color, size)) {

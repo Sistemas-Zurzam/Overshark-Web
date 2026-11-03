@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\ContactMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,16 +11,22 @@ use Illuminate\View\View;
 
 class ContactController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('web.contacto', ['subjects' => ContactMessage::SUBJECTS]);
+        return view('web.contacto', [
+            'subjects' => ContactMessage::SUBJECTS,
+            // Con ?marca=bravos la página se ve con la paleta y el menú de Bravos.
+            'brandPage' => $request->query('marca') === 'bravos' ? Brand::query()->active()->where('slug', 'bravos')->first() : null,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         // Campo trampa: los bots lo llenan, las personas no lo ven. Se responde como si se hubiera enviado.
+        $back = $request->input('marca') === 'bravos' ? ['marca' => 'bravos'] : [];
+
         if (filled($request->input('website'))) {
-            return redirect()->route('web.contact')->with('contact_sent', true);
+            return redirect()->route('web.contact', $back)->with('contact_sent', true);
         }
 
         $validated = $request->validate([
@@ -43,6 +50,6 @@ class ContactController extends Controller
 
         ContactMessage::query()->create(collect($validated)->except('privacy')->all());
 
-        return redirect()->route('web.contact')->with('contact_sent', true);
+        return redirect()->route('web.contact', $back)->with('contact_sent', true);
     }
 }

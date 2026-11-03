@@ -3,12 +3,14 @@
 use App\Models\Admin\BannerPortada;
 use App\Models\Admin\Combo;
 use App\Models\Admin\Departamento;
+use App\Models\Admin\Distrito;
 use App\Models\Admin\MetodoPago;
+use App\Models\Admin\Order;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
-use App\Models\Admin\TipoDocumento;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
+use App\Support\Checkout;
 use App\Support\GirlsHome;
 use App\Support\ProductCards;
 use App\Support\SessionCart;
@@ -18,21 +20,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
-Route::get('/carrito', function () {
-    $items = collect(session('cart.items', []));
-    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $igv = $items->isEmpty() ? 0 : $subtotal * 0.18;
-
-    return view('web.cart-summary', [
-        'items' => $items,
-        'itemCount' => $items->sum('qty'),
-        'subtotal' => $subtotal,
-        'igv' => $igv,
-        'total' => $subtotal + $igv,
-        'paymentMethods' => MetodoPago::active(),
-    ]);
-})->name('web.cart.index');
+// Checkout (Figma "04 · Compra compartida"): Carrito → Datos y entrega → Pago → Estado del pedido.
+Route::get('/carrito', fn () => view('web.checkout.cart', Checkout::summary()))->name('web.cart.index');
 
 Route::get('/combos/{combo}', function (Combo $combo) {
     abort_unless($combo->status, 404);
@@ -130,6 +121,41 @@ Route::post('/carrito', function (Request $request) {
         ->with('cart_open', true);
 })->name('web.cart.store');
 
+// Look de "Arma tu outfit" de Bravos: agrega cada prenda elegida (color y talla) a su precio individual.
+Route::post('/carrito/look', function (Request $request) {
+    $validated = $request->validate([
+        'items' => ['required', 'array', 'min:1', 'max:4'],
+        'items.*.producto_id' => ['required', 'integer', 'exists:productos,id'],
+        'items.*.color' => ['required', 'string', 'max:255'],
+        'items.*.talla' => ['required', 'string', 'max:255'],
+    ], [
+        'items.required' => 'Elige las prendas de tu look.',
+    ]);
+
+    $variants = collect($validated['items'])->map(function (array $item) {
+        $producto = Producto::query()->findOrFail($item['producto_id']);
+
+        return [$producto, Producto::query()
+            ->where('name', $producto->name)
+            ->when($producto->zazu_company_id !== null, fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id))
+            ->where('color', $item['color'])
+            ->where('talla', $item['talla'])
+            ->where('price', '>', 0)
+            ->where('stock', '>', 0)
+            ->first()];
+    });
+
+    if ($variants->contains(fn (array $pair) => $pair[1] === null)) {
+        return back()->withErrors(['items' => 'Una de las prendas ya no tiene stock en ese color y talla. Elige otra opción.']);
+    }
+
+    $variants->each(fn (array $pair) => SessionCart::addVariant($pair[1], 1, $pair[0]));
+
+    return back()
+        ->with('status', 'Look agregado al carrito.')
+        ->with('cart_open', true);
+})->name('web.cart.look');
+
 Route::patch('/carrito/{variantId}', function (Request $request, int $variantId) {
     $validated = $request->validate([
         'action' => ['required', 'in:increment,decrement'],
@@ -139,6 +165,11 @@ Route::patch('/carrito/{variantId}', function (Request $request, int $variantId)
 
     abort_if(! isset($items[$key]), 404);
 
+    // No se puede pedir más de lo que hay en stock.
+    if ($validated['action'] === 'increment' && $items[$key]['qty'] >= (int) (Producto::query()->find($variantId)?->stock ?? 0)) {
+        return back()->withErrors(['cart' => 'No hay más unidades disponibles de esa prenda.'])->with('cart_open', ! $request->boolean('stay'));
+    }
+
     $items[$key]['qty'] += $validated['action'] === 'increment' ? 1 : -1;
 
     if ($items[$key]['qty'] <= 0) {
@@ -147,98 +178,175 @@ Route::patch('/carrito/{variantId}', function (Request $request, int $variantId)
 
     session(['cart.items' => $items]);
 
-    return back()->with('cart_open', true);
+    // Desde la página del carrito (stay=1) no se abre el carrito lateral.
+    return back()->with('cart_open', ! $request->boolean('stay'));
 })->name('web.cart.update');
 
-Route::delete('/carrito/{variantId}', function (int $variantId) {
+Route::delete('/carrito/{variantId}', function (Request $request, int $variantId) {
     $items = session('cart.items', []);
     unset($items[(string) $variantId]);
     session(['cart.items' => $items]);
 
-    return back()->with('cart_open', true);
+    return back()->with('cart_open', ! $request->boolean('stay'));
 })->name('web.cart.destroy');
 
-Route::delete('/carrito/combo/{itemKey}', function (string $itemKey) {
+Route::delete('/carrito/combo/{itemKey}', function (Request $request, string $itemKey) {
     $items = session('cart.items', []);
     unset($items[$itemKey]);
     session(['cart.items' => $items]);
 
-    return back()->with('cart_open', true);
+    return back()->with('cart_open', ! $request->boolean('stay'));
 })->name('web.cart.combo.destroy');
 
 Route::get('/checkout/datos-personales', function () {
-    $items = collect(session('cart.items', []));
+    $summary = Checkout::summary();
 
-    if ($items->isEmpty()) {
+    if ($summary['items']->isEmpty()) {
         return redirect()->route('web.cart.index');
     }
 
-    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $igv = $subtotal * 0.18;
-
-    $departamentos = Departamento::query()->with('provincias.distritos')->orderBy('name')->get();
-    $provincias = $departamentos->flatMap(fn ($departamento) => $departamento->provincias)->sortBy('name')->values();
-    $distritos = $provincias->flatMap(fn ($provincia) => $provincia->distritos)->sortBy('name')->values();
-
-    return view('web.checkout-personal', [
-        'items' => $items,
-        'itemCount' => $items->sum('qty'),
-        'subtotal' => $subtotal,
-        'igv' => $igv,
-        'shipping' => null,
-        'total' => $subtotal + $igv,
-        'documentTypes' => TipoDocumento::query()->orderBy('name')->get(),
-        'departamentos' => $departamentos,
-        'provincias' => $provincias,
-        'distritos' => $distritos,
-        'paymentMethods' => MetodoPago::active(),
+    return view('web.checkout.details', $summary + [
+        'customer' => session('checkout.customer', []),
+        'ubigeo' => Departamento::query()->with('provincias.distritos:id,provincia_id,name')->orderBy('name')->get(['id', 'name'])
+            ->map(fn ($departamento) => [
+                'id' => $departamento->id,
+                'name' => $departamento->name,
+                'provincias' => $departamento->provincias->sortBy('name')->values()->map(fn ($provincia) => [
+                    'id' => $provincia->id,
+                    'name' => $provincia->name,
+                    'distritos' => $provincia->distritos->sortBy('name')->values()->map(fn ($distrito) => ['id' => $distrito->id, 'name' => $distrito->name]),
+                ]),
+            ]),
     ]);
 })->name('web.checkout.personal');
 
-Route::get('/checkout/entrega-y-pago', function () {
-    $items = collect(session('cart.items', []));
+Route::post('/checkout/datos-personales', function (Request $request) {
+    $validated = $request->validate([
+        'email' => ['required', 'email', 'max:255'],
+        'nombres' => ['required', 'string', 'max:120'],
+        'apellidos' => ['required', 'string', 'max:120'],
+        'phone' => ['required', 'regex:/^9\d{8}$/'],
+        'doc_type' => ['required', 'in:DNI,CE'],
+        'doc_number' => ['required', 'string', 'max:20', $request->input('doc_type') === 'DNI' ? 'regex:/^\d{8}$/' : 'regex:/^[A-Za-z0-9]{6,12}$/'],
+        'distrito_id' => ['required', 'integer', 'exists:distritos,id'],
+        'address' => ['required', 'string', 'max:255'],
+        'reference' => ['nullable', 'string', 'max:255'],
+        'delivery' => ['required', 'in:domicilio,agencia'],
+        'agency' => ['required_if:delivery,agencia', 'nullable', 'string', 'max:255'],
+        'invoice' => ['required', 'in:boleta,factura'],
+        'ruc' => ['required_if:invoice,factura', 'nullable', 'regex:/^(10|20)\d{9}$/'],
+        'razon_social' => ['required_if:invoice,factura', 'nullable', 'string', 'max:255'],
+    ], [
+        'email.required' => 'Ingresa tu correo.',
+        'email.email' => 'Revisa tu correo.',
+        'nombres.required' => 'Ingresa tus nombres.',
+        'apellidos.required' => 'Ingresa tus apellidos.',
+        'phone.required' => 'Ingresa tu celular.',
+        'phone.regex' => 'Ingresa un celular de 9 dígitos que empiece con 9.',
+        'doc_number.required' => 'Ingresa tu número de documento.',
+        'doc_number.regex' => $request->input('doc_type') === 'DNI' ? 'El DNI tiene 8 dígitos.' : 'Revisa el número de tu carné de extranjería.',
+        'distrito_id.required' => 'Elige tu distrito.',
+        'address.required' => 'Ingresa tu dirección.',
+        'agency.required_if' => 'Elige la agencia donde recogerás tu pedido.',
+        'ruc.required_if' => 'Para factura necesitamos el RUC.',
+        'ruc.regex' => 'El RUC tiene 11 dígitos y empieza con 10 o 20.',
+        'razon_social.required_if' => 'Para factura necesitamos la razón social.',
+    ]);
 
-    if ($items->isEmpty()) {
-        return redirect()->route('web.cart.index');
+    // Fuera de Lima solo hay recojo en agencia.
+    $department = Distrito::query()->with('provincia.departamento')->find($validated['distrito_id'])?->provincia?->departamento?->name;
+    if ($validated['delivery'] === 'domicilio' && mb_strtoupper((string) $department) !== 'LIMA') {
+        return back()->withInput()->withErrors(['delivery' => 'Fuera de Lima el envío es a una agencia. Elige "Recojo en agencia".']);
     }
 
-    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $igv = $subtotal * 0.18;
-    $shipping = \App\Support\Shipping::costFor($subtotal);
+    session(['checkout.customer' => $validated]);
 
-    return view('web.checkout-delivery', [
-        'items' => $items,
-        'itemCount' => $items->sum('qty'),
-        'subtotal' => $subtotal,
-        'igv' => $igv,
-        'shipping' => $shipping,
-        'total' => $subtotal + $igv + $shipping,
-        'paymentMethods' => MetodoPago::active(),
-    ]);
-})->name('web.checkout.delivery');
+    return redirect()->route('web.checkout.payment');
+})->name('web.checkout.personal.store');
+
+// La entrega se elige en "Datos y entrega"; la ruta antigua lleva ahí.
+Route::get('/checkout/entrega-y-pago', fn () => redirect()->route('web.checkout.personal'))->name('web.checkout.delivery');
 
 Route::get('/checkout/pago', function () {
-    $items = collect(session('cart.items', []));
+    $summary = Checkout::summary();
 
-    if ($items->isEmpty()) {
+    if ($summary['items']->isEmpty()) {
         return redirect()->route('web.cart.index');
     }
 
-    $subtotal = $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
-    $igv = $subtotal * 0.18;
-    $shipping = \App\Support\Shipping::costFor($subtotal);
+    if (! session('checkout.customer')) {
+        return redirect()->route('web.checkout.personal');
+    }
 
-    return view('web.checkout-payment', [
-        'items' => $items,
-        'itemCount' => $items->sum('qty'),
-        'subtotal' => $subtotal,
-        'igv' => $igv,
-        'shipping' => $shipping,
-        'discount' => 0,
-        'total' => $subtotal + $igv + $shipping,
-        'paymentMethods' => MetodoPago::active(),
+    // Un token por intento de compra: si el formulario se envía dos veces, se reutiliza el mismo pedido.
+    if (! session('checkout.token')) {
+        session(['checkout.token' => Str::random(40)]);
+    }
+
+    return view('web.checkout.payment', $summary + [
+        'customer' => session('checkout.customer'),
+        'methods' => Checkout::paymentMethods(),
+        'token' => session('checkout.token'),
+        'receiptPath' => session('checkout.payment_receipt_path'),
     ]);
 })->name('web.checkout.payment');
+
+Route::post('/checkout/pedido', function (Request $request) {
+    $methods = Checkout::paymentMethods();
+    $validated = $request->validate([
+        'method' => ['required', 'in:'.$methods->pluck('id')->implode(',')],
+        'token' => ['required', 'string', 'size:40'],
+        'terms' => ['accepted'],
+    ], [
+        'method.required' => 'Elige cómo vas a pagar.',
+        'terms.accepted' => 'Acepta los Términos y condiciones y la Política de privacidad para continuar.',
+    ]);
+
+    // Reenvío del mismo checkout (doble clic, volver atrás): se muestra el pedido ya creado.
+    if ($existing = Order::query()->where('checkout_token', $validated['token'])->first()) {
+        session()->push('checkout.orders', $existing->id);
+
+        return redirect()->route('web.checkout.done', $existing);
+    }
+
+    $customer = session('checkout.customer');
+    if (! $customer) {
+        return redirect()->route('web.checkout.personal');
+    }
+
+    if ($validated['token'] !== session('checkout.token')) {
+        return redirect()->route('web.checkout.payment')->withErrors(['method' => 'Tu sesión de pago cambió. Revisa tu pedido y vuelve a confirmar.']);
+    }
+
+    $method = $methods->firstWhere('id', $validated['method']);
+    $receipt = session('checkout.payment_receipt_path');
+    if ($method['receipt'] && ! $receipt) {
+        return back()->withInput()->withErrors(['receipt' => 'Sube la captura de tu pago para confirmar el pedido.']);
+    }
+
+    // Precio, stock y combos se vuelven a validar en el servidor; si algo cambió, el carrito se conserva.
+    $cart = Checkout::verifyCart();
+    if ($cart['error']) {
+        return redirect()->route('web.cart.index')->withErrors(['cart' => $cart['error']]);
+    }
+
+    $order = Checkout::place($customer, $method, $method['receipt'] ? $receipt : null, $validated['token'], $cart['lines']);
+
+    session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
+    session()->push('checkout.orders', $order->id);
+
+    return redirect()->route('web.checkout.done', $order);
+})->middleware('throttle:10,1')->name('web.checkout.place');
+
+// Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
+Route::get('/checkout/pedido/{order}', function (Order $order) {
+    abort_unless(in_array($order->id, session('checkout.orders', []), true), 404);
+
+    return view('web.checkout.status', [
+        'order' => $order->load('statusOrder'),
+        'paid' => $order->statusOrder?->name === Checkout::STATUS_PAID,
+    ]);
+})->name('web.checkout.done');
 
 Route::post('/checkout/comprobante', function (Request $request) {
     $validated = $request->validate([
@@ -351,9 +459,11 @@ Route::get('/arma-tu-outfit', fn (\App\Support\OutfitBuilder $builder) => view('
 ]))->name('web.outfit');
 
 // Nosotros: historia, ADN, proceso de fabricación, marcas y comunidad (textos y fotos en Admin → Página Nosotros).
-Route::get('/nosotros', fn () => view('web.nosotros', [
+// Nosotros y Contacto: con ?marca=bravos se ven con la paleta de Bravos y el menú de Bravos.
+Route::get('/nosotros', fn (Request $request) => view('web.nosotros', [
     'c' => \App\Support\AboutPage::content(),
     'bravosBrand' => Brand::active()->whereRaw('UPPER(name) LIKE ?', ['%BRAVO%'])->first(),
+    'brandPage' => $request->query('marca') === 'bravos' ? Brand::active()->where('slug', 'bravos')->first() : null,
 ]))->name('web.nosotros');
 
 Route::get('/contacto', [\App\Http\Controllers\ContactController::class, 'create'])->name('web.contact');
@@ -364,6 +474,16 @@ Route::view('/tv', 'web.tv')->name('web.tv');
 
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
 Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
+
+// Arma tu outfit de Bravos (Figma "03 · Arma tu Outfit Bravos"): una polera y un pantalón a precio individual.
+Route::get('/marcas/bravos/arma-tu-outfit', function () {
+    $brand = Brand::query()->active()->where('slug', 'bravos')->firstOrFail();
+
+    return view('web.bravos-outfit', [
+        'brandPage' => $brand,
+        'steps' => \App\Support\BravosOutfit::steps($brand),
+    ]);
+})->name('web.bravos.outfit');
 
 Route::get('/marcas/{brand:slug}', function (Brand $brand) {
     abort_unless($brand->is_active, 404);
@@ -381,7 +501,7 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
-            ->whereRaw('UPPER(TRIM(marca)) = ?', [$brandName])
+            ->ofBrand($brand->name)
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('total_stock')
             ->limit(48)
@@ -389,6 +509,18 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
         $fallbackImage,
         $brand->name,
     );
+
+    // Bravos tiene su propia portada (diseño Figma "01 · Home Bravos · Black & White").
+    if ($brand->slug === 'bravos') {
+        $range = Producto::query()->ofBrand($brand->name)->where('price', '>', 0)->where('stock', '>', 0);
+
+        return view('web.bravos', [
+            'brandPage' => $brand,
+            'favorites' => $products->take(4),
+            'modelCount' => (clone $range)->distinct()->count('name'),
+            'colorCount' => (clone $range)->whereNotNull('color')->distinct()->count('color'),
+        ]);
+    }
 
     return view('web.brand-show', [
         'brandPage' => $brand,
@@ -452,7 +584,29 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         $fallbackImage,
     );
 
-    return view('web.product-show', [
+    // Productos de Bravos: ficha con el diseño de la marca (Figma "PDP · Polera Neru · Desktop").
+    $bravosBrand = Producto::query()->whereKey($producto->id)->ofBrand('BRAVOS')->exists()
+        ? Brand::query()->active()->where('slug', 'bravos')->first()
+        : null;
+
+    if ($bravosBrand) {
+        $recommendedProducts = ProductCards::make(
+            Producto::query()
+                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+                ->ofBrand($bravosBrand->name)
+                ->where('price', '>', 0)
+                ->where('stock', '>', 0)
+                ->where('name', '!=', $producto->name)
+                ->groupBy('zazu_company_id', 'name')
+                ->orderByDesc('total_stock')
+                ->limit(3)
+                ->get(),
+            $fallbackImage,
+        );
+    }
+
+    return view($bravosBrand ? 'web.product-show-bravos' : 'web.product-show', [
+        'brandPage' => $bravosBrand,
         'producto' => $producto,
         'variants' => $variants,
         'colorOptions' => $colorOptions,
@@ -481,7 +635,7 @@ Route::get('/buscar', function (Request $request) {
     $available = fn () => Producto::query()
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
-        ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
+        ->when($marca !== '', fn ($query) => $query->ofBrand($marca))
         ->when($marca === '' && $line === 'mujer', fn ($query) => GirlsHome::onlyGirls($query))
         ->when($marca === '' && $line === 'hombre' && $search === '', fn ($query) => GirlsHome::exceptGirls($query));
 
@@ -545,7 +699,12 @@ Route::get('/buscar', function (Request $request) {
         });
     }
 
-    return view('web.search', [
+    // La tienda de Bravos tiene su propio diseño (Figma "02 · Tienda Bravos · Todos").
+    $bravosBrand = mb_strtoupper($marca) === 'BRAVOS' ? Brand::query()->active()->where('slug', 'bravos')->first() : null;
+
+    return view($bravosBrand ? 'web.search-bravos' : 'web.search', [
+        'bravosBrand' => $bravosBrand,
+        'allCount' => $bravosBrand ? $filtered(false)->distinct()->count('name') : null,
         'products' => $products,
         'search' => $search,
         'marca' => $marca,

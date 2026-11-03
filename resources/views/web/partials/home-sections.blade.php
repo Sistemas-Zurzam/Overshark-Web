@@ -102,7 +102,7 @@
 
     {{-- Por qué elegir Overshark: calidad de la prenda y las tres telas --}}
     <section class="os-hh-wrap flex flex-col gap-4 pb-16 lg:pb-[88px]" aria-labelledby="hh-quality">
-        <div class="flex flex-col gap-10 bg-[var(--hh-dark)] px-6 py-12 sm:p-12 lg:flex-row lg:items-center lg:gap-14 lg:p-16">
+        <div class="flex flex-col gap-10 bg-[var(--hh-dark)] px-6 py-12 sm:p-12 xl:flex-row xl:items-center xl:gap-14 xl:p-16">
             <div class="flex min-w-0 flex-1 flex-col items-start gap-[18px]">
                 <p class="os-hh-eyebrow !text-[12px] !tracking-[3px] !text-[var(--hh-bright)]">Por qué elegir Overshark</p>
                 <h2 id="hh-quality" class="os-hh-display text-[40px] leading-[40px] text-white sm:text-[56px] sm:leading-[54px]">
@@ -111,7 +111,7 @@
                 <span class="h-[2px] w-12 bg-[var(--hh-bright)]" aria-hidden="true"></span>
                 <p class="max-w-[440px] text-[16px] font-medium leading-[26px] text-white/80">{{ $girls ? 'Básicos' : 'Polos' }} diseñados para el uso diario con materiales que garantizan durabilidad, frescura y confort.</p>
             </div>
-            <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:shrink-0">
+            <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:shrink-0">
                 @foreach ($qualities as $quality)
                     <li class="os-hh-quality">
                         <span class="grid h-[60px] w-[60px] shrink-0 place-items-center rounded-[18px] border border-[var(--hh-icon-line)] bg-[var(--hh-icon-bg)]" aria-hidden="true">
@@ -125,7 +125,7 @@
                 @endforeach
             </ul>
         </div>
-        <ul class="grid gap-4 md:grid-cols-3">
+        <ul class="grid gap-4 lg:grid-cols-3">
             @foreach ($fabrics as $fabric)
                 <li class="flex h-[200px] overflow-hidden border border-[#d9d9d9] bg-white">
                     <div class="flex min-w-0 flex-1 flex-col justify-center gap-1.5 pl-6 pr-4">
@@ -133,7 +133,7 @@
                         <h3 class="os-hh-display text-[40px] leading-none">{{ $fabric['name'] }}</h3>
                         <p class="max-w-[150px] text-[13px] font-medium leading-[19px] text-[var(--hh-fabric-text)]">{{ $fabric['text'] }}</p>
                     </div>
-                    <img src="{{ $img($fabric['image']) }}" alt="Textura de tela {{ mb_strtolower($fabric['name']) }}" width="190" height="198" class="h-full w-[150px] shrink-0 object-cover sm:w-[190px]" loading="lazy">
+                    <img src="{{ $img($fabric['image']) }}" alt="Textura de tela {{ mb_strtolower($fabric['name']) }}" width="190" height="198" class="h-full w-[150px] shrink-0 object-cover sm:w-[260px] lg:w-[140px] xl:w-[190px]" loading="lazy">
                 </li>
             @endforeach
         </ul>
@@ -191,7 +191,7 @@
         <div class="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div>
                 <p class="os-hh-eyebrow !text-[13px] !tracking-[3px]">Familia Overshark</p>
-                <h2 id="hh-family" class="os-hh-display mt-2.5 text-[52px] leading-[0.95] sm:text-[96px] sm:leading-[88px]">Otras tiendas<br>de nuestra familia</h2>
+                <h2 id="hh-family" class="os-hh-display mt-2.5 text-[52px] leading-[0.95] sm:text-[72px] sm:leading-[68px] lg:text-[96px] lg:leading-[88px]">Otras tiendas<br>de nuestra familia</h2>
             </div>
             <p class="max-w-[340px] text-[16px] font-medium leading-[25px] text-[#545966]">Overshark reúne tiendas para hombre, para mujer y la línea urbana Bravos, que comparten la misma visión: básicos bien hechos, a precio justo y con envío a todo el Perú.</p>
         </div>

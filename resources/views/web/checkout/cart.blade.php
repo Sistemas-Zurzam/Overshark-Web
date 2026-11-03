@@ -1,0 +1,76 @@
+@extends('web.checkout.layout', ['step' => 1])
+
+{{-- C1 · Tu carrito (y E1 · Tu carrito está vacío). Cantidades y "Eliminar" usan las rutas del carrito con stay=1. --}}
+
+@section('title', 'Tu carrito | Overshark')
+
+@php($title = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text)))
+
+@section('checkout')
+    @if ($items->isEmpty())
+        <section class="flex max-w-[560px] flex-col items-start gap-5 py-6" aria-labelledby="cart-title">
+            <h1 id="cart-title" class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">TU CARRITO ESTÁ VACÍO</h1>
+            <p class="text-[16px] leading-[1.45] text-[#65717c]">Agrega tus prendas favoritas y arma tu próximo look. El envío es S/ 14 a todo el Perú.</p>
+            <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">IR A LA TIENDA</a>
+        </section>
+    @else
+        <h1 class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">TU CARRITO</h1>
+
+        @if ($errors->any())
+            <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
+        @endif
+
+        <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
+            <section class="flex flex-col gap-6" aria-labelledby="cart-items">
+                <h2 id="cart-items" class="text-[18px] font-bold leading-[1.45] text-[#0b1015]">{{ $count }} {{ $count === 1 ? 'prenda' : 'prendas' }} para tu próximo look</h2>
+                <ul class="flex flex-col">
+                    @foreach ($items as $key => $item)
+                        @php($isCombo = ($item['kind'] ?? null) === 'combo')
+                        <li class="flex gap-4 border-b border-[#dae0e5] py-6 first:pt-0 last:border-b-0 sm:gap-5">
+                            <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="" class="h-[112px] w-[88px] shrink-0 bg-[#f5f7f9] object-cover sm:h-[132px] sm:w-[104px]">
+                            <div class="flex min-w-0 flex-1 flex-col gap-2 leading-[1.45] text-[#0b1015]">
+                                <p class="text-[17px] font-bold">{{ $isCombo ? ($item['producto'] ?? 'Combo') : $title($item['producto'] ?? 'Producto') }}</p>
+                                @if ($isCombo)
+                                    <p class="text-[13px] text-[#65717c]">Combo · {{ collect($item['selections'] ?? [])->map(fn ($selection) => $title($selection['producto'] ?? '').' '.$title($selection['color'] ?? '').' '.($selection['talla'] ?? ''))->implode(' · ') }}</p>
+                                @else
+                                    <p class="text-[13px] text-[#65717c]">{{ $title($item['color'] ?? '') }} · Talla {{ $item['talla'] ?? '-' }}</p>
+                                @endif
+                                <p class="text-[16px] font-extrabold">S/ {{ number_format((float) $item['price'] * (int) $item['qty'], 2) }}@if ((int) $item['qty'] > 1) <span class="text-[13px] font-medium text-[#65717c]">· S/ {{ number_format((float) $item['price'], 2) }} c/u</span>@endif</p>
+                                <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                                    @if ($isCombo)
+                                        <span class="text-[14px] font-bold">{{ $item['qty'] }} {{ (int) $item['qty'] === 1 ? 'combo' : 'combos' }}</span>
+                                    @else
+                                        <div class="flex items-center gap-1 text-[14px] font-bold">
+                                            <form method="POST" action="{{ route('web.cart.update', $item['variant_id']) }}">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="action" value="decrement"><input type="hidden" name="stay" value="1">
+                                                <button type="submit" class="os-focus grid h-8 w-8 place-items-center hover:bg-[#f5f7f9]" aria-label="Quitar una unidad">−</button>
+                                            </form>
+                                            <span class="w-6 text-center" aria-label="Cantidad">{{ $item['qty'] }}</span>
+                                            <form method="POST" action="{{ route('web.cart.update', $item['variant_id']) }}">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="action" value="increment"><input type="hidden" name="stay" value="1">
+                                                <button type="submit" class="os-focus grid h-8 w-8 place-items-center hover:bg-[#f5f7f9]" aria-label="Agregar una unidad">+</button>
+                                            </form>
+                                        </div>
+                                    @endif
+                                    <form method="POST" action="{{ $isCombo ? route('web.cart.combo.destroy', $key) : route('web.cart.destroy', $item['variant_id']) }}">
+                                        @csrf @method('DELETE')
+                                        <input type="hidden" name="stay" value="1">
+                                        <button type="submit" class="os-focus text-[13px] text-[#65717c] hover:text-[#a3261c] hover:underline">Eliminar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+                <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[280px]">SEGUIR COMPRANDO</a>
+            </section>
+
+            @component('web.checkout.partials.summary', compact('items', 'count', 'subtotal', 'shipping', 'total'))
+                <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
+                <p class="text-[12px] leading-[1.45] text-[#65717c]">Envío S/ 14 a todo el Perú.</p>
+            @endcomponent
+        </div>
+    @endif
+@endsection

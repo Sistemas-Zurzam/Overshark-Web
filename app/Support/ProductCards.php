@@ -15,7 +15,7 @@ class ProductCards
             ->whereNotNull('color')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
-            ->when($brandName !== null, fn ($query) => $query->whereRaw('UPPER(TRIM(marca)) = ?', [mb_strtoupper(trim($brandName))]))
+            ->when($brandName !== null, fn ($query) => $query->ofBrand($brandName))
             ->orderBy('color')
             ->get()
             ->groupBy(fn (Producto $product): string => self::productKey($product->name, $product->zazu_company_id));

@@ -16,9 +16,14 @@
 
 @php
     $img = fn (string $key) => \App\Support\AboutPage::imageUrl($key, $c);
-    // Línea mujer: paleta Overshark Girls (.os-hh--girls) y, si no se subió una portada propia, la foto del arrecife.
-    $girls = session('storefront.line') === 'mujer';
-    $portada = $girls && empty($c['images']['portada']) ? asset('images/home-mujer/hero.webp') : $img('portada');
+    // Desde Bravos (?marca=bravos): paleta negra y amarilla (.os-hh--bravos) y títulos en Manrope.
+    // Línea mujer: paleta Overshark Girls (.os-hh--girls). Sin portada propia, cada una usa su foto de portada.
+    $bravos = ($brandPage ?? null)?->slug === 'bravos';
+    $girls = ! $bravos && session('storefront.line') === 'mujer';
+    $portada = empty($c['images']['portada'])
+        ? ($bravos ? asset('images/bravos/hero.webp') : ($girls ? asset('images/home-mujer/hero.webp') : $img('portada')))
+        : $img('portada');
+    $display = fn (string $hh, string $bv) => $bravos ? 'font-extrabold uppercase tracking-[-0.01em] '.$bv : 'os-hh-display '.$hh;
     $file = fn (string $key) => \App\Support\AboutPage::IMAGES[$key][0];
     $paragraphs = fn (?string $text) => collect(preg_split('/\R\s*\R/', trim((string) $text)))->filter();
     $brands = [
@@ -31,17 +36,25 @@
         ->filter(fn (array $social) => filled($social['url']));
 @endphp
 
+@if ($bravos)
+    @section('body-class', 'theme-neon theme-bravos')
+@endif
+
 @section('content')
-    <div @class(['os-hh os-nos-page', 'os-hh--girls' => $girls])>
+    <div @class(['os-hh os-nos-page', 'os-hh--girls' => $girls, 'os-hh--bravos' => $bravos])>
         {{-- Portada --}}
         <section class="relative isolate flex min-h-[460px] flex-col items-center justify-center gap-5 overflow-hidden bg-[var(--shop-deep)] px-4 py-20 text-center text-white lg:min-h-[560px]" aria-labelledby="nos-title">
             @if ($portada)
                 <img src="{{ $portada }}" alt="" class="absolute inset-0 -z-20 h-full w-full object-cover" fetchpriority="high">
             @endif
             <div class="absolute inset-0 -z-10 [background:var(--nos-veil)]" aria-hidden="true"></div>
-            <img src="{{ asset('images/nosotros/'.($girls ? 'aleta-girls.svg' : 'aleta.svg')) }}" alt="" width="40" height="40">
+            @if ($bravos)
+                <img src="{{ asset('images/nav/logo-bravos.svg') }}" alt="" width="80" height="26" class="h-8 w-auto">
+            @else
+                <img src="{{ asset('images/nosotros/'.($girls ? 'aleta-girls.svg' : 'aleta.svg')) }}" alt="" width="40" height="40">
+            @endif
             <p class="text-[13px] font-extrabold uppercase tracking-[4px] text-[var(--hh-bright)]">{{ $c['hero']['tag'] }}</p>
-            <h1 id="nos-title" class="os-hh-display text-[64px] leading-[0.95] sm:text-[104px] lg:text-[150px] lg:leading-[140px]">{{ $c['hero']['title'] }}</h1>
+            <h1 id="nos-title" class="{{ $display('text-[64px] leading-[0.95] sm:text-[104px] lg:text-[150px] lg:leading-[140px]', 'text-[40px] leading-[1.05] sm:text-[64px] lg:text-[88px]') }}">{{ $c['hero']['title'] }}</h1>
             <p class="max-w-[640px] text-[17px] font-medium leading-[27px] text-[var(--shop-intro)] sm:text-[20px] sm:leading-[30px]">{{ $c['hero']['text'] }}</p>
         </section>
 
@@ -57,17 +70,17 @@
                 @if (filled($c['historia']['year']))
                     <p class="absolute left-[4%] top-[4%] flex flex-col bg-[var(--hh-accent)] px-[18px] py-[14px] text-white">
                         <span class="text-[11px] font-extrabold uppercase tracking-[2px]">Desde</span>
-                        <span class="os-hh-display text-[40px] leading-[40px]">{{ $c['historia']['year'] }}</span>
+                        <span class="{{ $display('text-[40px] leading-[40px]', 'text-[26px] leading-[1.15]') }}">{{ $c['historia']['year'] }}</span>
                     </p>
                 @endif
             </div>
             <div class="flex flex-col items-start gap-[22px]" data-nos-reveal>
                 <p class="text-[13px] font-extrabold uppercase tracking-[3px] text-[var(--hh-accent)]">{{ $c['historia']['tag'] }}</p>
-                <h2 id="nos-historia" class="os-hh-display text-[44px] leading-[44px] sm:text-[64px] sm:leading-[62px]">{{ $c['historia']['title'] }}</h2>
+                <h2 id="nos-historia" class="{{ $display('text-[44px] leading-[44px] sm:text-[64px] sm:leading-[62px]', 'text-[32px] leading-[1.15] sm:text-[44px]') }}">{{ $c['historia']['title'] }}</h2>
                 @foreach ($paragraphs($c['historia']['text'])->concat($paragraphs($c['historia']['origen'])) as $paragraph)
                     <p class="text-[17px] font-medium leading-[28px] text-[#545966]">{{ $paragraph }}</p>
                 @endforeach
-                <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">{{ $c['historia']['button'] }} →</a>
+                <a href="{{ $bravos ? route('web.products.search', ['marca' => 'BRAVOS']) : route('web.products.search') }}" class="os-hh-btn os-focus bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">{{ $c['historia']['button'] }} →</a>
             </div>
         </section>
 
@@ -75,14 +88,14 @@
         <section class="bg-[var(--shop-deep)] py-16 text-white lg:py-[88px]" aria-labelledby="nos-adn">
             <div class="os-hh-wrap">
                 <header class="flex flex-col justify-between gap-2 border-b-2 border-white/20 pb-5 sm:flex-row sm:items-end">
-                    <h2 id="nos-adn" class="os-hh-display text-[48px] leading-none sm:text-[64px] sm:leading-[62px]">{{ $c['adn']['title'] }}</h2>
+                    <h2 id="nos-adn" class="{{ $display('text-[48px] leading-none sm:text-[64px] sm:leading-[62px]', 'text-[34px] leading-[1.1] sm:text-[44px]') }}">{{ $c['adn']['title'] }}</h2>
                     <p class="text-[16px] font-medium text-[var(--hh-muted)]">{{ $c['adn']['text'] }}</p>
                 </header>
                 <ul class="mt-10 grid gap-4 md:grid-cols-3">
                     @foreach ($c['adn']['items'] as $item)
                         <li class="flex flex-col gap-4 border border-white/10 bg-[var(--hh-card)] px-8 pb-9 pt-8" data-nos-reveal>
-                            <span class="os-hh-display text-[72px] leading-[68px] text-[var(--hh-bright)]" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
-                            <h3 class="os-hh-display text-[40px] leading-[40px]">{{ $item['title'] }}</h3>
+                            <span class="{{ $display('text-[72px] leading-[68px] text-[var(--hh-bright)]', 'text-[48px] leading-none text-[var(--hh-bright)]') }}" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
+                            <h3 class="{{ $display('text-[40px] leading-[40px]', 'text-[26px] leading-[1.15]') }}">{{ $item['title'] }}</h3>
                             <p class="text-[15px] font-medium leading-6 text-[var(--hh-muted)]">{{ $item['text'] }}</p>
                         </li>
                     @endforeach
@@ -107,7 +120,7 @@
                             <x-nosotros.photo :src="$stepPhoto" :alt="$step['image_alt']" ratio="4 / 3" :gray="false" />
                         @endif
                         <div class="flex flex-col gap-2 p-6">
-                            <span class="os-hh-display text-[40px] leading-none text-[var(--hh-accent)]" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
+                            <span class="{{ $display('text-[40px] leading-none text-[var(--hh-accent)]', 'text-[28px] leading-none text-[var(--hh-accent)]') }}" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
                             <h3 class="text-[18px] font-extrabold"><span class="sr-only">Paso {{ $loop->iteration }}: </span>{{ $step['title'] }}</h3>
                             <p class="text-[14px] font-medium leading-[22px] text-[#545966]">{{ $step['text'] }}</p>
                         </div>
@@ -121,7 +134,7 @@
             <ul class="os-hh-wrap grid grid-cols-2 gap-y-8 lg:grid-cols-4">
                 @foreach ($c['datos'] as $dato)
                     <li @class(['flex flex-col gap-1.5', 'border-l border-[var(--shop-line)] pl-5 sm:pl-8' => $loop->index % 2 === 1, 'lg:border-l lg:border-[var(--shop-line)] lg:pl-8' => $loop->index === 2])>
-                        <span class="os-hh-display text-[40px] leading-none text-[var(--hh-accent)] sm:text-[64px] sm:leading-[62px]">{{ $dato['value'] }}</span>
+                        <span class="{{ $display('text-[40px] leading-none text-[var(--hh-accent)] sm:text-[64px] sm:leading-[62px]', 'text-[30px] leading-none text-[var(--hh-accent)] sm:text-[44px]') }}">{{ $dato['value'] }}</span>
                         <span class="text-[14px] font-bold sm:text-[15px]">{{ $dato['label'] }}</span>
                     </li>
                 @endforeach
@@ -163,7 +176,7 @@
         <section class="os-hh-wrap pb-16 lg:pb-[100px]" aria-labelledby="nos-comunidad">
             <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
                 <div class="flex flex-col gap-1.5">
-                    <h2 id="nos-comunidad" class="os-hh-display text-[36px] leading-none sm:text-[48px] sm:leading-[48px]">{{ $c['comunidad']['title'] }}</h2>
+                    <h2 id="nos-comunidad" class="{{ $display('text-[36px] leading-none sm:text-[48px] sm:leading-[48px]', 'text-[26px] leading-[1.15] sm:text-[34px]') }}">{{ $c['comunidad']['title'] }}</h2>
                     <p class="text-[15px] font-medium text-[#545966]">
                         @if (filled($c['comunidad']['handle']))
                             Etiquétanos con {{ $c['comunidad']['handle'] }} cuando estrenes tu look.

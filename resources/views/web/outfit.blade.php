@@ -30,7 +30,7 @@
             <div class="flex flex-col items-start justify-center gap-5 px-4 py-12 sm:px-8 lg:min-h-[520px] lg:py-10 lg:pl-[max(2rem,calc(50vw-620px))] lg:pr-14">
                 <p class="text-[13px] font-extrabold uppercase tracking-[3px] text-[var(--hh-bright)]">Estilista online · Gratis</p>
                 <h1 id="ob-title" @class([
-                    'os-hh-display text-[72px] leading-[64px] sm:text-[104px] sm:leading-[92px] xl:text-[128px] xl:leading-[112px]' => ! $girls,
+                    'os-hh-display text-[64px] leading-[62px] sm:text-[104px] sm:leading-[98px] xl:text-[128px] xl:leading-[118px]' => ! $girls,
                     'os-josefin text-[56px] uppercase leading-[60px] sm:text-[90px] sm:leading-[97px]' => $girls,
                 ])>¡Arma tu<br>outfit!</h1>
                 <p class="max-w-[560px] text-[16px] font-medium leading-[26px] text-[var(--shop-intro)] sm:text-[18px] sm:leading-[28px]">Combina tus básicos favoritos, mira cómo queda el look completo y llévatelo con precio de combo.</p>

@@ -94,7 +94,7 @@
                                     <div>
                                         <label for="document_number" class="{{ $labelClass }}">Tipo y numero de documento
                                             <span class="text-red-400">*</span></label>
-                                        <div class="mt-2 grid grid-cols-[88px_1fr] gap-2">
+                                        <div class="mt-2 grid grid-cols-[88px_minmax(0,1fr)] gap-2">
                                             <select name="document_type"
                                                 class="rounded-lg border border-edge bg-panel px-3 py-3 text-sm outline-none focus:border-neon-soft focus:ring-4 focus:ring-neon/25"
                                                 required>
@@ -105,7 +105,7 @@
                                             </select>
                                             <input id="document_number" name="document_number"
                                                 value="{{ old('document_number') }}"
-                                                class="rounded-lg border border-edge bg-panel px-3 py-3 text-sm outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25"
+                                                class="w-full min-w-0 rounded-lg border border-edge bg-panel px-3 py-3 text-sm outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25"
                                                 placeholder="75351525" required>
                                         </div>
                                         @error('document_number')

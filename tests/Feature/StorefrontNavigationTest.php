@@ -34,7 +34,7 @@ class StorefrontNavigationTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('Nacido del océano')
-            ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas × S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
+            ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas <span class="whitespace-nowrap">× S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
             ->assertDontSee('Baby Ty');
     }
 
@@ -200,7 +200,7 @@ class StorefrontNavigationTest extends TestCase
             ->assertSee('os-hh--girls', false)
             ->assertSee('3 productos')
             ->assertSeeInOrder(['Baby tees', '1', 'Tops', '1', 'Poleras', '0', 'Joggers', '1', 'Sets', '0'])
-            ->assertSee('9 prendas × S/ 99')
+            ->assertSeeText('9 prendas × S/ 99')
             ->assertDontSee('Polo Waffle');
 
         $this->get(route('web.products.search', ['categoria' => 'joggers']))
