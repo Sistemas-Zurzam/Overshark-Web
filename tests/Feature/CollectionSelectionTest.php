@@ -25,9 +25,9 @@ class CollectionSelectionTest extends TestCase
             ->assertSessionHas('storefront.line', 'hombre')
             ->assertSee('Nacido del océano')
             ->assertSee('Hecho para dominar')
-            ->assertSee('Compras en vivo')
-            ->assertSee('Asesoría personalizada')
-            ->assertSee('Compra manual')
+            ->assertDontSee('Compras en vivo')
+            ->assertDontSee('Asesoría personalizada')
+            ->assertDontSee('Compra manual')
             ->assertDontSeeText('Arma tu outfit con IA');
 
         $this->get('/')
@@ -50,9 +50,27 @@ class CollectionSelectionTest extends TestCase
         $this->withSession(['storefront.line' => 'mujer'])
             ->get('/')
             ->assertOk()
-            ->assertSee('libre como la marea')
-            ->assertSee('Overshark Girls')
+            ->assertSee('Nacida del arrecife')
+            ->assertSee('Hecha para brillar')
+            ->assertSee('os-hh--girls', false)
+            ->assertSeeInOrder(['9 prendas × S/ 99', 'Baby tees', 'Calidad que se nota', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
             ->assertDontSee('dominar');
+    }
+
+    public function test_women_home_lists_only_girls_best_sellers(): void
+    {
+        foreach (['BABY TY BASICA' => 'BABY-1', 'POLO WAFFLE' => 'WAF-1'] as $name => $code) {
+            \App\Models\Admin\Producto::query()->create([
+                'name' => $name, 'default_code' => $code, 'talla' => 'M', 'color' => 'ROSA', 'stock' => 5, 'price' => 39.9, 'zazu_company_id' => 1,
+            ]);
+        }
+
+        $this->withSession(['storefront.line' => 'mujer'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Los más vendidos')
+            ->assertSee('Baby Ty Basica · Rosa')
+            ->assertDontSee('Polo Waffle');
     }
 
     public function test_unknown_line_still_shows_the_selector(): void
@@ -89,9 +107,40 @@ class CollectionSelectionTest extends TestCase
         $this->get(route('web.outfit'))
             ->assertOk()
             ->assertSee('Combo Básico')
-            ->assertSee('S/109.00')
+            ->assertSee('S/ 109.00')
             ->assertSee(str_replace('/', '\/', route('web.combos.cart.store', $combo)), false)
             ->assertSee('Clasico', false)
             ->assertDontSee('data-ob-pick="'.($combo->id + 1).'"', false); // el combo que no es de outfit no aparece
+    }
+
+    public function test_outfit_builder_shows_only_the_looks_of_the_chosen_line(): void
+    {
+        $tee = \App\Models\Admin\Producto::query()->create(['name' => 'BABY TY BASICA', 'default_code' => 'BT-L-S', 'color' => 'LILA', 'talla' => 'S', 'stock' => 4, 'price' => 19.9, 'zazu_company_id' => 1]);
+        $girlsLook = \App\Models\Admin\Combo::query()->create([
+            'name' => 'Soft Pink', 'brand' => 'Overshark Girls', 'modality' => 'Outfit', 'price' => 59.9,
+            'imagen' => 'combos/soft-pink.jpg', 'status' => true, 'selection_mode' => 'fixed',
+            'items' => [['zazu' => 'BABY TY BASICA', 'cantidad' => 1]],
+        ]);
+        $girlsLook->productos()->sync([$tee->id => ['cantidad' => 1]]);
+        $polo = \App\Models\Admin\Producto::query()->create(['name' => 'CLASICO', 'default_code' => 'CL-N-M', 'color' => 'NEGRO', 'talla' => 'M', 'stock' => 4, 'price' => 52.9, 'zazu_company_id' => 1]);
+        $menLook = \App\Models\Admin\Combo::query()->create([
+            'name' => 'Casual Chino', 'brand' => 'Overshark', 'modality' => 'Outfit', 'price' => 79.9,
+            'imagen' => 'combos/casual.jpg', 'status' => true, 'selection_mode' => 'fixed',
+            'items' => [['zazu' => 'CLASICO', 'cantidad' => 1]],
+        ]);
+        $menLook->productos()->sync([$polo->id => ['cantidad' => 1]]);
+
+        $this->withSession(['storefront.line' => 'mujer'])->get(route('web.outfit'))
+            ->assertOk()
+            ->assertSee('os-hh--girls', false)
+            ->assertSee('collage-girls-1.webp', false)
+            ->assertSee('Soft Pink')
+            ->assertDontSee('Casual Chino');
+
+        $this->withSession(['storefront.line' => 'hombre'])->get(route('web.outfit'))
+            ->assertOk()
+            ->assertDontSee('os-hh--girls', false)
+            ->assertSee('Casual Chino')
+            ->assertDontSee('Soft Pink');
     }
 }

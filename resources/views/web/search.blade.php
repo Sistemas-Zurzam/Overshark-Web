@@ -1,144 +1,250 @@
 @extends('layouts.web')
 
-@section('title', 'Buscar productos | Overshark')
+@section('title', 'Tienda | Overshark')
+
+{{--
+    Tienda (diseños Figma "02 · Tienda Hombre" y "02 · Tienda Mujer"): cabecera con categorías rápidas,
+    filtros laterales (categoría, talla, color y precio), resultados paginados y franja de confianza.
+    Los filtros son enlaces GET: cada uno cambia un parámetro y conserva los demás. En la línea mujer
+    (.os-hh--girls) cambian la paleta, las categorías y los títulos (Josefin Sans).
+--}}
+@php
+    $girls = session('storefront.line') === 'mujer' && $marca === '';
+    $title = fn (string $name) => \Illuminate\Support\Str::title(mb_strtolower($name));
+    $url = fn (array $changes = []) => route('web.products.search', array_filter([...$filters, ...$changes], fn ($value) => $value !== null && $value !== ''));
+    $categories = \App\Support\StorefrontCategories::all();
+    $talla = $filters['talla'] ?? '';
+    $color = $filters['color'] ?? '';
+    $min = $filters['min'] ?? $priceFloor;
+    $max = $filters['max'] ?? $priceCeil;
+
+    $heading = match (true) {
+        $categoria !== '' => \App\Support\StorefrontCategories::label($categoria),
+        $search !== '' => 'Resultados',
+        $orden === 'novedades' => 'Novedades',
+        $marca !== '' => $marca,
+        default => 'Tienda',
+    };
+    $intro = match (true) {
+        $search !== '' => 'Resultados para "'.$search.'".',
+        $marca !== '' => 'Productos de la marca '.$marca.'.',
+        $orden === 'novedades' && $categoria === '' => 'Los últimos modelos incorporados al catálogo.',
+        $girls => 'Baby tees, tops, poleras y joggers para todos los días. Mézclalos en combos 3 × S/ 50.',
+        default => 'Polos, camisas, poleras y joggers para todos los días. Mézclalos en combos 3 × S/ 50.',
+    };
+
+    // Filtros activos, cada uno con el enlace que lo quita.
+    $active = collect([
+        $search !== '' ? ['label' => '"'.$search.'"', 'url' => $url(['q' => null])] : null,
+        $marca !== '' ? ['label' => $marca, 'url' => $url(['marca' => null])] : null,
+        $categoria !== '' ? ['label' => \App\Support\StorefrontCategories::label($categoria), 'url' => $url(['categoria' => null])] : null,
+        $talla !== '' ? ['label' => 'Talla '.$talla, 'url' => $url(['talla' => null])] : null,
+        $color !== '' ? ['label' => $title($color), 'url' => $url(['color' => null])] : null,
+        isset($filters['min']) || isset($filters['max']) ? ['label' => 'S/ '.$min.' — S/ '.$max, 'url' => $url(['min' => null, 'max' => null])] : null,
+    ])->filter();
+
+    $chips = $girls ? ['baby-tees', 'tops', 'joggers'] : ['polos', 'camisas', 'poleras', 'pantalones'];
+    // Títulos: Big Shoulders en mayúsculas (hombre) o Josefin Sans (Overshark Girls).
+    $display = $girls ? 'os-josefin' : 'os-hh-display';
+    $sorts = ['' => 'Más vendidos', 'novedades' => 'Novedades', 'precio-asc' => 'Precio: menor a mayor', 'precio-desc' => 'Precio: mayor a menor'];
+    $perks = [
+        ['title' => 'Envío S/ 14 a todo el Perú', 'text' => 'Lima y provincias'],
+        ['title' => 'Pago contraentrega', 'text' => 'Yape, Plin o efectivo'],
+        ['title' => 'Cambios y devoluciones', 'text' => 'Te ayudamos por WhatsApp'],
+        ['title' => 'Combos 3 × S/ 50', 'text' => 'Mezcla tus favoritos'],
+    ];
+@endphp
 
 @section('content')
-    @php
-        $swatches = [
-            'azul' => '#1d4f91',
-            'beige' => '#ddcdbd',
-            'perla' => '#e8e0d6',
-            'cemento' => '#9b9b95',
-            'negro' => '#111111',
-            'vino' => '#7b1028',
-            'botella' => '#0f4f3b',
-            'plomo' => '#9a9aa0',
-            'pacay' => '#8c9b73',
-            'denim' => '#526f91',
-            'blanco' => '#f7f7f2',
-            'p. rosa' => '#e8b8bd',
-        ];
-    @endphp
-
-    <section class="px-5 py-14 text-white lg:px-8">
-        <div class="mx-auto max-w-7xl">
-            <div class="mb-9 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <p class="text-sm font-black uppercase tracking-[0.22em] text-neon-soft">Busqueda Overshark</p>
-                    <h1 class="mt-2 text-3xl font-black uppercase sm:text-4xl">
-                        @if ($categoria !== '')
-                            {{ \App\Support\StorefrontCategories::label($categoria) }}
-                        @elseif ($orden === 'novedades')
-                            Novedades
-                        @elseif ($orden === 'populares' && $search === '' && $marca === '')
-                            Colección
-                        @else
-                            Productos encontrados
-                        @endif
-                    </h1>
-                    <p class="mt-2 text-haze">
-                        @if ($categoria !== '' && $search !== '')
-                            Resultados en {{ \App\Support\StorefrontCategories::label($categoria) }} para "{{ $search }}".
-                        @elseif ($categoria !== '')
-                            Modelos disponibles de {{ mb_strtolower(\App\Support\StorefrontCategories::label($categoria)) }}.
-                        @elseif ($orden === 'novedades' && $search === '' && $marca === '')
-                            Los últimos modelos incorporados al catálogo.
-                        @elseif ($orden === 'populares' && $search === '' && $marca === '')
-                            Todos los modelos disponibles, primero los de mayor stock.
-                        @elseif ($marca !== '' && $search !== '')
-                            Resultados de {{ $marca }} para "{{ $search }}".
-                        @elseif ($marca !== '')
-                            Productos de la marca {{ $marca }}.
-                        @elseif ($search !== '')
-                            Resultados para "{{ $search }}".
-                        @else
-                            Escribe un producto o elige una marca.
-                        @endif
-                    </p>
+    <div @class(['os-hh', 'os-hh--girls' => $girls])>
+        {{-- Cabecera de página --}}
+        <header class="pb-10 pt-10 text-white [background:var(--shop-head)] lg:pt-12">
+            <div class="os-hh-wrap flex flex-col items-start gap-3.5">
+                <nav aria-label="Ruta" class="text-[13px] font-semibold text-[var(--shop-crumb)]">
+                    <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
+                    <span class="mx-1.5" aria-hidden="true">›</span>
+                    <a href="{{ route('web.products.search') }}" class="hover:text-white">Tienda</a>
+                    @if ($girls)
+                        <span class="mx-1.5" aria-hidden="true">›</span>
+                        <a href="{{ route('web.products.search') }}" class="hover:text-white">Mujer</a>
+                    @endif
+                    @if ($heading !== 'Tienda')
+                        <span class="mx-1.5" aria-hidden="true">›</span>
+                        <span class="text-white">{{ $heading }}</span>
+                    @endif
+                </nav>
+                <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                    <h1 @class([$display, 'text-[64px] leading-[0.95]', 'sm:text-[96px] sm:leading-[90px]' => ! $girls, 'sm:text-[84px] sm:leading-[91px]' => $girls])>{{ $heading }}</h1>
+                    <p class="text-[16px] font-bold text-[var(--hh-bright)]">{{ $products->total() }} {{ $products->total() === 1 ? 'producto' : 'productos' }}</p>
                 </div>
-
-                <form action="{{ route('web.products.search') }}" method="GET" class="flex w-full max-w-sm items-center gap-2">
-                    <label for="simple-search" class="sr-only">Buscar productos</label>
-                    <div class="relative w-full">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-haze" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
-                        </div>
-                        <input type="hidden" name="marca" value="{{ $marca }}">
-                        @if ($categoria !== '')
-                            <input type="hidden" name="categoria" value="{{ $categoria }}">
-                        @endif
-                        <input type="text" id="simple-search" name="q" value="{{ $search }}" class="block w-full rounded-lg border border-edge-strong bg-panel py-2.5 pl-9 pr-3 text-sm font-semibold text-white outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25" placeholder="Buscar producto...">
-                    </div>
-                    <button type="submit" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neon text-white shadow-sm transition hover:bg-neon-soft focus:outline-none focus:ring-4 focus:ring-neon/25">
-                        <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
-                        <span class="sr-only">Buscar</span>
-                    </button>
-                </form>
-            </div>
-
-            @if ($products->isEmpty())
-                <div class="grid min-h-64 place-items-center rounded-3xl border border-dashed border-edge bg-panel-2 px-5 text-center">
-                    <div>
-                        @if (session('storefront.line') === 'mujer' && $marca === '')
-                            <p class="text-lg font-black text-mist">Aún no hay productos Overshark Girls disponibles</p>
-                            <p class="mt-1 text-sm text-haze">Pronto publicaremos la colección mujer. También puedes ver la colección hombre.</p>
-                        @else
-                            <p class="text-lg font-black text-mist">No hay productos disponibles</p>
-                            <p class="mt-1 text-sm text-haze">Prueba otra búsqueda o elige una marca diferente.</p>
-                        @endif
-                    </div>
-                </div>
-            @else
-                <div class="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
-                    @foreach ($products as $product)
-                        @php
-                            $displayColors = collect($product->display_colors ?? []);
-                            $oldPrice = (float) $product->min_price > 0 ? ((float) $product->min_price / 0.8) : 0;
-                        @endphp
-                        <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl bg-panel p-4 shadow-xl shadow-black/30 transition hover:-translate-y-1 sm:basis-auto">
-                            <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-frame">
-                                <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
-                                <span class="absolute left-0 top-0 rounded-br-lg bg-red-500/10 px-3 py-1.5 text-base font-medium text-red-400">-20%</span>
-                            </a>
-                            <div class="p-5">
-                                <p class="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-neon-soft">{{ $product->marca ?: ($product->empresa_nombre ?? 'Overshark') }}</p>
-                                <a href="{{ route('web.products.show', $product->id) }}" class="line-clamp-2 min-h-10 text-base font-bold text-white transition hover:text-neon-soft">{{ $product->name }}</a>
-                                <div class="mt-2 flex items-baseline gap-2">
-                                    <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-                                    @if ($oldPrice > 0)
-                                        <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
-                                    @endif
-                                </div>
-                                <div class="mt-4 flex flex-wrap items-center gap-1.5">
-                                    @foreach ($displayColors as $color)
-                                        @php
-                                            $colorName = mb_strtolower($color['name']);
-                                            $swatchColor = $swatches[$colorName] ?? '#b8b8bd';
-                                        @endphp
-                                        @if ($loop->iteration === 9 && $displayColors->count() > 8)
-                                            <button type="button" data-product-colors-expand data-collapsed-label="+{{ $displayColors->count() - 8 }}" data-expanded-label="-" class="grid h-5 min-w-5 place-items-center rounded-full border border-edge-strong bg-panel px-1 text-[11px] font-black leading-none text-mist transition hover:border-neon-soft hover:text-white" aria-label="Mostrar colores extra" aria-expanded="false">
-                                                +{{ $displayColors->count() - 8 }}
-                                            </button>
-                                        @endif
-                                        <button
-                                            type="button"
-                                            data-product-color
-                                            data-image="{{ $color['image'] }}"
-                                            @class([
-                                                'h-5 w-5 rounded-full border border-edge-strong ring-offset-2 ring-offset-ink transition hover:ring-2 hover:ring-edge-strong',
-                                                'hidden' => $loop->iteration > 8,
-                                            ])
-                                            @if ($loop->iteration > 8) data-extra-product-color @endif
-                                            style="background-color: {{ $swatchColor }}"
-                                            aria-label="Ver color {{ $color['name'] }}"
-                                        ></button>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </article>
+                <p class="text-[16px] font-medium text-[var(--shop-intro)]">{{ $intro }}</p>
+                <ul class="-mx-4 flex max-w-[calc(100%+2rem)] gap-2.5 overflow-x-auto px-4 pt-3.5 [scrollbar-width:none] sm:mx-0 sm:max-w-full sm:flex-wrap sm:px-0">
+                    <li><a href="{{ $url(['categoria' => null]) }}" @class(['os-shop-chip os-focus', 'is-active' => $categoria === '']) @if ($categoria === '') aria-current="page" @endif>Todos</a></li>
+                    @foreach ($chips as $slug)
+                        <li><a href="{{ $url(['categoria' => $slug]) }}" @class(['os-shop-chip os-focus', 'is-active' => $categoria === $slug]) @if ($categoria === $slug) aria-current="page" @endif>{{ $categories[$slug]['label'] }}</a></li>
                     @endforeach
+                    <li><a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="os-shop-chip os-focus">Combos</a></li>
+                </ul>
+            </div>
+        </header>
+
+        {{-- Contenido: filtros + resultados --}}
+        <div class="os-hh-wrap grid gap-8 pb-16 pt-8 lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-10 lg:pb-[88px] lg:pt-12">
+            <button type="button" class="os-focus flex h-11 items-center justify-center gap-2 border border-[#0b0f14] text-[14px] font-extrabold uppercase tracking-[1px] lg:hidden" data-shop-filters-toggle aria-controls="shop-filters" aria-expanded="false">
+                Filtros @if ($active->isNotEmpty()) ({{ $active->count() }}) @endif
+            </button>
+
+            <aside id="shop-filters" class="hidden flex-col gap-7 lg:flex" aria-label="Filtros">
+                <div class="flex items-center justify-between border-b-2 border-[#0b0f14] pb-3.5">
+                    <h2 @class([$display, 'uppercase leading-none', 'text-[28px]' => ! $girls, 'text-[19px] !font-bold' => $girls])>Filtros</h2>
+                    <a href="{{ route('web.products.search') }}" class="os-focus text-[13px] font-bold text-[var(--hh-accent)] hover:underline">Limpiar</a>
                 </div>
-            @endif
+
+                <section class="flex flex-col gap-3" aria-labelledby="f-cat">
+                    <h3 id="f-cat" class="os-shop-label">Categoría</h3>
+                    <ul class="flex flex-col gap-3">
+                        @foreach ($categories as $slug => $category)
+                            <li>
+                                <a href="{{ $url(['categoria' => $categoria === $slug ? null : $slug]) }}" class="os-focus group flex items-center gap-2.5" role="checkbox" aria-checked="{{ $categoria === $slug ? 'true' : 'false' }}">
+                                    <span @class(['os-shop-check', 'is-checked' => $categoria === $slug]) aria-hidden="true"></span>
+                                    <span @class(['flex-1 text-[14px] group-hover:text-[var(--hh-accent)]', 'font-bold' => $categoria === $slug, 'font-medium' => $categoria !== $slug])>{{ $category['label'] }}</span>
+                                    <span class="text-[13px] font-medium text-[#888]">{{ $categoryCounts[$slug] }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+
+                @if ($sizes->isNotEmpty())
+                    <section class="flex flex-col gap-3" aria-labelledby="f-size">
+                        <h3 id="f-size" class="os-shop-label">Talla</h3>
+                        <ul class="flex flex-wrap gap-2">
+                            @foreach ($sizes as $size)
+                                <li><a href="{{ $url(['talla' => $talla === $size ? null : $size]) }}" @class(['os-shop-size os-focus', 'is-active' => $talla === $size]) aria-pressed="{{ $talla === $size ? 'true' : 'false' }}">{{ $size }}</a></li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
+                @if ($colors->isNotEmpty())
+                    <section class="flex flex-col gap-3" aria-labelledby="f-color">
+                        <h3 id="f-color" class="os-shop-label">Color</h3>
+                        <ul class="flex flex-wrap gap-2.5">
+                            @foreach ($colors as $option)
+                                <li>
+                                    <a href="{{ $url(['color' => $color === $option ? null : $option]) }}" @class(['os-shop-swatch os-focus', 'is-active' => $color === $option]) style="--swatch: {{ \App\Support\GarmentSwatch::hex($option) }}" title="{{ $title($option) }}" aria-label="Color {{ $title($option) }}" aria-pressed="{{ $color === $option ? 'true' : 'false' }}"></a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
+                @if ($priceCeil > $priceFloor)
+                    <form action="{{ route('web.products.search') }}" method="GET" class="flex flex-col gap-3" aria-labelledby="f-price" data-shop-price>
+                        <h3 id="f-price" class="os-shop-label">Precio</h3>
+                        @foreach (\Illuminate\Support\Arr::except($filters, ['min', 'max']) as $name => $value)
+                            <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                        @endforeach
+                        <div class="os-shop-range" style="--low: {{ round(($min - $priceFloor) / ($priceCeil - $priceFloor), 4) }}; --high: {{ round(($max - $priceFloor) / ($priceCeil - $priceFloor), 4) }}">
+                            <input type="range" name="min" min="{{ $priceFloor }}" max="{{ $priceCeil }}" step="1" value="{{ $min }}" aria-label="Precio mínimo" data-shop-price-min>
+                            <input type="range" name="max" min="{{ $priceFloor }}" max="{{ $priceCeil }}" step="1" value="{{ $max }}" aria-label="Precio máximo" data-shop-price-max>
+                        </div>
+                        <p class="text-[14px] font-bold" data-shop-price-label>S/ {{ $min }} — S/ {{ $max }}</p>
+                        <button type="submit" class="sr-only">Aplicar precio</button>
+                    </form>
+                @endif
+
+                <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="os-focus group flex flex-col items-start gap-2.5 bg-[var(--shop-deep)] px-5 py-[22px]">
+                    <span class="text-[12px] font-extrabold uppercase tracking-[2px] text-[var(--hh-bright)]">Combo</span>
+                    <span @class([$display, 'text-white', 'text-[52px] leading-[50px]' => ! $girls, 'text-[36px] leading-[39px]' => $girls])>3 × S/ 50</span>
+                    <span class="max-w-[220px] text-[13px] font-medium leading-[19px] text-[var(--shop-deep-muted)]">Mezcla cualquier básico de la tienda.</span>
+                    <span class="text-[13px] font-extrabold uppercase text-[var(--hh-bright)] group-hover:underline">Armar combo →</span>
+                </a>
+            </aside>
+
+            <section aria-label="Resultados" class="min-w-0">
+                <div class="flex flex-col gap-3 border-b-2 border-[#0b0f14] pb-3.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-[14px] font-bold">
+                            @if ($products->total() > 0)
+                                Mostrando {{ $products->firstItem() }}–{{ $products->lastItem() }} de {{ $products->total() }}
+                            @else
+                                Sin resultados
+                            @endif
+                        </p>
+                        @foreach ($active as $filter)
+                            <a href="{{ $filter['url'] }}" class="os-focus bg-[var(--hh-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--hh-accent)] hover:brightness-95" aria-label="Quitar filtro {{ $filter['label'] }}">{{ $filter['label'] }}&nbsp; ✕</a>
+                        @endforeach
+                    </div>
+                    <form action="{{ route('web.products.search') }}" method="GET">
+                        @foreach (\Illuminate\Support\Arr::except($filters, ['orden']) as $name => $value)
+                            <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                        @endforeach
+                        <label class="flex h-10 items-center gap-1 border border-[var(--shop-line)] pl-3.5 text-[13px] font-bold">
+                            <span class="shrink-0">Ordenar por:</span>
+                            <select name="orden" class="os-shop-sort os-focus" data-auto-submit style="background-image: url('{{ asset('images/home-hombre/chevron-abajo.svg') }}')">
+                                @foreach ($sorts as $value => $label)
+                                    <option value="{{ $value }}" @selected($orden === $value || ($value === '' && $orden === 'populares'))>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <noscript><button type="submit" class="mt-2 text-[13px] font-bold text-[var(--hh-accent)]">Ordenar</button></noscript>
+                    </form>
+                </div>
+
+                @if ($products->isEmpty())
+                    <div class="mt-6 grid min-h-64 place-items-center border border-dashed border-[#d9d9d9] px-5 text-center">
+                        <div>
+                            <p class="text-[18px] font-extrabold">No encontramos productos con esos filtros</p>
+                            <p class="mt-1 text-[14px] font-medium text-[#545966]">Quita algún filtro o mira toda la tienda.</p>
+                            <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus mt-5 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ver toda la tienda</a>
+                        </div>
+                    </div>
+                @else
+                    <ul class="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
+                        @foreach ($products as $product)
+                            <li>@include('web.partials.hh-product-card', ['photoClass' => 'aspect-[222/314]'])</li>
+                        @endforeach
+                    </ul>
+
+                    @if ($products->hasPages())
+                        <nav class="flex justify-center gap-2 pt-12" aria-label="Paginación">
+                            @if ($products->onFirstPage())
+                                <span class="os-shop-page is-disabled" aria-hidden="true">‹</span>
+                            @else
+                                <a href="{{ $products->previousPageUrl() }}" class="os-shop-page os-focus" rel="prev" aria-label="Página anterior">‹</a>
+                            @endif
+                            @foreach (range(1, $products->lastPage()) as $page)
+                                <a href="{{ $products->url($page) }}" @class(['os-shop-page os-focus', 'is-active' => $page === $products->currentPage()]) @if ($page === $products->currentPage()) aria-current="page" @endif>{{ $page }}</a>
+                            @endforeach
+                            @if ($products->hasMorePages())
+                                <a href="{{ $products->nextPageUrl() }}" class="os-shop-page os-focus" rel="next" aria-label="Página siguiente">›</a>
+                            @else
+                                <span class="os-shop-page is-disabled" aria-hidden="true">›</span>
+                            @endif
+                        </nav>
+                    @endif
+                @endif
+            </section>
         </div>
-    </section>
+
+        @if ($marca === '')
+            {{-- Banner · Promo Wafflera (diseños Tienda Hombre y Tienda Mujer; no en la vista de una marca) --}}
+            <section class="os-hh-wrap pb-16 lg:pb-[88px]" aria-labelledby="hh-promo">
+                @include('web.partials.promo-wafflera')
+            </section>
+        @endif
+
+        {{-- Franja de confianza --}}
+        <section class="bg-[var(--shop-deep)] py-7 text-white" aria-label="Beneficios de comprar en Overshark">
+            <ul class="os-hh-wrap grid grid-cols-2 gap-6 lg:flex lg:justify-between">
+                @foreach ($perks as $perk)
+                    <li class="flex flex-col gap-1">
+                        <span class="text-[15px] font-extrabold">{{ $perk['title'] }}</span>
+                        <span class="text-[13px] font-medium text-[var(--shop-deep-muted)]">{{ $perk['text'] }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    </div>
 @endsection

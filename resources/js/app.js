@@ -1178,43 +1178,6 @@ document.querySelectorAll('[data-payment-edit-toggle]').forEach((button) => {
     });
 });
 
-const combosMenu = document.querySelector('[data-combos-menu]');
-const combosToggles = document.querySelectorAll('[data-combos-toggle]');
-const combosChevron = document.querySelector('[data-combos-chevron]');
-
-const closeCombosMenu = () => {
-    if (combosMenu) {
-        combosMenu.dataset.state = 'closed';
-    }
-    combosChevron?.classList.remove('rotate-180');
-    combosToggles.forEach((toggle) => toggle.setAttribute('aria-expanded', 'false'));
-};
-
-const openCombosMenu = () => {
-    if (combosMenu) {
-        combosMenu.dataset.state = 'open';
-    }
-    combosChevron?.classList.add('rotate-180');
-    combosToggles.forEach((toggle) => toggle.setAttribute('aria-expanded', 'true'));
-};
-
-combosToggles.forEach((toggle) => {
-    toggle.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
-        isOpen ? closeCombosMenu() : openCombosMenu();
-    });
-});
-
-combosMenu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeCombosMenu));
-combosMenu?.addEventListener('click', (event) => event.stopPropagation());
-document.addEventListener('click', closeCombosMenu);
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        closeCombosMenu();
-    }
-});
-
 const searchToggle = document.querySelector('[data-search-toggle]');
 const searchPanel = document.querySelector('[data-search-panel]');
 
@@ -1380,4 +1343,72 @@ document.querySelector('[data-combo-cart-form]')?.addEventListener('submit', (ev
             error.classList.remove('hidden');
         }
     }
+});
+
+// Home hombre · "Los más vendidos": las flechas desplazan el carrusel una tarjeta.
+document.querySelectorAll('[data-hh-carousel]').forEach((section) => {
+    const track = section.querySelector('[data-hh-track]');
+    const prev = section.querySelector('[data-hh-prev]');
+    const next = section.querySelector('[data-hh-next]');
+
+    if (!track) {
+        return;
+    }
+
+    const step = () => (track.firstElementChild?.getBoundingClientRect().width ?? 0) + 15;
+    const update = () => {
+        if (prev) prev.disabled = track.scrollLeft <= 2;
+        if (next) next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+    };
+
+    prev?.addEventListener('click', () => track.scrollBy({ left: -step() }));
+    next?.addEventListener('click', () => track.scrollBy({ left: step() }));
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+});
+
+// Tienda: mostrar/ocultar filtros en celular, ordenar al elegir y rango de precio.
+document.querySelectorAll('[data-shop-filters-toggle]').forEach((button) => {
+    const panel = document.getElementById(button.getAttribute('aria-controls'));
+
+    button.addEventListener('click', () => {
+        const open = button.getAttribute('aria-expanded') !== 'true';
+
+        panel?.classList.toggle('hidden', !open);
+        panel?.classList.toggle('flex', open);
+        button.setAttribute('aria-expanded', String(open));
+    });
+});
+
+document.querySelectorAll('select[data-auto-submit]').forEach((select) => {
+    select.addEventListener('change', () => select.form?.requestSubmit());
+});
+
+document.querySelectorAll('[data-shop-price]').forEach((form) => {
+    const low = form.querySelector('[data-shop-price-min]');
+    const high = form.querySelector('[data-shop-price-max]');
+    const label = form.querySelector('[data-shop-price-label]');
+    const range = low?.parentElement;
+
+    if (!low || !high || !range) {
+        return;
+    }
+
+    const span = Number(low.max) - Number(low.min);
+    const update = (moved) => {
+        if (Number(low.value) > Number(high.value)) {
+            if (moved === low) low.value = high.value;
+            else high.value = low.value;
+        }
+
+        range.style.setProperty('--low', (Number(low.value) - Number(low.min)) / span);
+        range.style.setProperty('--high', (Number(high.value) - Number(low.min)) / span);
+        if (label) label.textContent = `S/ ${low.value} — S/ ${high.value}`;
+    };
+
+    [low, high].forEach((input) => {
+        input.addEventListener('input', () => update(input));
+        input.addEventListener('change', () => form.requestSubmit());
+    });
 });

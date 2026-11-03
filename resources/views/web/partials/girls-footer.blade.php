@@ -14,7 +14,7 @@
                     @empty
                         <li><a href="{{ $catalogUrl }}">Todos los productos</a></li>
                     @endforelse
-                    <li><button type="button" data-combos-toggle aria-expanded="false" aria-controls="combos-menu">Combos</button></li>
+                    <li><a href="{{ route('web.combos.index', ['marca' => 'Girls']) }}">Combos</a></li>
                 </ul>
             </div>
             <div>

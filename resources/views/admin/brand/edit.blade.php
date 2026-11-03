@@ -77,4 +77,43 @@
             </button>
         </div>
     </form>
+
+    {{-- Botón flotante de WhatsApp de la tienda (layouts/web.blade.php). --}}
+    <form action="{{ route('admin.brand.whatsapp') }}" method="POST" class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        @csrf
+        @method('PUT')
+
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-black text-slate-950">Botón de WhatsApp</h2>
+                <p class="mt-1 text-sm text-slate-500">Botón flotante a la derecha en toda la tienda. Si dejas el número vacío, el botón no se muestra.</p>
+            </div>
+            <span @class([
+                'rounded-full px-3 py-1 text-xs font-bold',
+                'bg-emerald-50 text-emerald-700' => $brand->whatsappUrl(),
+                'bg-slate-100 text-slate-500' => ! $brand->whatsappUrl(),
+            ])>{{ $brand->whatsappUrl() ? 'Visible en la tienda' : 'Oculto' }}</span>
+        </div>
+
+        <div class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <label class="block">
+                <span class="mb-2 block text-sm font-bold text-slate-700">Número de WhatsApp</span>
+                <input type="tel" name="whatsapp_number" value="{{ old('whatsapp_number', $brand->whatsapp_number) }}" placeholder="999 888 777 o +51 999 888 777" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                <span class="mt-1.5 block text-xs text-slate-500">Un celular peruano de 9 dígitos se completa con +51.</span>
+                @error('whatsapp_number')
+                    <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span>
+                @enderror
+            </label>
+            <label class="block">
+                <span class="mb-2 block text-sm font-bold text-slate-700">Mensaje inicial</span>
+                <input type="text" name="whatsapp_message" value="{{ old('whatsapp_message', $brand->whatsapp_message) }}" placeholder="{{ \App\Models\BrandSetting::WHATSAPP_DEFAULT_MESSAGE }}" maxlength="300" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                <span class="mt-1.5 block text-xs text-slate-500">El texto que aparece escrito al abrir el chat. Vacío = mensaje por defecto.</span>
+                @error('whatsapp_message')
+                    <span class="mt-2 block text-sm font-semibold text-red-600">{{ $message }}</span>
+                @enderror
+            </label>
+        </div>
+
+        <button type="submit" class="mt-6 rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">Guardar WhatsApp</button>
+    </form>
 @endsection

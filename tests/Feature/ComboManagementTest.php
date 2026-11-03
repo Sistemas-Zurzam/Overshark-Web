@@ -34,8 +34,25 @@ class ComboManagementTest extends TestCase
         $this->withSession(['storefront.line' => 'hombre'])
             ->get('/')
             ->assertOk()
-            ->assertSee('Combo verano')
-            ->assertSee('/productos');
+            ->assertSee(route('web.combos.index'), false);
+    }
+
+    public function test_combos_page_lists_buyable_combos_once_and_names_packs_by_product(): void
+    {
+        Producto::query()->create(['name' => 'CLASICO', 'default_code' => 'CL-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 20, 'price' => 30, 'zazu_company_id' => 1]);
+        $combo = fn (string $name, string $modality, array $items, float $price = 99) => Combo::query()->create([
+            'name' => $name, 'brand' => 'Overshark', 'modality' => $modality, 'price' => $price,
+            'imagen' => 'images/default-hero-banner.png', 'items' => $items, 'status' => true,
+        ]);
+
+        $combo('10x99', 'Live', [['zazu' => 'CLASICO', 'cantidad' => 10]]);
+        $combo('10x99', 'Publicidad', [['zazu' => 'CLASICO', 'cantidad' => 10]]);
+        $combo('Promo Agotada', 'Promoción', [['zazu' => 'POLO SIN STOCK', 'cantidad' => 2]]);
+
+        $response = $this->get(route('web.combos.index'))->assertOk();
+
+        $response->assertSee('Clasico x10')->assertSee('S/ 9.90 c/u')->assertDontSee('Promo Agotada');
+        $this->assertSame(1, substr_count($response->getContent(), 'Clasico x10'));
     }
 
     public function test_overshark_catalog_imports_prices_composition_and_product_links(): void

@@ -104,7 +104,7 @@
                                 <button type="button" role="radio" aria-checked="{{ $loop->first ? 'true' : 'false' }}"
                                     data-pdp-color="{{ $color['name'] }}" data-images='@json($color['images'])'
                                     class="os-pdp-chip" aria-label="Color {{ $color['name'] }}" title="{{ $color['name'] }}">
-                                    <img src="{{ $color['images'][0] }}" alt="" loading="lazy" decoding="async">
+                                    <img src="{{ \App\Support\Thumb::url($color['images'][0], 240) }}" alt="" loading="lazy" decoding="async">
                                     <span class="os-pdp-chip__dot" style="--sw: {{ $swatches[mb_strtolower($color['name'])] ?? '#b8b8bd' }}" aria-hidden="true"></span>
                                 </button>
                             @endforeach

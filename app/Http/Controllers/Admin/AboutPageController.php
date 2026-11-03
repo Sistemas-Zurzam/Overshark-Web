@@ -21,7 +21,7 @@ class AboutPageController extends Controller
         return view('admin.about.edit', [
             'c' => $content,
             'images' => collect(AboutPage::IMAGES)->map(fn ($meta, $key) => [
-                'label' => $key === 'portada' || $key === 'esencia' || $key === 'calidad' ? $meta[1] : $meta[1].' · '.($content['proceso']['steps'][(int) substr($key, -1) - 1]['title'] ?? ''),
+                'label' => str_starts_with($key, 'paso_') ? $meta[1].' · '.($content['proceso']['steps'][(int) substr($key, 5) - 1]['title'] ?? '') : $meta[1],
                 'url' => AboutPage::imageUrl($key, $content),
                 'uploaded' => (bool) Arr::get($content, "images.{$key}"),
                 'file' => $meta[0],
@@ -33,21 +33,20 @@ class AboutPageController extends Controller
     {
         $text = ['required', 'string', 'max:500'];
         $short = ['required', 'string', 'max:120'];
+        $optional = ['nullable', 'string', 'max:120'];
         $validated = $request->validate([
             'seo_description' => ['nullable', 'string', 'max:300'],
-            'hero.tag' => $short, 'hero.title' => $short, 'hero.highlight' => ['nullable', 'string', 'max:120'], 'hero.text' => $text,
-            'hero.button' => $short, 'hero.attributes' => ['array', 'size:4'], 'hero.attributes.*' => $short, 'hero.image_alt' => $short,
-            'esencia.tag' => $short, 'esencia.title' => $short, 'esencia.highlight' => ['nullable', 'string', 'max:120'],
-            'esencia.text' => ['required', 'string', 'max:1500'], 'esencia.image_alt' => $short,
+            'hero.tag' => $short, 'hero.title' => $short, 'hero.text' => $text,
+            'historia.tag' => $short, 'historia.title' => $short, 'historia.text' => ['required', 'string', 'max:1500'],
+            'historia.origen' => ['nullable', 'string', 'max:1000'], 'historia.year' => ['nullable', 'string', 'max:12'],
+            'historia.button' => $short, 'historia.image_alt_1' => $short, 'historia.image_alt_2' => $short,
+            'adn.title' => $short, 'adn.text' => $short, 'adn.items' => ['array', 'size:3'], 'adn.items.*.title' => $short, 'adn.items.*.text' => $text,
             'proceso.tag' => $short, 'proceso.title' => $short, 'proceso.text' => $text,
             'proceso.steps' => ['array', 'size:6'], 'proceso.steps.*.title' => $short, 'proceso.steps.*.text' => $text, 'proceso.steps.*.image_alt' => $short,
-            'calidad.tag' => $short, 'calidad.title' => $short, 'calidad.highlight' => ['nullable', 'string', 'max:120'],
-            'calidad.text' => ['required', 'string', 'max:1500'], 'calidad.points' => ['array', 'size:4'], 'calidad.points.*' => $short, 'calidad.image_alt' => $short,
-            'conectada.tag' => $short, 'conectada.title' => $short, 'conectada.highlight' => ['nullable', 'string', 'max:120'],
-            'conectada.text' => $text, 'conectada.note' => ['nullable', 'string', 'max:500'],
-            'conectada.button_collection' => $short, 'conectada.button_outfit' => $short, 'conectada.show_products' => ['nullable', 'boolean'],
-            'cierre.title' => $short, 'cierre.highlight' => ['nullable', 'string', 'max:120'], 'cierre.text' => $text,
-            'cierre.button_primary' => $short, 'cierre.button_secondary' => $short,
+            'datos' => ['array', 'size:4'], 'datos.*.value' => ['required', 'string', 'max:20'], 'datos.*.label' => $short,
+            'marcas.tag' => $short, 'marcas.title' => $short, 'marcas.text' => $short,
+            'comunidad.title' => $short, 'comunidad.handle' => $optional,
+            'comunidad.instagram' => ['nullable', 'url', 'max:255'], 'comunidad.tiktok' => ['nullable', 'url', 'max:255'], 'comunidad.facebook' => ['nullable', 'url', 'max:255'],
             'images' => ['nullable', 'array'],
             'images.*' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
             'remove_images' => ['nullable', 'array'],
@@ -73,7 +72,6 @@ class AboutPageController extends Controller
         }
 
         $content = Arr::except($validated, ['images', 'remove_images']);
-        $content['conectada']['show_products'] = $request->boolean('conectada.show_products');
         $content['images'] = $stored;
         $page->fill(['content' => $content])->save();
 

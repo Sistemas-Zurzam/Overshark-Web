@@ -60,6 +60,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::put('/pagina-nosotros', [\App\Http\Controllers\Admin\AboutPageController::class, 'update'])->name('about.update');
     Route::post('/pagina-nosotros/restaurar', [\App\Http\Controllers\Admin\AboutPageController::class, 'reset'])->name('about.reset');
     Route::put('/identidad-visual', [BrandSettingController::class, 'update'])->name('brand.update');
+    Route::put('/identidad-visual/whatsapp', [BrandSettingController::class, 'updateWhatsapp'])->name('brand.whatsapp');
 
     Route::post('/refresh-token', [AuthController::class, 'refresh'])->name('token.refresh');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');

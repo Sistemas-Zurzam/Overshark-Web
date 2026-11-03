@@ -103,7 +103,7 @@ class ProductoManagementTest extends TestCase
         $this->get(route('web.products.search', ['marca' => 'Overshark']))
             ->assertOk()
             ->assertSee('Overshark')
-            ->assertSee('POLO OVERSHARK')
-            ->assertDontSee('POLO BRAVOS');
+            ->assertSee('Polo Overshark')
+            ->assertDontSee('Polo Bravos');
     }
 }

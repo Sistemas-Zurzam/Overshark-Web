@@ -2,14 +2,11 @@
 
 namespace App\Support;
 
-use App\Models\Admin\Combo;
-use App\Models\Admin\Producto;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Datos reales de la home de Overshark Girls: productos de la línea mujer (por
- * marca "Girls" o por el tipo de prenda en el nombre) y sus combos. Si no hay,
- * la vista oculta esas secciones en vez de mostrar datos de ejemplo.
+ * Productos de la línea mujer (Overshark Girls): por marca "Girls" o por el tipo de prenda
+ * en el nombre. Lo usan el inicio, la tienda y el catálogo según la línea elegida.
  */
 class GirlsHome
 {
@@ -29,31 +26,14 @@ class GirlsHome
         });
     }
 
-    public static function data(): array
+    /** Lo contrario de onlyGirls(); con marca vacía (NULL) el producto no es de la línea mujer. */
+    public static function exceptGirls(Builder $query): Builder
     {
-        $base = self::onlyGirls(Producto::query()
-            ->where('price', '>', 0)
-            ->where('stock', '>', 0));
+        $query->whereRaw("LOWER(COALESCE(marca, '')) NOT LIKE ?", ['%girl%']);
+        foreach (self::TERMINOS as $termino) {
+            $query->where('name', 'not like', "%{$termino}%");
+        }
 
-        $products = ProductCards::make(
-            (clone $base)
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-                ->groupBy('zazu_company_id', 'name')
-                ->orderByDesc('total_stock')
-                ->limit(4)
-                ->get(),
-            asset('images/default-hero-banner.png'),
-        );
-
-        $combos = Combo::activeForMenu()
-            ->filter(fn ($combo) => str_contains(mb_strtolower($combo->brand.' '.$combo->name), 'girl'))
-            ->take(3)
-            ->values();
-
-        return [
-            'products' => $products,
-            'productCount' => (clone $base)->distinct()->count('name'),
-            'combos' => $combos,
-        ];
+        return $query;
     }
 }

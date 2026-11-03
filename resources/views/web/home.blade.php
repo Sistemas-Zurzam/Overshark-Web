@@ -12,7 +12,7 @@
             'image' => 'images/home/hero-model-hombre.webp',
             'width' => 300,
             'height' => 510,
-            'imageClass' => 'os-hero-model h-[300px] w-auto sm:h-[360px] lg:h-[440px] xl:h-[480px]',
+            'imageClass' => 'os-hero-model h-[300px] w-auto sm:h-[360px] lg:h-[min(640px,calc(100svh-var(--header-h)-70px))]',
             'alt' => 'Modelo Overshark con polo verde de la colección hombre',
         ],
         'mujer' => [
@@ -27,62 +27,19 @@
             'alt' => 'Modelo con baby tee y buzo rosado de la colección mujer',
         ],
     ][$storeLine];
-    $channels = [
-        [
-            'badge' => 'En vivo ahora',
-            'title' => 'Compras en vivo',
-            'copy' => 'Compra mientras transmitimos y aprovecha precios exclusivos del live.',
-            'cta' => 'Ver live',
-            'url' => route('web.tv'),
-            'external' => false,
-            'icon' => '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/>',
-            'card' => 'border-live/70 from-live/15 shadow-[0_0_40px_rgb(229_72_77/15%)]',
-            'iconClass' => 'bg-live text-white shadow-[0_0_24px_rgb(229_72_77/55%)]',
-            'badgeClass' => 'bg-live/15 text-[#ff8a8e]',
-            'ctaClass' => 'bg-live text-white hover:shadow-[0_10px_26px_rgb(229_72_77/45%)]',
-            'live' => true,
-        ],
-        [
-            'badge' => 'Responde en 1 min',
-            'title' => 'Asesoría personalizada',
-            'copy' => 'Habla con un asesor en la web y arma tu outfit con su ayuda.',
-            'cta' => 'Iniciar chat',
-            'url' => config('services.storefront.chat_url'),
-            'icon' => '<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2.5-4 2.5h-2"/>',
-            'card' => 'border-neon/70 from-neon/15 shadow-[0_0_40px_rgb(47_111_208/18%)]',
-            'iconClass' => 'bg-neon text-white shadow-[0_0_24px_rgb(47_111_208/60%)]',
-            'badgeClass' => 'bg-neon/20 text-neon-soft',
-            'ctaClass' => 'bg-neon text-white hover:bg-neon-soft hover:shadow-[0_10px_26px_rgb(47_111_208/45%)]',
-            'live' => false,
-        ],
-        [
-            'badge' => 'A tu ritmo',
-            'title' => 'Compra manual',
-            'copy' => 'Explora el catálogo, elige talla y color, y finaliza tu pedido cuando quieras.',
-            'cta' => 'Ver catálogo',
-            'url' => route('web.products.search', ['orden' => 'populares']),
-            'external' => false,
-            'icon' => '<path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/>',
-            'card' => 'border-aqua/70 from-aqua/15 shadow-[0_0_40px_rgb(45_212_191/14%)]',
-            'iconClass' => 'bg-aqua text-ink shadow-[0_0_24px_rgb(45_212_191/50%)]',
-            'badgeClass' => 'bg-aqua/15 text-aqua',
-            'ctaClass' => 'bg-aqua text-ink hover:shadow-[0_10px_26px_rgb(45_212_191/40%)]',
-            'live' => false,
-        ],
-    ];
     $heroSlides = $banners->isNotEmpty() ? $banners : collect([null]);
     $catalogUrl = route('web.products.search', ['orden' => 'populares']);
 @endphp
 
 @section('content')
     <div class="os-ocean">
-        <section id="home-carousel" class="relative isolate mt-[calc(var(--header-h)*-1)] overflow-hidden" data-carousel="slide" aria-labelledby="home-hero-title">
+        <section id="home-carousel" class="relative isolate mt-[calc(var(--header-h)*-1)] flex min-h-[100svh] flex-col overflow-hidden pb-6 lg:pb-8" data-carousel="slide" aria-labelledby="home-hero-title">
             <x-storefront.ocean-backdrop class="-z-10"/>
-            <div class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(2_7_19/40%)_0%,rgb(2_7_19/12%)_45%,transparent_70%),linear-gradient(0deg,#030c1e_0%,transparent_30%)]" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(2_7_19/40%)_0%,rgb(2_7_19/12%)_45%,transparent_70%)]" aria-hidden="true"></div>
             <canvas class="pointer-events-none absolute inset-0 -z-10 h-full w-full" data-ocean-particles aria-hidden="true"></canvas>
 
-            <div class="mx-auto grid max-w-[1440px] grid-cols-1 items-end px-4 sm:px-6 lg:min-h-[500px] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)] lg:px-10 xl:min-h-[540px] xl:px-24">
-                <div class="min-w-0 self-center pb-6 pt-[6.5rem] sm:pt-[7.5rem] lg:self-start lg:pb-24 lg:pt-[min(14vw,230px)]">
+            <div class="mx-auto grid w-full max-w-[1440px] flex-1 grid-cols-1 items-end px-4 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)] lg:px-10 xl:px-24">
+                <div class="min-w-0 self-center pb-6 pt-[calc(var(--header-h)+2.5rem)] sm:pt-[calc(var(--header-h)+3.5rem)] lg:self-center lg:pb-10 lg:pt-[var(--header-h)]">
                     <p class="text-xs font-medium uppercase tracking-[0.34em] text-white/90 sm:text-sm">{{ $hero['eyebrow'] }}</p>
                     <h1 id="home-hero-title" class="mt-3 font-heading font-black uppercase leading-[1.02] tracking-tight">
                         <span class="block text-[34px] text-white sm:text-5xl lg:whitespace-nowrap lg:text-[40px] xl:text-[46px] min-[1400px]:text-[52px]">{{ $hero['title'] }}</span>
@@ -155,30 +112,7 @@
             </div>
         </section>
 
-        <div class="relative z-10 mx-auto -mt-3 max-w-[1300px] px-4 pb-16 sm:px-6 sm:pb-20 lg:-mt-8 lg:px-10">
-            <div class="grid gap-5 lg:grid-cols-3" aria-label="Formas de comprar" role="group">
-                @foreach ($channels as $channel)
-                    <article class="flex flex-col gap-4 rounded-2xl border bg-gradient-to-r via-panel/90 to-panel/90 p-5 backdrop-blur sm:flex-row sm:items-center lg:flex-col lg:items-start {{ $channel['card'] }}">
-                        <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full {{ $channel['iconClass'] }}" aria-hidden="true">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">{!! $channel['icon'] !!}</svg>
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] {{ $channel['badgeClass'] }}">
-                                @if ($channel['live'])
-                                    <span class="neon-live-dot h-1.5 w-1.5 rounded-full bg-live" aria-hidden="true"></span>
-                                @endif
-                                {{ $channel['badge'] }}
-                            </span>
-                            <h2 class="mt-2 text-base font-black uppercase tracking-wide">{{ $channel['title'] }}</h2>
-                            <p class="mt-1 text-xs leading-5 text-mist">{{ $channel['copy'] }}</p>
-                        </div>
-                        <a href="{{ $channel['url'] ?: '#contacto' }}" @if ($channel['url'] && ($channel['external'] ?? true)) target="_blank" rel="noopener" @endif class="os-focus inline-flex w-fit shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] transition hover:-translate-y-0.5 {{ $channel['ctaClass'] }}">
-                            {{ $channel['cta'] }}
-                            <span aria-hidden="true">→</span>
-                        </a>
-                    </article>
-                @endforeach
-            </div>
-        </div>
     </div>
+
+    @include('web.partials.home-sections', ['line' => 'hombre'])
 @endsection

@@ -335,21 +335,25 @@ Route::get('/checkout/courier-agencies', function (Request $request) {
     return response()->json(['agencies' => $agencies]);
 })->name('web.checkout.courier-agencies');
 
+// Combos de la colección actual (Overshark u Overshark Girls), o de una marca con ?marca=.
+Route::get('/combos', function (Request $request) {
+    $brand = trim((string) $request->query('marca')) ?: (session('storefront.line') === 'mujer' ? 'Girls' : 'Overshark');
+
+    return view('web.combos', [
+        'combos' => \App\Support\ComboCatalog::forStore($brand),
+        'brandLabel' => $brand === 'Girls' ? 'Overshark Girls' : $brand,
+    ]);
+})->name('web.combos.index');
+
 // Arma tu outfit: combos de outfit (modalidad "Outfit" en Admin → Combos).
 Route::get('/arma-tu-outfit', fn (\App\Support\OutfitBuilder $builder) => view('web.outfit', [
     'combos' => $builder->combos(),
 ]))->name('web.outfit');
 
-// Nosotros: proceso de fabricación + unas prendas reales de la colección.
+// Nosotros: historia, ADN, proceso de fabricación, marcas y comunidad (textos y fotos en Admin → Página Nosotros).
 Route::get('/nosotros', fn () => view('web.nosotros', [
     'c' => \App\Support\AboutPage::content(),
-    'products' => ProductCards::make(
-        Producto::query()
-            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
-            ->where('price', '>', 0)->where('stock', '>', 0)
-            ->groupBy('zazu_company_id', 'name')->orderByDesc('total_stock')->limit(3)->get(),
-        asset('images/default-hero-banner.png'),
-    ),
+    'bravosBrand' => Brand::active()->whereRaw('UPPER(name) LIKE ?', ['%BRAVO%'])->first(),
 ]))->name('web.nosotros');
 
 Route::get('/contacto', [\App\Http\Controllers\ContactController::class, 'create'])->name('web.contact');
@@ -460,41 +464,85 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     ]);
 })->name('web.products.show');
 
+// Tienda: catálogo con filtros (categoría, talla, color y precio), orden y paginación de 12.
 Route::get('/buscar', function (Request $request) {
-    $fallbackImage = asset('images/default-hero-banner.png');
+    // ?linea=hombre|mujer abre la tienda directamente en esa línea.
+    if (in_array($request->query('linea'), ['hombre', 'mujer'], true)) {
+        session(['storefront.line' => $request->query('linea')]);
+    }
+
     $search = trim((string) $request->query('q', ''));
     $marca = trim((string) $request->query('marca', ''));
     $categoria = StorefrontCategories::find($request->query('categoria')) ? (string) $request->query('categoria') : '';
-    $orden = in_array($request->query('orden'), ['novedades', 'populares'], true) ? (string) $request->query('orden') : '';
-    $products = collect();
+    $orden = in_array($request->query('orden'), ['novedades', 'populares', 'precio-asc', 'precio-desc'], true) ? (string) $request->query('orden') : '';
+    $line = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
 
-    if ($search !== '' || $marca !== '' || $categoria !== '' || $orden !== '') {
-        $products = ProductCards::make(
-            Producto::query()
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen, MIN(created_at) as first_seen_at')
-                ->where('price', '>', 0)
-                ->where('stock', '>', 0)
-                ->when($search !== '', function ($query) use ($search): void {
-                    $query->where(function ($searchQuery) use ($search): void {
-                        $searchQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('default_code', 'like', "%{$search}%")
-                            ->orWhere('color', 'like', "%{$search}%")
-                            ->orWhere('talla', 'like', "%{$search}%");
-                    });
-                })
-                ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
-                ->when($categoria !== '', fn ($query) => StorefrontCategories::apply($query, $categoria))
-                ->when(session('storefront.line') === 'mujer' && $marca === '', fn ($query) => GirlsHome::onlyGirls($query))
-                ->groupBy('zazu_company_id', 'name')
-                ->when(
-                    $orden === 'novedades',
-                    fn ($query) => $query->orderByDesc('first_seen_at'),
-                    fn ($query) => $query->orderByDesc('total_stock'),
-                )
-                ->limit($search === '' && $marca === '' ? 48 : 24)
-                ->get(),
-            $fallbackImage,
-        );
+    // Variantes a la venta de la línea actual (en hombre sin Girls, salvo que se busque algo concreto).
+    $available = fn () => Producto::query()
+        ->where('price', '>', 0)
+        ->where('stock', '>', 0)
+        ->when($marca !== '', fn ($query) => $query->where('marca', $marca))
+        ->when($marca === '' && $line === 'mujer', fn ($query) => GirlsHome::onlyGirls($query))
+        ->when($marca === '' && $line === 'hombre' && $search === '', fn ($query) => GirlsHome::exceptGirls($query));
+
+    $sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    $sizes = $available()->whereNotNull('talla')->distinct()->pluck('talla')
+        ->map(fn ($size) => mb_strtoupper(trim($size)))->unique()
+        ->sortBy(fn ($size) => array_search($size, $sizeOrder, true) === false ? 99 : array_search($size, $sizeOrder, true))
+        ->values();
+    $colors = $available()->whereNotNull('color')->selectRaw('UPPER(TRIM(color)) as color_name')->distinct()->orderBy('color_name')->pluck('color_name');
+    $bounds = $available()->selectRaw('MIN(price) as low, MAX(price) as high')->first();
+    $priceFloor = (int) floor((float) $bounds?->low);
+    $priceCeil = (int) ceil((float) $bounds?->high);
+
+    $talla = $sizes->contains(mb_strtoupper((string) $request->query('talla'))) ? mb_strtoupper((string) $request->query('talla')) : '';
+    $color = $colors->contains(mb_strtoupper(trim((string) $request->query('color')))) ? mb_strtoupper(trim((string) $request->query('color'))) : '';
+    $min = $request->filled('min') ? max($priceFloor, min($priceCeil, (int) $request->query('min'))) : null;
+    $max = $request->filled('max') ? max($priceFloor, min($priceCeil, (int) $request->query('max'))) : null;
+    $min = $min === $priceFloor ? null : $min;
+    $max = $max === $priceCeil ? null : $max;
+
+    $filtered = fn (bool $withCategory) => $available()
+        ->when($search !== '', function ($query) use ($search): void {
+            $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('default_code', 'like', "%{$search}%")
+                    ->orWhere('color', 'like', "%{$search}%")
+                    ->orWhere('talla', 'like', "%{$search}%");
+            });
+        })
+        ->when($talla !== '', fn ($query) => $query->whereRaw('UPPER(TRIM(talla)) = ?', [$talla]))
+        ->when($color !== '', fn ($query) => $query->whereRaw('UPPER(TRIM(color)) = ?', [$color]))
+        ->when($min !== null, fn ($query) => $query->where('price', '>=', $min))
+        ->when($max !== null, fn ($query) => $query->where('price', '<=', $max + 0.99))
+        ->when($withCategory && $categoria !== '', fn ($query) => StorefrontCategories::apply($query, $categoria));
+
+    $categoryCounts = collect(StorefrontCategories::all())
+        ->map(fn (array $category, string $slug) => StorefrontCategories::apply($filtered(false), $slug)->distinct()->count('name'));
+
+    $products = $filtered(true)
+        ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen, MIN(created_at) as first_seen_at')
+        ->groupBy('zazu_company_id', 'name')
+        ->when($orden === 'novedades', fn ($query) => $query->orderByDesc('first_seen_at'))
+        ->when($orden === 'precio-asc', fn ($query) => $query->orderBy('min_price'))
+        ->when($orden === 'precio-desc', fn ($query) => $query->orderByDesc('min_price'))
+        ->orderByDesc('total_stock')
+        ->orderBy('name')
+        ->paginate(12)
+        ->withQueryString();
+
+    ProductCards::make($products->getCollection(), asset('images/default-hero-banner.png'));
+
+    // Con un color elegido, la tarjeta muestra la foto y el nombre de ese color.
+    if ($color !== '') {
+        $products->getCollection()->each(function (Producto $product) use ($color): void {
+            $match = collect($product->display_colors)->first(fn (array $option) => mb_strtoupper(trim($option['name'])) === $color);
+
+            if ($match) {
+                $product->setAttribute('display_image', $match['image']);
+                $product->setAttribute('card_color', $match['name']);
+            }
+        });
     }
 
     return view('web.search', [
@@ -503,6 +551,12 @@ Route::get('/buscar', function (Request $request) {
         'marca' => $marca,
         'categoria' => $categoria,
         'orden' => $orden,
+        'filters' => array_filter(['q' => $search, 'marca' => $marca, 'categoria' => $categoria, 'talla' => $talla, 'color' => $color, 'min' => $min, 'max' => $max, 'orden' => $orden], fn ($value) => $value !== null && $value !== ''),
+        'categoryCounts' => $categoryCounts,
+        'sizes' => $sizes,
+        'colors' => $colors,
+        'priceFloor' => $priceFloor,
+        'priceCeil' => $priceCeil,
     ]);
 })->name('web.products.search');
 
@@ -549,12 +603,29 @@ Route::get('/', function (Request $request) {
         return view('web.explore');
     }
 
+    // "Los más vendidos": mismo orden que Tienda → populares (más stock movido primero), de la línea elegida.
+    $bestSellers = ProductCards::make(
+        Producto::query()
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+            ->where('price', '>', 0)
+            ->where('stock', '>', 0)
+            ->tap(fn ($query) => $storeLine === 'mujer' ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query))
+            ->groupBy('zazu_company_id', 'name')
+            ->orderByDesc('total_stock')
+            ->limit(15)
+            ->get(),
+        asset('images/default-hero-banner.png'),
+    );
+    $bravosBrand = \App\Models\Brand::query()->active()->whereRaw('UPPER(name) LIKE ?', ['%BRAVO%'])->first();
+
     if ($storeLine === 'mujer') {
-        return view('web.home-mujer', GirlsHome::data());
+        return view('web.home-mujer', compact('bestSellers', 'bravosBrand'));
     }
 
     return view('web.home', [
         'storeLine' => $storeLine,
         'banners' => BannerPortada::activeForHome(),
+        'bestSellers' => $bestSellers,
+        'bravosBrand' => $bravosBrand,
     ]);
 })->name('web.home');

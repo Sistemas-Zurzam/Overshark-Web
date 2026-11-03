@@ -28,9 +28,9 @@
 </div>
 <div class="gl-wrap gl-hdr__bar">
     <nav class="gl-nav" aria-label="Principal">
-        <button type="button" class="gl-combos" data-combos-toggle aria-expanded="false" aria-controls="combos-menu">
+        <a href="{{ route('web.combos.index', ['marca' => 'Girls']) }}" class="gl-combos">
             <svg class="gl-i" aria-hidden="true"><use href="#gl-i-flame"/></svg>Combos
-        </button>
+        </a>
         <a class="gl-nav__link" href="{{ $catalogUrl }}" @if (request()->routeIs('web.girls.products')) aria-current="page" @endif>Productos</a>
         <a class="gl-nav__link" href="{{ $onGirlsHome ? '' : route('web.home', ['linea' => 'mujer']) }}#nosotros">Nosotros</a>
     </nav>

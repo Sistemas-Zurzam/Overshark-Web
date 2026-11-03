@@ -46,4 +46,21 @@ class BrandSettingController extends Controller
 
         return back()->with('status', 'Identidad visual actualizada correctamente.');
     }
+
+    public function updateWhatsapp(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[+\d\s()-]*$/'],
+            'whatsapp_message' => ['nullable', 'string', 'max:300'],
+        ], [
+            'whatsapp_number.regex' => 'Escribe solo números (puedes incluir +51, espacios o guiones).',
+        ]);
+
+        $brand = BrandSetting::current();
+        $brand->fill($validated)->save();
+
+        return back()->with('status', $brand->whatsappUrl() || blank($brand->whatsapp_number)
+            ? 'WhatsApp actualizado correctamente.'
+            : 'Guardado, pero el número no parece válido: el botón no se mostrará hasta corregirlo.');
+    }
 }

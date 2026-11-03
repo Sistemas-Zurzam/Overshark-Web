@@ -1,10 +1,10 @@
 @extends('layouts.web')
 
 {{--
-    Nosotros: Overshark como fabricante (tejido, teñido, corte, confección, acabados, calidad y empaque).
-    Fotos en public/images/nosotros (ver components/nosotros/photo.blade.php); son ilustrativas,
-    no se presentan como fotos de las instalaciones o del personal.
-    Sin cifras, certificaciones ni condiciones comerciales no confirmadas.
+    Nosotros (diseño Figma "04 · Nosotros · Overshark"): portada, nuestra historia, nuestro ADN,
+    proceso de fabricación (del hilo a la prenda), datos clave, nuestras marcas y comunidad.
+    Textos y fotos en Admin → Página Nosotros (App\Support\AboutPage). El año de fundación, el
+    párrafo de origen, la cuenta y los enlaces a redes solo se muestran cuando están completos.
 --}}
 
 @section('title', 'Nosotros | Overshark')
@@ -16,139 +16,176 @@
 
 @php
     $img = fn (string $key) => \App\Support\AboutPage::imageUrl($key, $c);
+    // Línea mujer: paleta Overshark Girls (.os-hh--girls) y, si no se subió una portada propia, la foto del arrecife.
+    $girls = session('storefront.line') === 'mujer';
+    $portada = $girls && empty($c['images']['portada']) ? asset('images/home-mujer/hero.webp') : $img('portada');
     $file = fn (string $key) => \App\Support\AboutPage::IMAGES[$key][0];
-    $hl = fn (array $block) => e($block['title']).(! empty($block['highlight']) ? ' <span class="text-electric">'.e($block['highlight']).'</span>' : '');
+    $paragraphs = fn (?string $text) => collect(preg_split('/\R\s*\R/', trim((string) $text)))->filter();
+    $brands = [
+        ['key' => 'marca_overshark', 'logo' => 'home-hombre/logo-overshark.png', 'name' => 'Overshark', 'label' => 'Para él', 'arrow' => 'bg-[#061a2e]', 'url' => route('web.home', ['linea' => 'hombre'])],
+        ['key' => 'marca_girls', 'logo' => 'home-hombre/logo-girls.png', 'name' => 'Overshark Girls', 'label' => 'Para ella', 'arrow' => 'bg-[#8c2155]', 'url' => route('web.home', ['linea' => 'mujer'])],
+        ['key' => 'marca_bravos', 'logo' => 'home-hombre/logo-bravos.svg', 'name' => 'Bravos', 'label' => 'Urban clothing', 'arrow' => 'bg-[#141414]', 'url' => $bravosBrand ? route('web.brands.show', $bravosBrand) : route('web.products.search', ['q' => 'bravos'])],
+    ];
+    $socials = collect(['instagram' => 'Instagram', 'tiktok' => 'TikTok', 'facebook' => 'Facebook'])
+        ->map(fn (string $label, string $key) => ['label' => $label, 'url' => $c['comunidad'][$key] ?? null])
+        ->filter(fn (array $social) => filled($social['url']));
 @endphp
 
 @section('content')
-    <div class="os-nos text-white">
-        {{-- 1. Portada --}}
-        <section class="relative isolate overflow-hidden bg-ink" aria-labelledby="nos-title">
-            <x-nosotros.photo :src="$img('portada')" :file="$file('portada')" :alt="$c['hero']['image_alt']" ratio="auto" eager class="os-nos-hero__bg" />
-            <div class="os-nos-hero__shade" aria-hidden="true"></div>
-            <div class="relative mx-auto max-w-[1280px] px-4 pb-16 pt-16 sm:px-6 sm:pt-24 lg:px-10 lg:pb-24 lg:pt-32">
-                <p class="os-nos-tag" data-nos-reveal>{{ $c['hero']['tag'] }}</p>
-                <h1 id="nos-title" class="mt-4 max-w-3xl font-heading text-[2.4rem] font-black uppercase leading-[1] tracking-tight sm:text-6xl lg:text-7xl" data-nos-reveal>
-                    {!! $hl($c['hero']) !!}
-                </h1>
-                <p class="mt-6 max-w-xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8" data-nos-reveal>{{ $c['hero']['text'] }}</p>
-                <a href="#proceso" class="btn-primary mt-8 inline-flex h-12 items-center gap-2 px-7 text-sm" data-nos-reveal>
-                    {{ $c['hero']['button'] }}
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>
-                </a>
+    <div @class(['os-hh os-nos-page', 'os-hh--girls' => $girls])>
+        {{-- Portada --}}
+        <section class="relative isolate flex min-h-[460px] flex-col items-center justify-center gap-5 overflow-hidden bg-[var(--shop-deep)] px-4 py-20 text-center text-white lg:min-h-[560px]" aria-labelledby="nos-title">
+            @if ($portada)
+                <img src="{{ $portada }}" alt="" class="absolute inset-0 -z-20 h-full w-full object-cover" fetchpriority="high">
+            @endif
+            <div class="absolute inset-0 -z-10 [background:var(--nos-veil)]" aria-hidden="true"></div>
+            <img src="{{ asset('images/nosotros/'.($girls ? 'aleta-girls.svg' : 'aleta.svg')) }}" alt="" width="40" height="40">
+            <p class="text-[13px] font-extrabold uppercase tracking-[4px] text-[var(--hh-bright)]">{{ $c['hero']['tag'] }}</p>
+            <h1 id="nos-title" class="os-hh-display text-[64px] leading-[0.95] sm:text-[104px] lg:text-[150px] lg:leading-[140px]">{{ $c['hero']['title'] }}</h1>
+            <p class="max-w-[640px] text-[17px] font-medium leading-[27px] text-[var(--shop-intro)] sm:text-[20px] sm:leading-[30px]">{{ $c['hero']['text'] }}</p>
+        </section>
 
-                <ul class="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/15 lg:grid-cols-4" aria-label="Lo que hacemos">
-                    @foreach ($c['hero']['attributes'] as $attribute)
-                        <li class="flex items-center gap-3 bg-ink/80 px-4 py-4 text-sm font-black uppercase tracking-wide backdrop-blur sm:px-6 sm:py-5">
-                            <span class="h-2 w-2 shrink-0 rounded-full bg-electric" aria-hidden="true"></span>{{ $attribute }}
+        {{-- Nuestra historia --}}
+        <section class="os-hh-wrap grid items-center gap-12 py-16 lg:grid-cols-[560px_minmax(0,1fr)] lg:gap-[72px] lg:py-[100px]" aria-labelledby="nos-historia">
+            <div class="relative mx-auto aspect-square w-full max-w-[560px]" data-nos-reveal>
+                <div class="absolute left-0 top-0 w-[68%]">
+                    <x-nosotros.photo :src="$img('historia_1')" :file="$file('historia_1')" :alt="$c['historia']['image_alt_1']" ratio="380 / 500" :gray="false" />
+                </div>
+                <div class="absolute bottom-0 right-0 w-[43%] border-8 border-white bg-white">
+                    <x-nosotros.photo :src="$img('historia_2')" :file="$file('historia_2')" :alt="$c['historia']['image_alt_2']" ratio="224 / 284" :gray="false" />
+                </div>
+                @if (filled($c['historia']['year']))
+                    <p class="absolute left-[4%] top-[4%] flex flex-col bg-[var(--hh-accent)] px-[18px] py-[14px] text-white">
+                        <span class="text-[11px] font-extrabold uppercase tracking-[2px]">Desde</span>
+                        <span class="os-hh-display text-[40px] leading-[40px]">{{ $c['historia']['year'] }}</span>
+                    </p>
+                @endif
+            </div>
+            <div class="flex flex-col items-start gap-[22px]" data-nos-reveal>
+                <p class="text-[13px] font-extrabold uppercase tracking-[3px] text-[var(--hh-accent)]">{{ $c['historia']['tag'] }}</p>
+                <h2 id="nos-historia" class="os-hh-display text-[44px] leading-[44px] sm:text-[64px] sm:leading-[62px]">{{ $c['historia']['title'] }}</h2>
+                @foreach ($paragraphs($c['historia']['text'])->concat($paragraphs($c['historia']['origen'])) as $paragraph)
+                    <p class="text-[17px] font-medium leading-[28px] text-[#545966]">{{ $paragraph }}</p>
+                @endforeach
+                <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">{{ $c['historia']['button'] }} →</a>
+            </div>
+        </section>
+
+        {{-- Nuestro ADN --}}
+        <section class="bg-[var(--shop-deep)] py-16 text-white lg:py-[88px]" aria-labelledby="nos-adn">
+            <div class="os-hh-wrap">
+                <header class="flex flex-col justify-between gap-2 border-b-2 border-white/20 pb-5 sm:flex-row sm:items-end">
+                    <h2 id="nos-adn" class="os-hh-display text-[48px] leading-none sm:text-[64px] sm:leading-[62px]">{{ $c['adn']['title'] }}</h2>
+                    <p class="text-[16px] font-medium text-[var(--hh-muted)]">{{ $c['adn']['text'] }}</p>
+                </header>
+                <ul class="mt-10 grid gap-4 md:grid-cols-3">
+                    @foreach ($c['adn']['items'] as $item)
+                        <li class="flex flex-col gap-4 border border-white/10 bg-[var(--hh-card)] px-8 pb-9 pt-8" data-nos-reveal>
+                            <span class="os-hh-display text-[72px] leading-[68px] text-[var(--hh-bright)]" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
+                            <h3 class="os-hh-display text-[40px] leading-[40px]">{{ $item['title'] }}</h3>
+                            <p class="text-[15px] font-medium leading-6 text-[var(--hh-muted)]">{{ $item['text'] }}</p>
                         </li>
                     @endforeach
                 </ul>
             </div>
         </section>
 
-        {{-- 2. Nuestra esencia (claro) --}}
-        <section class="os-nos-light px-4 py-20 sm:px-6 lg:px-10 lg:py-28" aria-labelledby="nos-esencia">
-            <div class="mx-auto grid max-w-[1280px] items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                <x-nosotros.photo :src="$img('esencia')" :file="$file('esencia')" :alt="$c['esencia']['image_alt']" ratio="4 / 3" class="rounded-2xl" data-nos-reveal />
-                <div data-nos-reveal>
-                    <p class="os-nos-tag os-nos-tag--dark">{{ $c['esencia']['tag'] }}</p>
-                    <h2 id="nos-esencia" class="mt-4 font-heading text-3xl font-black uppercase leading-[1.05] sm:text-5xl">{!! $hl($c['esencia']) !!}</h2>
-                    <p class="mt-6 text-base leading-8 text-ink/75 sm:text-lg">{!! nl2br(e($c['esencia']['text'])) !!}</p>
+        {{-- Proceso de fabricación --}}
+        <section id="proceso" class="os-hh-wrap scroll-mt-[calc(var(--header-h)+1rem)] py-16 lg:py-[88px]" aria-labelledby="nos-proceso">
+            <header class="os-hh-head">
+                <div>
+                    <p class="os-hh-eyebrow">{{ $c['proceso']['tag'] }}</p>
+                    <h2 id="nos-proceso" class="os-hh-title">{{ $c['proceso']['title'] }}</h2>
+                    <p class="os-hh-sub">{{ $c['proceso']['text'] }}</p>
                 </div>
-            </div>
+            </header>
+            <ol class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ($c['proceso']['steps'] as $step)
+                    <li class="flex flex-col border border-[var(--shop-line)] bg-white" data-nos-reveal>
+                        {{-- Sin foto subida, la tarjeta muestra solo el texto (el aviso de foto pendiente queda en el admin). --}}
+                        @if ($stepPhoto = $img('paso_'.$loop->iteration))
+                            <x-nosotros.photo :src="$stepPhoto" :alt="$step['image_alt']" ratio="4 / 3" :gray="false" />
+                        @endif
+                        <div class="flex flex-col gap-2 p-6">
+                            <span class="os-hh-display text-[40px] leading-none text-[var(--hh-accent)]" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
+                            <h3 class="text-[18px] font-extrabold"><span class="sr-only">Paso {{ $loop->iteration }}: </span>{{ $step['title'] }}</h3>
+                            <p class="text-[14px] font-medium leading-[22px] text-[#545966]">{{ $step['text'] }}</p>
+                        </div>
+                    </li>
+                @endforeach
+            </ol>
         </section>
 
-        {{-- 3. Proceso de fabricación (oscuro) --}}
-        <section id="proceso" class="scroll-mt-[calc(var(--header-h)+1rem)] px-4 py-20 sm:px-6 lg:px-10 lg:py-28" aria-labelledby="nos-proceso">
-            <div class="mx-auto max-w-[1280px]">
-                <div class="max-w-2xl" data-nos-reveal>
-                    <p class="os-nos-tag">{{ $c['proceso']['tag'] }}</p>
-                    <h2 id="nos-proceso" class="mt-4 font-heading text-3xl font-black uppercase leading-[1.05] sm:text-5xl">{{ $c['proceso']['title'] }}</h2>
-                    <p class="mt-4 text-base text-white/75 sm:text-lg">{{ $c['proceso']['text'] }}</p>
-                </div>
-
-                <ol class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($c['proceso']['steps'] as $step)
-                        <li class="os-nos-step" data-nos-reveal>
-                            <x-nosotros.photo :src="$img('paso_'.$loop->iteration)" :file="$file('paso_'.$loop->iteration)" :alt="$step['image_alt']" ratio="4 / 3" />
-                            <div class="relative p-6">
-                                <span class="os-nos-step__num" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
-                                <h3 class="text-xl font-black uppercase"><span class="sr-only">Paso {{ $loop->iteration }}: </span>{{ $step['title'] }}</h3>
-                                <p class="mt-2 text-sm leading-6 text-white/75">{{ $step['text'] }}</p>
-                            </div>
-                        </li>
-                    @endforeach
-                </ol>
-            </div>
+        {{-- Datos clave --}}
+        <section class="bg-[var(--hh-soft)] py-12 lg:py-[72px]" aria-label="Datos clave">
+            <ul class="os-hh-wrap grid grid-cols-2 gap-y-8 lg:grid-cols-4">
+                @foreach ($c['datos'] as $dato)
+                    <li @class(['flex flex-col gap-1.5', 'border-l border-[var(--shop-line)] pl-5 sm:pl-8' => $loop->index % 2 === 1, 'lg:border-l lg:border-[var(--shop-line)] lg:pl-8' => $loop->index === 2])>
+                        <span class="os-hh-display text-[40px] leading-none text-[var(--hh-accent)] sm:text-[64px] sm:leading-[62px]">{{ $dato['value'] }}</span>
+                        <span class="text-[14px] font-bold sm:text-[15px]">{{ $dato['label'] }}</span>
+                    </li>
+                @endforeach
+            </ul>
         </section>
 
-        {{-- 4. Control de calidad (claro) --}}
-        <section class="os-nos-light px-4 py-20 sm:px-6 lg:px-10 lg:py-28" aria-labelledby="nos-calidad">
-            <div class="mx-auto grid max-w-[1280px] items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                <div class="lg:order-2" data-nos-reveal>
-                    <x-nosotros.photo :src="$img('calidad')" :file="$file('calidad')" :alt="$c['calidad']['image_alt']" ratio="4 / 3" class="rounded-2xl" />
+        {{-- Nuestras marcas --}}
+        <section class="os-hh-wrap py-16 lg:py-[100px]" aria-labelledby="nos-marcas">
+            <header class="os-hh-head">
+                <div>
+                    <p class="os-hh-eyebrow">{{ $c['marcas']['tag'] }}</p>
+                    <h2 id="nos-marcas" class="os-hh-title">{{ $c['marcas']['title'] }}</h2>
+                    <p class="os-hh-sub">{{ $c['marcas']['text'] }}</p>
                 </div>
-                <div data-nos-reveal>
-                    <p class="os-nos-tag os-nos-tag--dark">{{ $c['calidad']['tag'] }}</p>
-                    <h2 id="nos-calidad" class="mt-4 font-heading text-3xl font-black uppercase leading-[1.05] sm:text-5xl">{!! $hl($c['calidad']) !!}</h2>
-                    <p class="mt-6 text-base leading-8 text-ink/75 sm:text-lg">{!! nl2br(e($c['calidad']['text'])) !!}</p>
-                    <ul class="mt-8 grid gap-3 sm:grid-cols-2">
-                        @foreach ($c['calidad']['points'] as $point)
-                            <li class="flex items-start gap-3 rounded-xl border border-ink/10 bg-white px-4 py-3.5 text-sm font-bold">
-                                <svg class="mt-0.5 h-5 w-5 shrink-0 text-electric" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
-                                {{ $point }}
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            </div>
+            </header>
+            <ul class="mt-8 grid gap-4 md:grid-cols-3">
+                @foreach ($brands as $brand)
+                    <li data-nos-reveal>
+                        <a href="{{ $brand['url'] }}" class="os-focus group block">
+                            <span class="block aspect-[403/460] overflow-hidden bg-[var(--hh-soft)]">
+                                @if ($photo = $img($brand['key']))
+                                    <img src="{{ $photo }}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                                @endif
+                            </span>
+                            <span class="flex items-center justify-between border border-t-0 border-[var(--shop-line)] bg-white px-6 py-[22px]">
+                                <span class="flex flex-col items-start gap-2">
+                                    <img src="{{ asset('images/'.$brand['logo']) }}" alt="{{ $brand['name'] }}" class="h-[26px] w-auto max-w-[130px] object-contain">
+                                    <span class="text-[13px] font-semibold text-[#545966]">{{ $brand['label'] }}</span>
+                                </span>
+                                <span class="grid h-11 w-11 place-items-center text-[18px] font-extrabold text-white transition group-hover:translate-x-1 {{ $brand['arrow'] }}" aria-hidden="true">→</span>
+                            </span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
         </section>
 
-        {{-- 5. De la producción a tu outfit (oscuro, acentos azules) --}}
-        <section class="os-nos-connected px-4 py-20 sm:px-6 lg:px-10 lg:py-28" aria-labelledby="nos-conectada">
-            <div class="mx-auto grid max-w-[1280px] items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <div data-nos-reveal>
-                    <p class="os-nos-tag">{{ $c['conectada']['tag'] }}</p>
-                    <h2 id="nos-conectada" class="mt-4 font-heading text-3xl font-black uppercase leading-[1.05] sm:text-5xl">{!! $hl($c['conectada']) !!}</h2>
-                    <p class="mt-6 text-base leading-8 text-white/75 sm:text-lg">{{ $c['conectada']['text'] }}</p>
-                    @if ($c['conectada']['note'])
-                        <p class="mt-3 text-sm leading-6 text-white/60">{{ $c['conectada']['note'] }}</p>
-                    @endif
-                    <div class="mt-8 flex flex-wrap gap-3">
-                        <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="btn-primary inline-flex h-12 items-center px-7 text-sm">{{ $c['conectada']['button_collection'] }}</a>
-                        <a href="{{ route('web.outfit') }}" class="os-nos-btn-ghost">{{ $c['conectada']['button_outfit'] }}</a>
-                    </div>
+        {{-- Comunidad --}}
+        <section class="os-hh-wrap pb-16 lg:pb-[100px]" aria-labelledby="nos-comunidad">
+            <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+                <div class="flex flex-col gap-1.5">
+                    <h2 id="nos-comunidad" class="os-hh-display text-[36px] leading-none sm:text-[48px] sm:leading-[48px]">{{ $c['comunidad']['title'] }}</h2>
+                    <p class="text-[15px] font-medium text-[#545966]">
+                        @if (filled($c['comunidad']['handle']))
+                            Etiquétanos con {{ $c['comunidad']['handle'] }} cuando estrenes tu look.
+                        @else
+                            Comparte tu look Overshark y muéstralo con orgullo.
+                        @endif
+                    </p>
                 </div>
-
-                @if ($c['conectada']['show_products'] && $products->isNotEmpty())
-                    <ul class="grid grid-cols-3 gap-3 sm:gap-4" aria-label="Algunas prendas de la colección">
-                        @foreach ($products as $product)
-                            <li @class(['os-nos-product', 'sm:translate-y-6' => $loop->iteration === 2]) data-nos-reveal>
-                                <a href="{{ route('web.products.show', $product->id) }}" class="block">
-                                    <div class="aspect-[4/5] overflow-hidden rounded-xl bg-white">
-                                        <img src="{{ $product->display_image }}" alt="{{ \Illuminate\Support\Str::title(mb_strtolower($product->name)) }}" class="h-full w-full object-cover transition duration-500 hover:scale-105" loading="lazy" decoding="async">
-                                    </div>
-                                    <p class="mt-3 text-xs font-black uppercase leading-tight sm:text-sm">{{ \Illuminate\Support\Str::title(mb_strtolower($product->name)) }}</p>
-                                    <p class="mt-1 text-sm font-black text-electric-soft">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-                                </a>
-                            </li>
+                @if ($socials->isNotEmpty())
+                    <ul class="flex flex-wrap gap-2.5">
+                        @foreach ($socials as $social)
+                            <li><a href="{{ $social['url'] }}" target="_blank" rel="noopener" class="os-focus inline-flex border-[1.5px] border-[#0b0f14] px-[18px] py-3 text-[12px] font-extrabold uppercase tracking-[1px] transition hover:bg-[#0b0f14] hover:text-white">{{ $social['label'] }}&nbsp; ↗</a></li>
                         @endforeach
                     </ul>
                 @endif
             </div>
+            <ul class="mt-7 grid grid-cols-3 gap-2 md:grid-cols-6" aria-hidden="true">
+                @foreach (range(1, 6) as $i)
+                    <li class="aspect-square overflow-hidden bg-[var(--hh-soft)]"><img src="{{ asset("images/nosotros/comunidad-{$i}.webp") }}" alt="" class="h-full w-full object-cover" loading="lazy"></li>
+                @endforeach
+            </ul>
         </section>
 
-        {{-- 6. Cierre --}}
-        <section class="px-4 pb-24 pt-4 sm:px-6 lg:px-10" aria-labelledby="nos-cierre">
-            <div class="os-nos-cta mx-auto max-w-[1280px]" data-nos-reveal>
-                <h2 id="nos-cierre" class="font-heading text-3xl font-black uppercase leading-tight sm:text-5xl">{!! $hl($c['cierre']) !!}</h2>
-                <p class="mx-auto mt-4 max-w-xl text-base leading-7 text-white/75 sm:text-lg">{{ $c['cierre']['text'] }}</p>
-                <div class="mt-8 flex flex-wrap justify-center gap-3">
-                    <a href="{{ route('web.products.search', ['orden' => 'populares']) }}" class="btn-primary inline-flex h-12 items-center px-8 text-sm">{{ $c['cierre']['button_primary'] }}</a>
-                    <a href="{{ route('web.contact') }}" class="os-nos-btn-ghost">{{ $c['cierre']['button_secondary'] }}</a>
-                </div>
-            </div>
-        </section>
     </div>
 @endsection

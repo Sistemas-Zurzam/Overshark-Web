@@ -304,36 +304,6 @@
         flex: 0 0 auto;
     }
 
-    .combos-panel {
-        max-height: 0;
-        overflow: hidden;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transform: translateY(-18px);
-        transition: max-height 500ms cubic-bezier(.22, 1, .36, 1), opacity 250ms ease, transform 400ms cubic-bezier(.22, 1, .36, 1), visibility 0s linear 400ms;
-    }
-
-    .combos-panel[data-state='open'] {
-        max-height: 520px;
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-        transition-delay: 0s;
-        transform: translateY(0);
-    }
-
-    .combo-card {
-        opacity: 0;
-        transform: translateY(-12px);
-        transition: opacity 300ms ease, transform 400ms cubic-bezier(.22, 1, .36, 1), border-color 200ms ease;
-    }
-
-    .combos-panel[data-state='open'] .combo-card {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
     .brands-panel {
         visibility: hidden;
         opacity: 0;
@@ -392,6 +362,11 @@
     }
 
     /* Tienda pública · tema Neón. El admin no usa .theme-neon y conserva el tema claro. */
+    /* Reserva el espacio de la barra de scroll: al abrir el carrito (body overflow-hidden) la página no salta. */
+    html {
+        scrollbar-gutter: stable;
+    }
+
     .theme-neon {
         color-scheme: dark;
         background:
@@ -549,8 +524,7 @@
 
     .os-header[data-scrolled='true'],
     .os-header:has([data-web-menu]:not(.hidden)),
-    .os-header:has([data-search-panel]:not(.hidden)),
-    .os-header:has([data-combos-menu][data-state='open']) {
+    .os-header:has([data-search-panel]:not(.hidden)) {
         background: rgb(2 7 19 / 90%);
         border-bottom-color: rgb(38 117 255 / 18%);
         backdrop-filter: blur(12px);
@@ -628,11 +602,6 @@
         .os-creature-eye {
             opacity: .3;
         }
-    }
-
-    .os-hero-model {
-        -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
-        mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
     }
 
     .os-btn-ghost {
@@ -842,6 +811,19 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
     filter: brightness(0) invert(1);
 }
 
+/* En la línea mujer manda Overshark Girls: su logo crece y el de Overshark queda atenuado (Nav / Overshark Girls). */
+.theme-girls .os-girls-logo {
+    height: 38px;
+}
+
+.theme-girls .os-nav-logo {
+    width: 140px;
+    height: 24px;
+    opacity: .6;
+    -webkit-mask-size: 140px 24px;
+    mask-size: 140px 24px;
+}
+
 .theme-girls .os-header {
     background: linear-gradient(180deg, rgb(42 12 29 / 82%), rgb(42 12 29 / 58%)) border-box;
     border-bottom-color: rgb(255 111 159 / 14%);
@@ -849,8 +831,7 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
 
 .theme-girls .os-header[data-scrolled='true'],
 .theme-girls .os-header:has([data-web-menu]:not(.hidden)),
-.theme-girls .os-header:has([data-search-panel]:not(.hidden)),
-.theme-girls .os-header:has([data-combos-menu][data-state='open']) {
+.theme-girls .os-header:has([data-search-panel]:not(.hidden)) {
     background: rgb(42 12 29 / 92%);
     border-bottom-color: rgb(214 58 120 / 22%);
 }
@@ -859,25 +840,55 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
     background: #d63a78;
 }
 
-/* Navbar de la tienda: menú central y franja de envío gratis (layouts/web.blade.php), sobre .os-header. */
+/* Navbar de la tienda (diseño Figma "Nav Principal / Overshark", layouts/web.blade.php), sobre .os-header. */
+.os-nav-bar {
+    background: #061a2e;
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.theme-girls .os-nav-bar {
+    background: transparent;
+}
+
+.os-nav-logo {
+    display: block;
+    width: 170px;
+    height: 29px;
+    background: #ffffff;
+    -webkit-mask: var(--os-logo) no-repeat 0 0 / 170px 29px;
+    mask: var(--os-logo) no-repeat 0 0 / 170px 29px;
+}
+
+@media (max-width: 639px) {
+    .os-nav-logo {
+        width: 136px;
+        height: 23px;
+        -webkit-mask-size: 136px 23px;
+        mask-size: 136px 23px;
+    }
+}
+
 .os-store-link {
     position: relative;
-    padding-block: .5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
     color: #ffffff;
-    font-size: .9375rem;
-    font-weight: 500;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: normal;
+    white-space: nowrap;
     transition: color 160ms ease;
 }
 
 .os-store-link::after {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    width: 100%;
     height: 2px;
     border-radius: 2px;
-    background: #2675ff;
-    box-shadow: 0 0 10px rgb(38 117 255 / 70%);
+    background: #3fa9f5;
     content: '';
     transform: scaleX(0);
     transition: transform 200ms ease;
@@ -885,13 +896,34 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
 
 .os-store-link:hover,
 .os-store-link[aria-current='page'] {
-    color: #6aa6ff;
+    color: #3fa9f5;
 }
 
 .os-store-link:hover::after,
 .os-store-link[aria-current='page']::after {
     transform: scaleX(1);
 }
+
+/* Pie (layouts/web.blade.php, diseño Figma "Footer"): blanco; Girls solo cambia el logo, el gris y el acento. */
+.os-footer {
+    --ft-muted: #545966;
+    --ft-accent: #2d69b5;
+    color-scheme: light;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #111111;
+    font-family: 'Manrope', sans-serif;
+}
+
+.os-footer--girls {
+    --ft-muted: #666666;
+    --ft-accent: #c2457a;
+}
+
+/* Línea mujer (diseño Nav Principal / Overshark Girls): el enlace activo va en rosa. */
+.theme-girls .os-store-link:hover,
+.theme-girls .os-store-link[aria-current='page'] { color: #f07fa6; }
+.theme-girls .os-store-link::after { background: #f07fa6; }
 
 .os-store-brand {
     opacity: .8;
@@ -903,8 +935,63 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
     opacity: 1;
 }
 
-.os-shipping-strip {
-    border-top: 1px solid rgb(106 166 255 / 12%);
+.os-nav-icon {
+    position: relative;
+    display: block;
+    width: 22px;
+    height: 22px;
+    transition: opacity 160ms ease;
+}
+
+@media (max-width: 639px) {
+    .os-nav-icon--account {
+        display: none;
+    }
+}
+
+button.os-nav-icon:hover {
+    opacity: .75;
+}
+
+.os-nav-count {
+    position: absolute;
+    top: -6px;
+    left: 14px;
+    min-width: 17px;
+    padding: 1px 5px;
+    border-radius: 9px;
+    background: #3fa9f5;
+    color: #061a2e;
+    font-family: 'Manrope', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 14px;
+    text-align: center;
+}
+
+.os-announce {
+    display: flex;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    overflow: hidden;
+    background: #2d69b5;
+    color: #ffffff;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.os-announce:hover {
+    background: #3274c4;
+}
+
+.theme-girls .os-announce {
+    background: #d63a78;
 }
 
 /* Ficha de producto editorial (web/product-show.blade.php). */
@@ -1023,238 +1110,84 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
 
 .os-pdp-details summary::-webkit-details-marker { display: none; }
 
-/* Arma tu outfit (web/outfit.blade.php, js/outfit-builder.js). */
-.os-ob-combo {
-    position: relative;
-    display: block;
-    border: 1px solid #1b3366;
-    border-radius: 1rem;
-    background: rgb(10 24 56 / 60%);
-    padding: 1.75rem 1.25rem;
-    text-align: center;
-    transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-
-.os-ob-combo:hover { border-color: #2675ff; background: #000; transform: translateY(-2px); }
-
-.os-ob-combo__cta {
-    display: inline-block;
-    margin-top: 1rem;
-    border-bottom: 2px solid #2675ff;
-    padding-bottom: .15rem;
-    color: #6aa6ff;
-    font-size: .75rem;
-    font-weight: 900;
-    letter-spacing: .18em;
+/* Arma tu outfit (web/outfit.blade.php, js/outfit-builder.js): pestañas, chips, opciones y tallas. */
+.os-ob-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 16px 8px;
+    border: 1px solid var(--shop-line);
+    background: #fff;
+    color: #545966;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1px;
     text-transform: uppercase;
-}
-
-.os-ob-chip-step {
-    border: 1.5px solid #2a4a8c;
-    padding: .45rem .8rem;
-    color: #8299bf;
-    font-size: .7rem;
-    font-weight: 900;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-}
-
-.os-ob-chip-step.is-done { border-color: #2675ff; color: #6aa6ff; }
-.os-ob-chip-step.is-current { border-color: #ffffff; background: #ffffff; color: #030a1c; }
-.os-ob-chip-step:disabled { cursor: default; opacity: .6; }
-
-.os-ob-panel { border: 1px solid #1b3366; border-radius: 1rem; background: #0a1838; padding: 1.5rem; }
-
-.os-ob-track { display: flex; gap: .875rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
-.os-ob-track::-webkit-scrollbar { display: none; }
-
-.os-ob-arrow {
-    position: absolute;
-    top: 38%;
-    z-index: 2;
-    display: grid;
-    height: 2.5rem;
-    width: 2.5rem;
-    place-items: center;
-    border-radius: 9999px;
-    background: #ffffff;
-    color: #030a1c;
-    font-size: 1.4rem;
-    box-shadow: 0 4px 14px rgb(0 0 0 / 35%);
-    transform: translateX(-35%);
-}
-
-.os-ob-arrow.right-0 { transform: translateX(35%); }
-
-.os-ob-card {
-    width: 13.5rem;
-    flex: none;
+    white-space: nowrap;
     overflow: hidden;
-    border: 1.5px solid #1b3366;
-    border-radius: .875rem;
-    background: #061230;
-    scroll-snap-align: start;
+    text-overflow: ellipsis;
+    transition: border-color 160ms ease, color 160ms ease;
+}
+
+.os-ob-tab:hover { color: #0b0f14; }
+.os-ob-tab.is-done { color: var(--hh-accent); }
+
+.os-ob-tab.is-active {
+    border-color: #0b0f14;
+    background: #0b0f14;
+    color: #fff;
+}
+
+.os-ob-chip {
+    padding: 8px 14px;
+    border: 1px solid var(--shop-line);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.os-ob-chip.is-active {
+    border-color: var(--hh-soft);
+    background: var(--hh-soft);
+    color: var(--hh-accent);
+    font-weight: 800;
+}
+
+.os-ob-option {
+    padding: 10px 10px 14px;
+    border: 1px solid var(--shop-line);
+    background: #fff;
     transition: border-color 160ms ease;
 }
 
-.os-ob-card.is-picked,
-.os-ob-card:hover { border-color: #2675ff; }
-.os-ob-card__img { aspect-ratio: 4 / 5; background: #ffffff; }
-.os-ob-card__img img { height: 100%; width: 100%; object-fit: cover; object-position: center 20%; }
+.os-ob-option:hover { border-color: var(--shop-check-line); }
+
+.os-ob-option.is-selected {
+    padding: 9px 9px 13px;
+    border: 2px solid var(--hh-accent);
+}
 
 .os-ob-size {
-    min-width: 2.4rem;
-    height: 2.1rem;
-    border: 1px solid #2a4a8c;
-    border-radius: .5rem;
-    font-size: .8rem;
-    font-weight: 800;
-    transition: background-color 140ms ease, border-color 140ms ease;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 5px;
+    border: 1px solid var(--shop-line);
+    color: #545966;
+    font-size: 12px;
+    font-weight: 700;
+    transition: border-color 160ms ease, background-color 160ms ease;
 }
 
-.os-ob-size:hover { border-color: #6aa6ff; }
-.os-ob-size.is-picked { border-color: #2675ff; background: #2675ff; }
+.os-ob-size:hover { border-color: #0b0f14; color: #0b0f14; }
+.os-ob-size.is-prompt { border-color: var(--hh-accent); color: var(--hh-accent); }
 
-.os-ob-btn-ghost {
-    height: 3rem;
-    border: 1.5px solid #ffffff;
-    border-radius: 9999px;
-    padding: 0 2rem;
-    font-size: .875rem;
-    font-weight: 900;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+.os-ob-size.is-active {
+    border-color: #0b0f14;
+    background: #0b0f14;
+    color: #fff;
 }
 
-.os-ob-btn-ghost:hover { background: #ffffff; color: #030a1c; }
-
-.os-step-card {
-    position: relative;
-    display: flex;
-    min-height: 16rem;
-    flex-direction: column;
-    border-radius: 1rem;
-    padding: 1.5rem;
-}
-
-.os-step-card--light { background: #e6edf7; color: #030a1c; }
-.os-step-card--dark { border: 1px solid #1b3366; background: #0a1838; color: #ffffff; }
-.os-step-card--accent { background: #2675ff; color: #ffffff; }
-.os-step-card__title { margin-top: .25rem; color: #2675ff; font-size: .9375rem; font-weight: 900; text-transform: uppercase; }
-.os-step-card--accent .os-step-card__title { color: #ffffff; }
-.os-step-card--dark .os-step-card__title { color: #6aa6ff; }
-.os-step-card__num { font-size: 1.75rem; font-weight: 900; opacity: .35; }
-
-.os-step-card__foot {
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid currentColor;
-    padding-top: .875rem;
-    font-size: .9375rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    opacity: .9;
-}
-
-/* Arma tu outfit: fondo desvanecido con luces suaves en movimiento y paneles translúcidos. */
-.os-ob-page {
-    background:
-        radial-gradient(ellipse 90% 55% at 50% 0%, rgb(38 117 255 / 18%), transparent 70%),
-        linear-gradient(180deg, #050f26 0%, #071433 55%, #030a1c 100%);
-}
-
-.os-ob-glow { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-
-.os-ob-glow i {
-    position: absolute;
-    width: 46rem;
-    height: 46rem;
-    border-radius: 9999px;
-    filter: blur(110px);
-    opacity: .5;
-    animation: os-ob-drift 22s ease-in-out infinite alternate;
-}
-
-.os-ob-glow i:nth-child(1) { top: 8%; left: -14rem; background: rgb(38 117 255 / 45%); }
-.os-ob-glow i:nth-child(2) { top: 38%; right: -16rem; background: rgb(94 155 234 / 35%); animation-duration: 28s; animation-delay: -6s; }
-.os-ob-glow i:nth-child(3) { bottom: -18rem; left: 30%; background: rgb(47 111 208 / 40%); animation-duration: 32s; animation-delay: -12s; }
-
-@keyframes os-ob-drift {
-    0% { transform: translate3d(0, 0, 0) scale(1); }
-    50% { transform: translate3d(6rem, -3rem, 0) scale(1.12); }
-    100% { transform: translate3d(-4rem, 4rem, 0) scale(.94); }
-}
-
-.os-ob-page .os-ob-combo,
-.os-ob-page .os-ob-panel,
-.os-ob-page .os-step-card--dark {
-    border-color: rgb(106 166 255 / 22%);
-    background: linear-gradient(160deg, rgb(15 33 72 / 72%), rgb(6 18 48 / 45%));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-}
-
-.os-ob-page .os-ob-combo:hover {
-    border-color: #2675ff;
-    background: linear-gradient(160deg, rgb(38 117 255 / 30%), rgb(3 10 28 / 75%));
-    box-shadow: 0 18px 50px -18px rgb(38 117 255 / 60%);
-}
-
-.os-ob-page .os-ob-card { background: linear-gradient(180deg, rgb(10 24 56 / 85%), rgb(6 18 48 / 70%)); }
-.os-ob-page .os-step-card--light { background: linear-gradient(160deg, #f1f5fc, #c9d8f2); }
-.os-ob-page .os-step-card--accent { background: linear-gradient(150deg, #4c8dff, #1c55d6 60%, #0f3aa6); }
-
-@media (prefers-reduced-motion: reduce) {
-    .os-ob-glow i { animation: none; }
-}
-
-.os-ob-combo.is-soon { cursor: not-allowed; opacity: .75; }
-.os-ob-page .os-ob-combo.is-soon:hover { border-color: rgb(106 166 255 / 22%); background: linear-gradient(160deg, rgb(15 33 72 / 72%), rgb(6 18 48 / 45%)); box-shadow: none; transform: none; }
-
-.os-ob-combo__soon {
-    display: inline-block;
-    margin-top: 1rem;
-    border-radius: 9999px;
-    background: rgb(255 255 255 / 10%);
-    padding: .4rem .9rem;
-    color: #b9cde8;
-    font-size: .72rem;
-    font-weight: 900;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-}
-
-/* Nosotros (web/nosotros.blade.php): editorial industrial en negro, blanco y azul eléctrico. */
-.os-nos { background: #030a1c; }
-
-.os-nos-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: .6rem;
-    color: #6aa6ff;
-    font-size: .75rem;
-    font-weight: 900;
-    letter-spacing: .3em;
-    text-transform: uppercase;
-}
-
-.os-nos-tag::before { height: 2px; width: 1.75rem; background: #2675ff; content: ''; }
-.os-nos-tag--dark { color: #1d5fe0; }
-
-.os-nos-photo.os-nos-hero__bg { position: absolute; inset: 0; z-index: -2; height: 100%; width: 100%; }
-.os-nos-hero__bg .os-nos-photo__empty { align-items: flex-end; justify-content: flex-end; border: 0; padding: 1.25rem; }
-.os-nos-hero__shade {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-        linear-gradient(90deg, rgb(3 10 28 / 94%) 0%, rgb(3 10 28 / 70%) 50%, rgb(3 10 28 / 35%) 100%),
-        linear-gradient(0deg, #030a1c 0%, transparent 35%);
-}
-
-.os-nos-photo { position: relative; overflow: hidden; background: #0f2148; }
-.os-nos-photo__img--gray { filter: grayscale(1) contrast(1.08); transition: filter 500ms ease; }
-.os-nos-step:hover .os-nos-photo__img--gray { filter: grayscale(.2) contrast(1.05); }
+/* Nosotros (web/nosotros.blade.php, diseño Figma "04 · Nosotros"): fotos, espacio reservado y aparición. */
+.os-nos-photo { position: relative; overflow: hidden; background: #dfe5ef; }
+.os-nos-photo__img--gray { filter: grayscale(1) contrast(1.08); }
 
 .os-nos-photo__empty {
     display: flex;
@@ -1263,79 +1196,500 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
     align-items: center;
     justify-content: center;
     gap: .5rem;
-    border: 1.5px dashed rgb(106 166 255 / 35%);
-    background: repeating-linear-gradient(135deg, #0a1838 0 14px, #0c1c42 14px 28px);
-    color: #8299bf;
+    padding: 1rem;
+    border: 1.5px dashed rgb(3 10 28 / 18%);
+    background: repeating-linear-gradient(135deg, #e6ebf3 0 14px, #dde3ee 14px 28px);
+    color: #5b6b85;
     font-size: .8rem;
     font-weight: 700;
     text-align: center;
-    padding: 1rem;
 }
 
-.os-nos-photo__empty code { font-size: .7rem; color: #6aa6ff; word-break: break-all; }
+.os-nos-photo__empty code { font-size: .7rem; color: #1d5fe0; word-break: break-all; }
 
-.os-nos-light { background: #f3f5f9; color: #030a1c; }
-.os-nos-light .os-nos-photo { background: #dfe5ef; }
-.os-nos-light .os-nos-photo__empty { border-color: rgb(3 10 28 / 18%); background: repeating-linear-gradient(135deg, #e6ebf3 0 14px, #dde3ee 14px 28px); color: #5b6b85; }
-.os-nos-light .os-nos-photo__empty code { color: #1d5fe0; }
+.os-nos-reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms ease, transform 700ms ease; }
+.os-nos-reveal.is-visible { opacity: 1; transform: none; }
 
-.os-nos-step {
-    overflow: hidden;
-    border: 1px solid #1b3366;
-    border-radius: 1.25rem;
-    background: linear-gradient(180deg, #0a1838, #061230);
-    transition: border-color 200ms ease, transform 200ms ease;
+/* Inicio debajo del hero (web/partials/home-sections.blade.php, diseños Figma "01 · Home Hombre" y "01 · Home Mujer"). */
+.os-hh {
+    /* Paleta de las secciones (hombre: azules). .os-hh--girls la cambia a rosa/vino (diseño Home Mujer). */
+    --hh-accent: #2d69b5;
+    --hh-bright: #3fa9f5;
+    --hh-bright-hover: #6cc0fa;
+    --hh-on-bright: #061a2e;
+    --hh-dark: #061a2e;
+    --hh-card: #0e2740;
+    --hh-muted: #9fb4cb;
+    --hh-soft: #eaf4fa;
+    --hh-light-text: #c9d8e8;
+    --hh-shade: rgb(6 26 46 / 30%);
+    --hh-shade-hover: rgb(6 26 46 / 45%);
+    --hh-veil: linear-gradient(90deg, rgb(4 12 23 / 38%), rgb(4 12 23 / 22%) 45%, rgb(4 12 23 / 8%) 65%, rgb(4 12 23 / 0%));
+    --hh-fabric-text: #545966;
+    --hh-quality-bg: linear-gradient(120deg, #13304d 14%, #0b2038 54%, #08172b 86%);
+    --hh-quality-line: rgb(77 173 242 / 42%);
+    --hh-icon-bg: rgb(41 140 229 / 12%);
+    --hh-icon-line: rgb(64 168 245 / 35%);
+    /* Tienda (web/search.blade.php). */
+    --shop-head: linear-gradient(90deg, #061a2e, #13406b);
+    --shop-crumb: #9fb4cb;
+    --shop-intro: #c9d8e8;
+    --shop-line: #e3e8ef;
+    --shop-check-line: #b8c2cf;
+    --shop-deep: #061a2e;
+    --shop-deep-muted: #9fb4cb;
+    --ob-empty: #dce6f0;
+    --nos-veil: linear-gradient(180deg, rgb(6 26 46 / 35%), rgb(6 26 46 / 92%));
+
+    /* Controles nativos (casillas, selects) en claro: el resto del sitio usa el esquema oscuro. */
+    color-scheme: light;
+    background: #ffffff;
+    color: #0b0f14;
+    font-family: 'Manrope', sans-serif;
 }
 
-.os-nos-step:hover { border-color: #2675ff; transform: translateY(-3px); }
+.os-hh--girls {
+    --hh-accent: #c2457a;
+    --hh-bright: #f576a9;
+    --hh-bright-hover: #f89cc0;
+    --hh-on-bright: #3a0f27;
+    --hh-dark: #2e121e;
+    --hh-card: #401b2a;
+    --hh-muted: #cb7eb4;
+    --hh-soft: #fceaf0;
+    --hh-light-text: #f3d3df;
+    --hh-shade: rgb(46 18 30 / 25%);
+    --hh-shade-hover: rgb(46 18 30 / 42%);
+    --hh-veil: linear-gradient(90deg, rgb(58 15 39 / 24%), rgb(58 15 39 / 20%) 55%, rgb(58 15 39 / 3%));
+    --hh-fabric-text: #663e59;
+    --hh-quality-bg: linear-gradient(120deg, #4d2232 14%, #381625 54%, #2b101d 86%);
+    --hh-quality-line: rgb(242 121 173 / 42%);
+    --hh-icon-bg: rgb(229 98 151 / 12%);
+    --hh-icon-line: rgb(245 118 168 / 35%);
+    --shop-head: linear-gradient(90deg, #3a0f27, #8c2155);
+    --shop-crumb: #d9a7bc;
+    --shop-intro: #f3d3df;
+    --shop-line: #f2dce4;
+    --shop-check-line: #e2b6c7;
+    --shop-deep: #3a0f27;
+    --shop-deep-muted: #d9a7bc;
+    --ob-empty: #f6dde6;
+    --nos-veil: linear-gradient(180deg, rgb(58 15 39 / 35%), rgb(58 15 39 / 90%));
+}
 
-.os-nos-step__num {
-    position: absolute;
-    top: -1.6rem;
-    right: 1.25rem;
-    color: #2675ff;
-    font-size: 3rem;
+.os-hh-wrap {
+    margin-inline: auto;
+    max-width: 1440px;
+    padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+    .os-hh-wrap {
+        padding-inline: 1.5rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .os-hh-wrap {
+        padding-inline: 100px;
+    }
+}
+
+.os-hh-display {
+    font-family: 'Big Shoulders Display', 'Montserrat', sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.os-hh-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #0b0f14;
+}
+
+.os-hh-eyebrow {
+    color: var(--hh-accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.os-hh-title {
+    margin-top: 6px;
+    font-family: 'Big Shoulders Display', 'Montserrat', sans-serif;
+    font-size: 40px;
     font-weight: 900;
     line-height: 1;
-    text-shadow: 0 0 24px rgb(38 117 255 / 45%);
+    text-transform: uppercase;
 }
 
-.os-nos-connected {
-    background:
-        radial-gradient(ellipse 60% 70% at 85% 50%, rgb(38 117 255 / 22%), transparent 70%),
-        linear-gradient(180deg, #030a1c, #061230);
-    border-block: 1px solid #1b3366;
+@media (min-width: 640px) {
+    .os-hh-title {
+        font-size: 56px;
+        line-height: 56px;
+    }
 }
 
-.os-nos-product { transition: transform 300ms ease; }
+.os-hh-sub {
+    margin-top: 6px;
+    color: #545966;
+    font-size: 15px;
+    font-weight: 500;
+}
 
-.os-nos-btn-ghost {
-    display: inline-flex;
-    height: 3rem;
-    align-items: center;
-    border: 1.5px solid rgb(255 255 255 / 75%);
-    border-radius: 9999px;
-    padding: 0 1.75rem;
-    font-size: .875rem;
+.os-hh-link {
+    color: var(--hh-accent);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.os-hh-link:hover {
+    color: #0b0f14;
+}
+
+.os-hh-arrow {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid #ffffff;
+    background: #ffffff;
+    transition: border-color 160ms ease;
+}
+
+.os-hh-arrow:hover,
+.os-hh-arrow:first-child {
+    border-color: #0b0f14;
+}
+
+.os-hh-arrow:disabled {
+    border-color: #ffffff;
+    opacity: .35;
+}
+
+.os-hh-track {
+    display: grid;
+    grid-auto-columns: calc((100% - 4 * 15px) / 5);
+    grid-auto-flow: column;
+    gap: 15px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+}
+
+.os-hh-track::-webkit-scrollbar {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .os-hh-track {
+        grid-auto-columns: calc((100% - 2 * 15px) / 2.4);
+    }
+}
+
+@media (max-width: 639px) {
+    .os-hh-track {
+        grid-auto-columns: 72%;
+    }
+}
+
+.os-hh-card {
+    min-width: 0;
+    scroll-snap-align: start;
+}
+
+.os-hh-rank {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    width: 48px;
+    height: 54px;
+    place-items: center;
+    color: #ffffff;
+    font-family: 'Big Shoulders Display', 'Montserrat', sans-serif;
+    font-size: 30px;
     font-weight: 900;
-    letter-spacing: .08em;
+}
+
+.os-hh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 28px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
     transition: background-color 160ms ease, color 160ms ease;
 }
 
-.os-nos-btn-ghost:hover { background: #ffffff; color: #030a1c; }
-
-.os-nos-cta {
-    overflow: hidden;
-    border: 1px solid #1b3366;
-    border-radius: 1.5rem;
-    background: radial-gradient(ellipse 70% 90% at 50% 0%, rgb(38 117 255 / 30%), transparent 65%), #061230;
-    padding: 3.5rem 1.5rem;
-    text-align: center;
+/* Títulos de Overshark Girls en la tienda (diseño "02 · Tienda Mujer"). */
+.os-josefin {
+    font-family: 'Josefin Sans', 'Montserrat', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.03em;
 }
 
-.os-nos a:focus-visible,
-.os-nos button:focus-visible { outline: 2px solid #6aa6ff; outline-offset: 3px; }
+/* Títulos de sección en Josefin (Arma tu outfit Mujer): misma medida que .os-hh-title. */
+.os-hh-title.os-josefin {
+    font-size: 36px;
+    line-height: 1.1;
+}
 
-.os-nos-reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms ease, transform 700ms ease; }
-.os-nos-reveal.is-visible { opacity: 1; transform: none; }
+@media (min-width: 640px) {
+    .os-hh-title.os-josefin {
+        font-size: 40px;
+    }
+}
+
+/* Tienda (web/search.blade.php): chips de categoría, filtros, orden y paginación. */
+.os-shop-chip {
+    display: inline-flex;
+    padding: 10px 18px;
+    border: 1px solid rgb(255 255 255 / 35%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.os-shop-chip:hover {
+    border-color: #fff;
+}
+
+.os-shop-chip.is-active {
+    border-color: var(--hh-bright);
+    background: var(--hh-bright);
+    color: var(--hh-on-bright);
+    font-weight: 800;
+}
+
+.os-shop-label {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.os-shop-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--shop-check-line);
+    border-radius: 3px;
+    background: #fff;
+}
+
+.os-shop-check.is-checked {
+    border-color: var(--hh-accent);
+    background: var(--hh-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+
+.os-shop-size {
+    display: grid;
+    width: 48px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid var(--shop-line);
+    font-size: 14px;
+    font-weight: 700;
+    transition: border-color 160ms ease;
+}
+
+.os-shop-size:hover {
+    border-color: #0b0f14;
+}
+
+.os-shop-size.is-active {
+    border-color: #0b0f14;
+    background: #0b0f14;
+    color: #fff;
+}
+
+.os-shop-swatch {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--swatch);
+    box-shadow: inset 0 0 0 1px rgb(11 15 20 / 14%);
+    transition: box-shadow 160ms ease;
+}
+
+.os-shop-swatch:hover,
+.os-shop-swatch.is-active {
+    box-shadow: inset 0 0 0 1px rgb(11 15 20 / 14%), 0 0 0 2px #fff, 0 0 0 4px var(--hh-accent);
+}
+
+/* Rango de precio: dos sliders superpuestos sobre una pista con el tramo elegido pintado. */
+.os-shop-range {
+    position: relative;
+    height: 24px;
+    background: linear-gradient(var(--shop-line), var(--shop-line)) center / 100% 4px no-repeat;
+}
+
+.os-shop-range::before {
+    position: absolute;
+    top: 10px;
+    left: calc(9px + (100% - 18px) * var(--low));
+    width: calc((100% - 18px) * (var(--high) - var(--low)));
+    height: 4px;
+    background: var(--hh-accent);
+    content: '';
+}
+
+.os-shop-range input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    appearance: none;
+}
+
+.os-shop-range input::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--hh-accent);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    pointer-events: auto;
+    appearance: none;
+}
+
+.os-shop-range input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--hh-accent);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.os-shop-range input:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgb(45 105 181 / 30%);
+}
+
+.os-shop-sort {
+    height: 100%;
+    padding: 0 36px 0 4px;
+    border: 0;
+    background: transparent right 14px center / 16px no-repeat;
+    color: #0b0f14;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    appearance: none;
+}
+
+.os-shop-page {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 1px solid var(--shop-line);
+    font-size: 14px;
+    font-weight: 700;
+    transition: border-color 160ms ease;
+}
+
+.os-shop-page:hover {
+    border-color: #0b0f14;
+}
+
+.os-shop-page.is-active {
+    border-color: #0b0f14;
+    background: #0b0f14;
+    color: #fff;
+    font-weight: 800;
+}
+
+.os-shop-page.is-disabled {
+    color: var(--shop-check-line);
+    pointer-events: none;
+}
+
+/* Tarjeta de beneficio de la prenda (Por qué elegir Overshark). */
+.os-hh-quality {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--hh-quality-line);
+    border-radius: 12px;
+    background: var(--hh-quality-bg);
+    box-shadow: 0 8px 20px rgb(0 5 15 / 22%);
+}
+
+@media (min-width: 640px) {
+    .os-hh-quality {
+        flex-direction: column;
+        gap: 14px;
+        padding: 24px 16px;
+        text-align: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    .os-hh-quality {
+        width: 170px;
+        height: 220px;
+    }
+}
+
+/* Botón flotante de WhatsApp (layouts/web.blade.php): abajo a la derecha, bajo el header y el carrito. */
+.os-wa {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 40;
+    display: grid;
+    width: 60px;
+    height: 60px;
+    place-items: center;
+    border-radius: 999px;
+    background: #25d366;
+    box-shadow: 0 10px 28px rgb(0 0 0 / 28%), 0 0 0 0 rgb(37 211 102 / 55%);
+    color: #ffffff;
+    animation: os-wa-pulse 2.6s ease-out infinite;
+    transition: transform 200ms ease, background-color 200ms ease;
+}
+
+.os-wa:hover {
+    background: #1ebe5b;
+    transform: translateY(-3px) scale(1.04);
+}
+
+@media (min-width: 1024px) {
+    .os-wa {
+        right: 28px;
+        bottom: 28px;
+        width: 64px;
+        height: 64px;
+    }
+}
+
+@keyframes os-wa-pulse {
+    0% { box-shadow: 0 10px 28px rgb(0 0 0 / 28%), 0 0 0 0 rgb(37 211 102 / 55%); }
+    70% { box-shadow: 0 10px 28px rgb(0 0 0 / 28%), 0 0 0 16px rgb(37 211 102 / 0%); }
+    100% { box-shadow: 0 10px 28px rgb(0 0 0 / 28%), 0 0 0 0 rgb(37 211 102 / 0%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .os-wa {
+        animation: none;
+    }
+}

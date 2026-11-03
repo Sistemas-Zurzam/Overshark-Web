@@ -1,19 +1,8 @@
 @php
     $brand = \App\Models\BrandSetting::current();
-    $menuCombos = \App\Models\Admin\Combo::activeForMenu();
     $brandPageContext = $brandPage ?? null;
     $publicBrandLogo = $brandPageContext?->logoUrl() ?: $brand->logoUrl();
-    if ($brandPageContext) {
-        $brandPageName = mb_strtoupper(trim($brandPageContext->name));
-        $menuCombos = $menuCombos
-            ->filter(fn ($menuCombo) => mb_strtoupper(trim((string) $menuCombo->brand)) === $brandPageName)
-            ->values();
-    }
-    if (! $brandPageContext && session('storefront.line') === 'mujer') {
-        $menuCombos = $menuCombos
-            ->filter(fn ($menuCombo) => str_contains(mb_strtolower($menuCombo->brand.' '.$menuCombo->name), 'girl'))
-            ->values();
-    }
+    $combosUrl = $brandPageContext ? route('web.combos.index', ['marca' => $brandPageContext->name]) : route('web.combos.index');
     $menuBrands = \App\Models\Brand::query()
         ->active()
         ->orderBy('sort_order')
@@ -34,9 +23,6 @@
         ['label' => 'Nosotros', 'url' => route('web.nosotros'), 'active' => request()->routeIs('web.nosotros')],
         ['label' => 'Contacto', 'url' => route('web.contact'), 'active' => request()->routeIs('web.contact')],
     ];
-    $freeShippingFrom = \App\Support\Shipping::freeFrom();
-    $freeShippingLeft = max(0, $freeShippingFrom - $cartTotal);
-    $freeShippingProgress = $freeShippingFrom > 0 ? min(100, round($cartTotal / $freeShippingFrom * 100)) : 0;
     $navLinks = collect([
         [
             'label' => 'Novedades',
@@ -65,71 +51,66 @@
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=Josefin+Sans:wght@600;700&family=Manrope:wght@500;700;800&family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Playfair+Display:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body style="--header-h: {{ $freeShippingFrom > 0 ? 100 : 64 }}px" class="@yield('body-class', $storeLine === 'mujer' ? 'theme-neon theme-girls' : 'theme-neon') min-h-screen antialiased">
+<body style="--header-h: 108px" class="@yield('body-class', $storeLine === 'mujer' ? 'theme-neon theme-girls' : 'theme-neon') min-h-screen antialiased">
     <a href="#contenido" class="sr-only z-[80] rounded-md bg-white px-4 py-2 font-bold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Saltar al contenido</a>
 
     <header class="@yield('header-class', 'os-header fixed inset-x-0 top-0 z-50 text-white')">
         @hasSection('header-bar')
             @yield('header-bar')
         @else
-        {{-- Barra principal: logos de marca · menú central · búsqueda y carrito. Debajo, el avance hacia el envío gratis. --}}
-        <div class="mx-auto grid h-16 max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[1fr_auto_1fr] xl:px-12">
-            <div class="flex min-w-0 items-center gap-4">
-                <a href="{{ route('web.home', ['linea' => 'hombre']) }}" class="os-focus block shrink-0 rounded" aria-label="Overshark, ir al inicio">
-                    <span class="block font-heading text-[21px] font-extrabold leading-none tracking-tight" aria-hidden="true">OVER<span class="text-electric">SHARK</span></span>
-                </a>
-                <span class="hidden h-7 w-px bg-white/25 sm:block" aria-hidden="true"></span>
-                <nav class="hidden min-w-0 items-center gap-5 sm:flex" aria-label="Nuestras marcas">
-                    <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="os-focus os-store-brand rounded" aria-label="Overshark Girls, colección mujer" @if ($storeLine === 'mujer') aria-current="true" @endif>
-                        <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-7 w-auto object-contain">
+        {{-- Barra principal (diseño Figma "Nav Principal / Overshark"): logos de marca · menú central · búsqueda, cuenta y bolsa. Debajo, franja de anuncios. --}}
+        <div class="os-nav-bar">
+            <div class="mx-auto grid h-[72px] max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[1fr_auto_1fr] xl:px-[100px]">
+                <div class="flex min-w-0 items-center gap-4">
+                    <a href="{{ route('web.home', ['linea' => 'hombre']) }}" class="os-focus block shrink-0 rounded" aria-label="Overshark, ir al inicio">
+                        <span class="os-nav-logo" style="--os-logo: url('{{ asset('images/nav/overshark-wordmark.png') }}')" aria-hidden="true"></span>
                     </a>
+                    <span class="hidden h-7 w-px bg-white/25 sm:block" aria-hidden="true"></span>
+                    <nav class="hidden min-w-0 items-center gap-5 sm:flex" aria-label="Nuestras marcas">
+                        <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="os-focus os-store-brand rounded" aria-label="Overshark Girls, colección mujer" @if ($storeLine === 'mujer') aria-current="true" @endif>
+                            <img src="{{ asset('images/girls/logo-girls.png') }}" alt="" class="os-girls-logo h-7 w-auto object-contain">
+                        </a>
+                    </nav>
+                </div>
+
+                <nav class="hidden items-center gap-9 xl:flex" aria-label="Navegación principal">
+                    @foreach ($storeMenu as $item)
+                        <a href="{{ $item['url'] }}" class="os-store-link os-focus" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
+                    @endforeach
                 </nav>
-            </div>
 
-            <nav class="hidden items-center gap-8 xl:flex" aria-label="Navegación principal">
-                @foreach ($storeMenu as $item)
-                    <a href="{{ $item['url'] }}" class="os-store-link os-focus" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
-                @endforeach
-            </nav>
-
-            <div class="flex items-center justify-end gap-1 sm:gap-3">
-                <button type="button" data-search-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
-                </button>
-                <button type="button" data-cart-open class="os-focus flex items-center gap-2.5 rounded-full py-1.5 pl-2 pr-1.5 text-white transition hover:bg-white/10" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}, total S/{{ number_format($cartTotal, 2) }}">
-                    <span class="hidden text-sm font-bold sm:inline">S/{{ number_format($cartTotal, 2) }}</span>
-                    <span class="relative grid h-8 w-8 place-items-center">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>
-                        @if ($cartCount > 0)
-                            <span class="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-electric px-1 text-[10px] font-black leading-none text-white ring-2 ring-ink" aria-hidden="true">{{ $cartCount }}</span>
-                        @endif
+                <div class="flex items-center justify-end gap-[22px]">
+                    <button type="button" data-search-toggle class="os-focus os-nav-icon" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
+                        <img src="{{ asset('images/nav/buscar.svg') }}" alt="" width="22" height="22">
+                    </button>
+                    <span class="os-nav-icon os-nav-icon--account" role="img" aria-label="Mi cuenta, próximamente" title="Mi cuenta · Próximamente">
+                        <img src="{{ asset('images/nav/cuenta.svg') }}" alt="" width="22" height="22">
                     </span>
-                </button>
-                <button type="button" data-web-menu-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10 xl:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
-                    <svg class="h-6 w-6" data-menu-icon-open viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                    <svg class="hidden h-6 w-6" data-menu-icon-close viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                </button>
+                    <button type="button" data-cart-open class="os-focus os-nav-icon relative" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}, total S/{{ number_format($cartTotal, 2) }}">
+                        <img src="{{ asset('images/nav/bolsa.svg') }}" alt="" width="22" height="22">
+                        @if ($cartCount > 0)
+                            <span class="os-nav-count" aria-hidden="true">{{ $cartCount }}</span>
+                        @endif
+                    </button>
+                    <button type="button" data-web-menu-toggle class="os-focus grid h-10 w-10 place-items-center rounded-full text-white transition hover:bg-white/10 xl:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
+                        <svg class="h-6 w-6" data-menu-icon-open viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                        <svg class="hidden h-6 w-6" data-menu-icon-close viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        @if ($freeShippingFrom > 0)
-            <div class="os-shipping-strip" role="status">
-                <div class="mx-auto flex h-9 max-w-[1440px] items-center justify-center gap-4 px-4 text-[13px] text-white/75">
-                    @if ($freeShippingLeft > 0)
-                        <p>Te faltan <b class="font-bold text-white">S/{{ number_format($freeShippingLeft, 2) }}</b> para tener <b class="font-bold text-white">envío gratis</b></p>
-                    @else
-                        <p><b class="font-bold text-white">¡Tienes envío gratis!</b> en tu pedido</p>
-                    @endif
-                    <span class="hidden h-1.5 w-56 overflow-hidden rounded-full bg-white/15 sm:block" aria-hidden="true">
-                        <span class="block h-full rounded-full bg-electric" style="width: {{ $freeShippingProgress }}%"></span>
-                    </span>
-                </div>
-            </div>
-        @endif
+        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="Combos 3 por S/ 50, envío S/ 14 a todo el Perú, pago contraentrega. Ver combos">
+            <span>Combos 3 × S/ 50</span>
+            <span class="hidden sm:inline" aria-hidden="true">·</span>
+            <span class="hidden sm:inline">Envío S/ 14 a todo el Perú</span>
+            <span class="hidden md:inline" aria-hidden="true">·</span>
+            <span class="hidden md:inline">Pago contraentrega</span>
+        </a>
         @endif
 
         <div id="search-panel" data-search-panel class="hidden border-t border-edge/60 bg-abyss/95 px-4 py-4 sm:px-6">
@@ -145,39 +126,12 @@
             </form>
         </div>
 
-        <div id="combos-menu" data-combos-menu data-state="closed" class="combos-panel absolute left-0 right-0 top-full border-t border-edge/60 bg-ink shadow-2xl shadow-black/60">
-            <div class="mx-auto grid max-w-[1440px] gap-4 px-5 py-6 sm:grid-cols-2 lg:grid-cols-3 lg:px-12">
-                @forelse ($menuCombos as $combo)
-                    <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="combo-card group relative min-h-48 overflow-hidden rounded-2xl border border-edge bg-panel transition hover:border-neon-soft">
-                        <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110" loading="lazy">
-                        <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent"></div>
-                        <div class="relative flex h-full min-h-48 items-end p-5">
-                            <div>
-                                <span class="text-xs font-black uppercase tracking-[0.18em] text-neon-soft">Ver combo</span>
-                                <h2 class="mt-1 text-xl font-black text-white">{{ $combo->name }}</h2>
-                                @if ($combo->price !== null)
-                                    <p class="mt-1 text-sm font-black text-white/85">S/ {{ number_format((float) $combo->price, 2) }}</p>
-                                @endif
-                            </div>
-                        </div>
-                    </a>
-                @empty
-                    <div class="col-span-full rounded-2xl border border-dashed border-edge bg-panel px-5 py-10 text-center text-sm font-semibold text-haze">
-                        {{ session('storefront.line') === 'mujer' ? 'Aún no hay combos Overshark Girls publicados.' : 'Aún no hay combos activos.' }}
-                    </div>
-                @endforelse
-            </div>
-        </div>
-
         <nav id="web-menu" data-web-menu class="hidden max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-edge/60 bg-abyss px-4 py-4 text-sm font-semibold sm:px-6 xl:hidden" aria-label="Navegación móvil">
             <div class="mx-auto flex max-w-[1440px] flex-col gap-1">
                 @foreach ($storeMenu as $item)
                     <a href="{{ $item['url'] }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ $item['active'] ? 'text-electric-soft' : '' }}" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                 @endforeach
-                <button type="button" data-combos-toggle class="os-focus flex items-center justify-between rounded-lg px-3 py-3 text-left uppercase tracking-wide hover:bg-white/5" aria-expanded="false" aria-controls="combos-menu">
-                    Combos
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-                </button>
+                <a href="{{ $combosUrl }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ request()->routeIs('web.combos.index') ? 'text-electric-soft' : '' }}">Combos</a>
                 <div>
                     <button type="button" data-brands-toggle data-brands-menu-target="brands-menu-mobile" class="os-focus flex w-full items-center justify-between rounded-lg px-3 py-3 text-left uppercase tracking-wide hover:bg-white/5" aria-expanded="false" aria-controls="brands-menu-mobile">
                         Marcas
@@ -205,19 +159,26 @@
 
     <main id="contenido" class="@yield('main-class', 'pt-[var(--header-h)]')" tabindex="-1">@yield('content')</main>
 
-    <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-black/60" aria-hidden="true"></div>
-    <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" class="cart-drawer fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-full translate-x-full flex-col border-l border-edge bg-ink text-white shadow-2xl shadow-black/60 transition-transform duration-300 sm:max-w-[430px]" aria-label="Carrito de compras">
-        <div class="flex h-[76px] items-center justify-between border-b border-edge px-5 sm:h-[84px] sm:px-6">
-            <div>
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-neon-soft">Tu carrito</p>
-                <h2 class="text-xl font-black">{{ $cartCount }} producto{{ $cartCount === 1 ? '' : 's' }}</h2>
+    {{-- Carrito lateral: mismo sistema visual que las páginas nuevas (.os-hh); en la línea mujer usa la paleta Girls. --}}
+    <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-[#0b0f14]/55" aria-hidden="true"></div>
+    <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" @class(['cart-drawer os-hh fixed bottom-0 right-0 top-0 z-[70] flex w-full translate-x-full flex-col shadow-[-12px_0_40px_rgb(11_15_20/18%)] transition-transform duration-300 sm:max-w-[440px]', 'os-hh--girls' => $storeLine === 'mujer']) aria-label="Carrito de compras">
+        <div class="flex items-center justify-between gap-4 border-b border-[var(--shop-line)] px-5 py-5 sm:px-6">
+            <div class="flex items-baseline gap-3">
+                <h2 @class(['leading-none', 'os-josefin text-[26px] uppercase' => $storeLine === 'mujer', 'os-hh-display text-[34px]' => $storeLine !== 'mujer'])>Tu carrito</h2>
+                <span class="text-[14px] font-bold text-[#545966]">{{ $cartCount }} {{ $cartCount === 1 ? 'prenda' : 'prendas' }}</span>
             </div>
-            <button type="button" data-cart-close class="grid h-10 w-10 place-items-center rounded-full border border-edge text-mist transition hover:border-neon-soft hover:text-white" aria-label="Cerrar carrito">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            <button type="button" data-cart-close class="os-focus grid h-10 w-10 place-items-center text-[#0b0f14] transition hover:bg-[var(--hh-soft)] hover:text-[var(--hh-accent)]" aria-label="Cerrar carrito">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        @if ($cartItems->isNotEmpty())
+            <p class="flex flex-wrap items-center justify-center gap-x-2 bg-[var(--hh-soft)] px-5 py-2.5 text-center text-[12px] font-extrabold uppercase tracking-[1px] text-[var(--hh-accent)]">
+                <span>Envío S/ 14 a todo el Perú</span><span aria-hidden="true">·</span><span>Pago contraentrega</span>
+            </p>
+        @endif
+
+        <div class="flex-1 overflow-y-auto px-5 sm:px-6">
             @forelse ($cartItems as $itemKey => $item)
                 @php
                     $variantId = $item['variant_id'] ?? 0;
@@ -225,50 +186,51 @@
                     $qty = (int) ($item['qty'] ?? 1);
                     $price = (float) ($item['price'] ?? 0);
                     $oldPrice = $price > 0 ? $price / 0.8 : 0;
+                    $nice = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text));
                 @endphp
-                <div class="grid grid-cols-[76px_1fr] gap-3 border-b border-edge py-4 last:border-b-0 sm:grid-cols-[84px_1fr] sm:gap-4">
-                    <div class="h-[110px] w-[76px] overflow-hidden rounded-lg bg-frame sm:h-[122px] sm:w-[84px]">
-                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="{{ $item['producto'] ?? 'Producto' }}" class="h-full w-full object-contain object-center">
+                <div class="flex gap-4 border-b border-[var(--shop-line)] py-5 last:border-b-0">
+                    <div class="h-[120px] w-[96px] shrink-0 overflow-hidden bg-[var(--hh-soft)]">
+                        <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="" class="h-full w-full object-cover">
                     </div>
-                    <div class="min-w-0">
+                    <div class="flex min-w-0 flex-1 flex-col">
                         <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <h3 class="truncate text-sm font-black">{{ $item['producto'] ?? 'Producto' }}</h3>
-                                @if ($isCombo)
-                                    <p class="mt-1 text-xs font-black uppercase tracking-wide text-neon-soft">Combo · {{ $qty }} unidad{{ $qty === 1 ? '' : 'es' }}</p>
-                                    @foreach (collect($item['selections'] ?? [])->take(3) as $selection)
-                                        <p class="mt-1 truncate text-xs text-mist">{{ $selection['producto'] ?? 'Producto' }} · {{ $selection['talla'] ?? '-' }} · {{ $selection['color'] ?? '-' }}</p>
-                                    @endforeach
-                                @else
-                                    <p class="mt-1 text-sm text-mist">Color: {{ $item['color'] ?? '-' }}</p>
-                                    <p class="mt-1 text-sm text-mist">Talla: {{ $item['talla'] ?? '-' }}</p>
-                                @endif
-                            </div>
-                            <div class="text-right">
-                                <p class="text-sm font-black text-white">S/ {{ number_format($price, 2) }}</p>
-                                @if ($oldPrice > 0)
-                                    <p class="mt-1 text-xs text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                            <h3 class="min-w-0 text-[15px] font-extrabold leading-snug">{{ $nice($item['producto'] ?? 'Producto') }}</h3>
+                            <div class="shrink-0 text-right">
+                                <p class="text-[15px] font-extrabold">S/ {{ number_format($price * $qty, 2) }}</p>
+                                @if (! $isCombo && $oldPrice > 0)
+                                    <p class="text-[12px] font-medium text-[#888] line-through">S/ {{ number_format($oldPrice * $qty, 2) }}</p>
                                 @endif
                             </div>
                         </div>
+                        @if ($isCombo)
+                            <p class="mt-1 text-[11px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">Combo</p>
+                            @foreach (collect($item['selections'] ?? [])->take(3) as $selection)
+                                <p class="mt-0.5 truncate text-[13px] font-medium text-[#545966]">{{ $nice($selection['producto'] ?? 'Producto') }} · {{ $selection['talla'] ?? '-' }} · {{ $nice($selection['color'] ?? '-') }}</p>
+                            @endforeach
+                        @else
+                            <p class="mt-1 text-[13px] font-medium text-[#545966]">{{ $nice($item['color'] ?? '-') }} · Talla {{ $item['talla'] ?? '-' }}</p>
+                            @if ($qty > 1)
+                                <p class="text-[12px] font-medium text-[#888]">S/ {{ number_format($price, 2) }} c/u</p>
+                            @endif
+                        @endif
 
-                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <div class="mt-auto flex items-center justify-between gap-3 pt-3">
                             @if ($isCombo)
-                                <span class="rounded-md bg-panel-2 px-3 py-2 text-xs font-black text-mist">{{ $qty }} combo{{ $qty === 1 ? '' : 's' }}</span>
+                                <span class="text-[13px] font-bold text-[#545966]">{{ $qty }} combo{{ $qty === 1 ? '' : 's' }}</span>
                             @else
-                                <div class="grid w-28 grid-cols-3 overflow-hidden rounded-full border border-edge">
-                                    <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="hidden" name="action" value="increment">
-                                        <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-mist transition hover:bg-white/5 hover:text-white" aria-label="Aumentar cantidad">+</button>
-                                    </form>
-                                    <span class="grid h-9 place-items-center text-sm text-white">{{ $qty }}</span>
+                                <div class="flex h-9 items-center border border-[var(--shop-check-line)]">
                                     <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="action" value="decrement">
-                                        <button type="submit" class="grid h-9 w-full place-items-center text-xl font-bold text-mist transition hover:bg-white/5 hover:text-white" aria-label="Disminuir cantidad">-</button>
+                                        <button type="submit" class="os-focus grid h-9 w-9 place-items-center text-[18px] font-bold transition hover:bg-[var(--hh-soft)] hover:text-[var(--hh-accent)]" aria-label="Disminuir cantidad">−</button>
+                                    </form>
+                                    <span class="w-8 text-center text-[14px] font-extrabold" aria-label="Cantidad">{{ $qty }}</span>
+                                    <form method="POST" action="{{ route('web.cart.update', $variantId) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="increment">
+                                        <button type="submit" class="os-focus grid h-9 w-9 place-items-center text-[18px] font-bold transition hover:bg-[var(--hh-soft)] hover:text-[var(--hh-accent)]" aria-label="Aumentar cantidad">+</button>
                                     </form>
                                 </div>
                             @endif
@@ -276,137 +238,134 @@
                             <form method="POST" action="{{ $isCombo ? route('web.cart.combo.destroy', $itemKey) : route('web.cart.destroy', $variantId) }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="grid h-9 w-9 place-items-center rounded-md text-haze transition hover:bg-red-500/10 hover:text-red-400" aria-label="Eliminar producto">
-                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 7h14"/><path d="M10 11v6M14 11v6"/><path d="M8 7l1-3h6l1 3"/><path d="M6.5 7 8 21h8l1.5-14"/></svg>
-                                </button>
+                                <button type="submit" class="os-focus text-[13px] font-bold text-[#545966] underline-offset-4 transition hover:text-[#c0392b] hover:underline" aria-label="Eliminar {{ $nice($item['producto'] ?? 'producto') }}">Quitar</button>
                             </form>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="flex h-full flex-col items-center justify-center text-center">
-                    <div class="grid h-16 w-16 place-items-center rounded-full border border-edge bg-panel">
-                        <svg class="h-8 w-8 text-haze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
-                    </div>
-                    <p class="mt-4 text-lg font-black">Tu carrito está vacío</p>
-                    <p class="mt-1 text-sm text-haze">Agrega productos para verlos aquí.</p>
+                <div class="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
+                    <span class="grid h-16 w-16 place-items-center bg-[var(--hh-soft)] text-[var(--hh-accent)]">
+                        <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                    </span>
+                    <p class="text-[18px] font-extrabold">Tu carrito está vacío</p>
+                    <p class="max-w-[280px] text-[14px] font-medium text-[#545966]">Agrega tus prendas favoritas y aparecerán aquí.</p>
+                    <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus mt-2 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ir a la tienda →</a>
                 </div>
             @endforelse
         </div>
 
-        <div class="border-t border-edge bg-ink px-4 py-5 sm:px-6">
-            @if ($cartItems->isNotEmpty())
-                <div class="mb-5 rounded-2xl border border-edge bg-panel px-4 py-4">
-                    <div class="flex gap-3">
-                        <svg class="mt-0.5 h-6 w-6 shrink-0 text-live" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 1.8c.7 4.4-2.2 5.8-2.2 8.7 0 1.2.7 2.1 1.7 2.1 1.6 0 2.5-1.5 2.1-3.5 2.6 2 4 4.4 4 7.1a7.1 7.1 0 0 1-14.2 0c0-3.8 2-7.3 5.8-10.5-.2 2.6.5 4.1 1.5 4.1 1.4 0 2.3-2.7 1.3-8Z"/></svg>
-                        <div>
-                            <p class="text-sm font-black">¡Ahorra más comprando en pack!</p>
-                            <p class="mt-1 text-xs text-haze">Agrega un producto adicional y obtén mejor precio.</p>
-                        </div>
-                    </div>
+        @if ($cartItems->isNotEmpty())
+            <div class="border-t border-[var(--shop-line)] px-5 pb-5 pt-4 sm:px-6">
+                <a href="{{ $combosUrl }}" class="os-focus mb-4 flex items-center justify-between gap-3 border border-dashed border-[var(--shop-check-line)] px-4 py-3 transition hover:border-[var(--hh-accent)]">
+                    <span class="flex flex-col">
+                        <span class="text-[14px] font-extrabold">¡Ahorra más comprando en pack!</span>
+                        <span class="text-[12px] font-medium text-[#545966]">Mira los combos con mejor precio.</span>
+                    </span>
+                    <span class="shrink-0 text-[13px] font-extrabold text-[var(--hh-accent)]">Ver combos →</span>
+                </a>
+                <div class="flex items-baseline justify-between">
+                    <span class="text-[16px] font-extrabold">Subtotal</span>
+                    <span class="text-[24px] font-extrabold">S/ {{ number_format($cartTotal, 2) }}</span>
                 </div>
-                <div class="mb-4 flex items-center justify-between text-sm font-black">
-                    <span>Total</span>
-                    <span>S/ {{ number_format($cartTotal, 2) }}</span>
-                </div>
-                <a href="{{ route('web.cart.index') }}" class="btn-primary w-full gap-2 px-5 py-4">
+                <p class="mt-1 text-[12px] font-medium text-[#545966]">El envío se calcula al finalizar la compra.</p>
+                <a href="{{ route('web.cart.index') }}" class="os-hh-btn os-focus mt-4 w-full gap-2 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
                     Comprar ahora
                 </a>
-            @endif
-            <button type="button" data-cart-close class="btn-secondary mt-3 w-full px-5 py-4">Seguir comprando</button>
-        </div>
+                <button type="button" data-cart-close class="os-focus mt-3 w-full py-2 text-[13px] font-extrabold uppercase tracking-[1.2px] text-[#0b0f14] underline-offset-4 hover:text-[var(--hh-accent)] hover:underline">Seguir comprando</button>
+            </div>
+        @endif
     </aside>
 
     {{-- Una página puede traer su propio footer (p. ej. la home de Overshark Girls). --}}
     @hasSection('footer')
         @yield('footer')
     @else
+    {{-- Pie (diseño Figma "Footer" · Overshark / Overshark Girls): fondo blanco, solo cambia el logo y el gris de los íconos. --}}
+    @php
+        $footerGirls = $storeLine === 'mujer' && ! $brandPageContext;
+        $footerLogo = $brandPageContext?->logoUrl() ?: asset('images/home-hombre/'.($footerGirls ? 'logo-girls.png' : 'logo-overshark.png'));
+        $footerBravos = $menuBrands->first(fn ($menuBrand) => str_contains(mb_strtoupper($menuBrand->name), 'BRAVO'));
+        $footerFaq = route('web.contact').'#faq';
+        $footerCommunity = \App\Support\AboutPage::content()['comunidad'];
+        $footerSocials = collect([
+            ['Facebook', 'facebook', $footerCommunity['facebook'] ?? null],
+            ['TikTok', 'tiktok', $footerCommunity['tiktok'] ?? null],
+            ['Instagram', 'instagram', $footerCommunity['instagram'] ?? null],
+            ['WhatsApp', 'whatsapp', $brand->whatsappUrl()],
+        ])->filter(fn (array $social) => filled($social[2]));
+        $footerLink = 'transition hover:text-[var(--ft-accent)]';
+    @endphp
     <span id="nosotros" aria-hidden="true"></span>
-    <footer id="contacto" class="border-t border-edge bg-ink text-white">
-        <div class="border-b border-edge px-5 py-7">
-            <a href="{{ $homeUrl }}" class="mx-auto flex w-fit items-center justify-center" aria-label="Overshark inicio">
-                @if ($publicBrandLogo)
-                    <img src="{{ $publicBrandLogo }}" alt="{{ $brandPageContext?->name ?: 'Overshark' }}" class="h-16 w-56 object-contain sm:w-64">
-                @else
-                    <span class="text-3xl font-black uppercase italic tracking-tight">Overshark</span>
-                @endif
+    <footer id="contacto" @class(['os-footer', 'os-footer--girls' => $footerGirls])>
+        <div class="flex justify-center border-b border-[#e5e7eb] py-3">
+            <a href="{{ $homeUrl }}" class="os-focus flex h-16 w-[216px] items-center justify-center" aria-label="{{ $brandPageContext?->name ?: ($footerGirls ? 'Overshark Girls' : 'Overshark') }}, inicio">
+                <img src="{{ $footerLogo }}" alt="" class="max-h-[42px] max-w-[190px] object-contain">
             </a>
         </div>
 
-        <div class="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-6 py-12 lg:grid-cols-4 lg:px-8">
-            <section>
-                <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Comprar</h2>
-                <nav class="mt-5 flex flex-col gap-3 text-sm text-mist">
-                    <a href="{{ route('web.products.search', ['categoria' => 'polos']) }}" class="transition hover:text-white">Polos</a>
-                    <a href="{{ route('web.products.search', ['q' => 'media']) }}" class="transition hover:text-white">Medias</a>
-                    <button type="button" data-combos-toggle class="os-focus flex w-fit items-center gap-2 text-left transition hover:text-white" aria-expanded="false" aria-controls="combos-menu">
-                        Combos
-                        <img src="{{ asset('images/iconos/Fire.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
-                    </button>
-                    <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="flex items-center gap-2 transition hover:text-white">
-                        Para ellas
-                        <img src="{{ asset('images/iconos/Heart.svg') }}" alt="" class="h-4 w-4 object-contain" aria-hidden="true">
-                    </a>
+        <div class="mx-auto grid max-w-[1094px] grid-cols-2 gap-x-6 gap-y-10 px-6 pb-10 pt-12 lg:grid-cols-4 lg:gap-x-16">
+            <section class="flex flex-col gap-4">
+                <h2 class="text-[16px] font-medium">Comprar</h2>
+                <nav class="flex flex-col gap-3 text-[14px] leading-6" aria-label="Comprar">
+                    <a href="{{ route('web.home', ['linea' => 'hombre']) }}" class="{{ $footerLink }}">Overshark</a>
+                    <a href="{{ $footerBravos ? route('web.brands.show', $footerBravos) : route('web.products.search', ['q' => 'bravos']) }}" class="{{ $footerLink }}">Bravos</a>
+                    <a href="{{ route('web.home', ['linea' => 'mujer']) }}" class="{{ $footerLink }}">Overshark Girls</a>
+                    <a href="{{ $combosUrl }}" class="{{ $footerLink }}">Combos</a>
                 </nav>
-                @if ($menuBrands->isNotEmpty())
-                    <h2 class="mt-8 text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Marcas</h2>
-                    <nav class="mt-5 flex flex-col gap-3 text-sm text-mist" aria-label="Marcas">
-                        @foreach ($menuBrands as $menuBrand)
-                            <a href="{{ route('web.brands.show', $menuBrand) }}" class="transition hover:text-white">{{ $menuBrand->name }}</a>
-                        @endforeach
-                    </nav>
+            </section>
+
+            <section class="flex flex-col gap-4">
+                <h2 class="text-[16px] font-medium">Ayuda</h2>
+                <nav class="flex flex-col gap-3 text-[14px] leading-6" aria-label="Ayuda">
+                    <a href="{{ $footerFaq }}" class="{{ $footerLink }}">Preguntas frecuentes</a>
+                    <a href="{{ $footerFaq }}" class="{{ $footerLink }}">Envíos</a>
+                    <a href="{{ $footerFaq }}" class="{{ $footerLink }}">Cambios y devoluciones</a>
+                    <a href="{{ $footerFaq }}" class="{{ $footerLink }}">Métodos de pago</a>
+                    <a href="{{ route('web.claims.create') }}" class="{{ $footerLink }}">Libro de Reclamaciones</a>
+                </nav>
+            </section>
+
+            <section class="flex flex-col gap-4 text-[14px] leading-6">
+                <h2 class="text-[16px] font-medium">Contacto</h2>
+                @if ($whatsappNumber = $brand->whatsappDisplay())
+                    <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">WhatsApp:</span> <a href="{{ $brand->whatsappUrl() }}" target="_blank" rel="noopener" class="{{ $footerLink }}">{{ $whatsappNumber }}</a></p>
                 @endif
+                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Correo:</span> <a href="mailto:ventas@overshark.com" class="{{ $footerLink }} break-all">ventas@overshark.com</a></p>
+                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Horario de atención:</span> 9am a 6pm L-V</p>
             </section>
 
-            <section>
-                <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Ayuda</h2>
-                <nav class="mt-5 flex flex-col gap-3 text-sm text-mist">
-                    <a href="#contacto" class="transition hover:text-white">Envíos</a>
-                    <a href="#contacto" class="transition hover:text-white">Cambios y devoluciones</a>
-                    <a href="#contacto" class="transition hover:text-white">Métodos de pago</a>
-                </nav>
-            </section>
-
-            <section>
-                <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Contacto</h2>
-                <div class="mt-5 space-y-5 text-sm leading-6 text-mist">
-                    <p><span class="block font-bold text-white">Correo:</span> ventas@overshark.com</p>
-                    <p><span class="block font-bold text-white">Horario de atención:</span> 9am a 6pm L-V</p>
-                </div>
-            </section>
-
-            <section>
-                <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neon-soft">Envíos a todo el Perú</h2>
-                <div class="mt-5 space-y-2 text-sm text-mist">
-                    <p>Lima: delivery o agencia</p>
-                    <p>Provincia: agencia</p>
-                    <p class="mt-3 w-fit rounded-full border border-neon/50 bg-neon/15 px-4 py-1.5 font-bold text-neon-soft">S/14 costo único</p>
-                </div>
-                <a href="{{ route('web.claims.create') }}" class="mt-5 block w-fit rounded-lg bg-white p-1 transition hover:opacity-80" aria-label="Abrir libro de reclamaciones">
-                    <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="Libro de reclamaciones" class="h-auto w-44">
+            <section class="flex flex-col items-start gap-3">
+                <h2 class="text-[16px] font-medium">Envíos a todo el Perú</h2>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Lima: delivery o agencia</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Provincia: agencia</p>
+                <p class="rounded-[6px] bg-[#e9f7f9] px-2.5 py-1 text-[14px] font-medium leading-[18px] text-[#1c7696]">S/ 14 costo único</p>
+                <a href="{{ route('web.claims.create') }}" class="os-focus mt-2 block transition hover:opacity-80" aria-label="Libro de Reclamaciones">
+                    <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="" class="h-[83px] w-[121px] object-contain">
                 </a>
             </section>
         </div>
 
-        <div class="border-t border-edge">
-            <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-6 py-6 text-sm text-haze sm:flex-row lg:px-8">
-                <div class="flex items-center gap-4">
-                    @foreach ([
-                        ['Facebook', 'facebook.svg'],
-                        ['Instagram', 'instagram.svg'],
-                        ['TikTok', 'tiktok.svg'],
-                        ['WhatsApp', 'whatsapp.svg'],
-                    ] as [$social, $icon])
-                        <a href="#" class="grid h-9 w-9 place-items-center rounded-full border border-edge bg-panel text-white transition hover:-translate-y-0.5 hover:border-neon-soft hover:bg-neon" aria-label="{{ $social }}">
-                            <img src="{{ asset('images/iconos/'.$icon) }}" alt="" class="h-5 w-5 object-contain brightness-0 invert" aria-hidden="true">
+        <div class="border-t border-[#e5e7eb]">
+            <div class="mx-auto flex max-w-[1440px] flex-col items-center gap-4 px-6 py-5 text-[14px] leading-6 text-[var(--ft-muted)] sm:grid sm:grid-cols-[1fr_auto_1fr] lg:px-[100px]">
+                <div class="flex items-center gap-2 sm:justify-self-start">
+                    @foreach ($footerSocials as [$label, $icon, $url])
+                        <a href="{{ $url }}" target="_blank" rel="noopener" class="os-focus grid h-11 w-11 place-items-center rounded-full transition hover:bg-[#f2f4f7]" aria-label="{{ $label }}">
+                            <img src="{{ asset('images/footer/'.$icon.($footerGirls ? '-girls' : '').'.svg') }}" alt="" width="30" height="30">
                         </a>
                     @endforeach
                 </div>
-                <p>© {{ date('Y') }} Overshark. Todos los derechos reservados.</p>
+                <p class="text-center">© {{ date('Y') }} Overshark. Todos los derechos reservados.</p>
             </div>
         </div>
     </footer>
+    @endif
+    {{-- Botón flotante de WhatsApp (número y mensaje en Admin → Identidad visual). --}}
+    @if ($whatsappUrl = $brand->whatsappUrl())
+        <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="os-wa os-focus" aria-label="Escríbenos por WhatsApp">
+            <svg viewBox="0 0 32 32" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M16.04 3C8.85 3 3 8.82 3 15.98c0 2.29.6 4.52 1.75 6.49L3 29l6.7-1.75a13.1 13.1 0 0 0 6.34 1.62h.01c7.19 0 13.04-5.82 13.04-12.98C29.09 8.82 23.24 3 16.04 3Zm0 23.68h-.01a10.9 10.9 0 0 1-5.53-1.51l-.4-.24-3.98 1.04 1.06-3.86-.26-.4a10.7 10.7 0 0 1-1.66-5.73c0-5.95 4.87-10.79 10.79-10.79 5.93 0 10.77 4.84 10.77 10.79 0 5.95-4.84 10.7-10.78 10.7Zm5.91-8.05c-.32-.16-1.92-.94-2.21-1.05-.3-.11-.51-.16-.73.16-.21.32-.83 1.05-1.02 1.27-.19.21-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.6-.96-.85-1.6-1.9-1.79-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.56.16-.19.21-.32.32-.54.11-.21.05-.4-.03-.56-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.54-.73-.55h-.62c-.21 0-.56.08-.86.4-.3.32-1.13 1.1-1.13 2.69 0 1.58 1.16 3.11 1.32 3.33.16.21 2.28 3.47 5.52 4.87.77.33 1.37.53 1.84.68.77.24 1.48.21 2.03.13.62-.09 1.92-.78 2.19-1.54.27-.75.27-1.4.19-1.54-.08-.13-.29-.21-.62-.37Z"/></svg>
+        </a>
     @endif
     @yield('scripts')
 </body>

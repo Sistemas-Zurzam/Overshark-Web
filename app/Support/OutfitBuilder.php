@@ -23,8 +23,11 @@ class OutfitBuilder
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function combos(): Collection
+    public function combos(?string $line = null): Collection
     {
+        // Cada línea ve sus looks: en mujer los combos de Overshark Girls; en hombre, el resto.
+        $girls = ($line ?? session('storefront.line')) === 'mujer';
+
         return Combo::query()
             ->where('status', true)
             ->where('modality', 'Outfit')
@@ -32,6 +35,7 @@ class OutfitBuilder
             ->whereNotNull('price')
             ->orderBy('price')
             ->get()
+            ->filter(fn (Combo $combo): bool => str_contains(mb_strtolower($combo->brand.' '.$combo->name), 'girl') === $girls)
             ->map(fn (Combo $combo): array => $this->build($combo))
             ->filter(fn (array $combo): bool => $combo['steps'] !== [])
             ->values();
@@ -57,7 +61,7 @@ class OutfitBuilder
                     return [
                         'product' => Str::title(mb_strtolower($first->name)),
                         'color' => $first->color,
-                        'image' => $galleries->get($first->name)?->get($first->color)?->imageUrls()[0] ?? $first->imageUrl() ?? $fallback,
+                        'image' => Thumb::url($galleries->get($first->name)?->get($first->color)?->imageUrls()[0] ?? $first->imageUrl() ?? $fallback),
                         'price' => (float) $variants->min('price'),
                         'sizes' => $variants
                             ->sortBy(fn (Producto $v) => array_search(mb_strtoupper((string) $v->talla), self::SIZE_ORDER, true) ?? 99)
@@ -88,6 +92,9 @@ class OutfitBuilder
             'tagline' => $combo->notes ?: collect($steps)->pluck('label')->implode(' + '),
             'detail' => collect($steps)->pluck('label')->implode(' + '),
             'price' => (float) $combo->price,
+            // Foto del look: la imagen propia del combo o, si no tiene, la primera opción de cada prenda.
+            'image' => $combo->imagen && $combo->imagen !== 'images/default-hero-banner.png' ? $combo->imageUrl() : null,
+            'photos' => collect($steps)->map(fn (array $step) => $step['options'][0]['image'] ?? null)->filter()->values()->all(),
             'cart_url' => route('web.combos.cart.store', $combo),
             'steps' => $steps,
         ];

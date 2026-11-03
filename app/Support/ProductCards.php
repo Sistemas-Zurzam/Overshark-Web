@@ -36,7 +36,8 @@ class ProductCards
 
                     return [
                         'name' => $color,
-                        'image' => $galleryImages[0] ?? $product->imageUrl() ?? $fallbackImage,
+                        // Miniatura: la foto grande achicada a tarjeta hace rayas (moiré) en telas con textura.
+                        'image' => Thumb::url($galleryImages[0] ?? $product->imageUrl() ?? $fallbackImage),
                     ];
                 })
                 ->values();
@@ -53,7 +54,7 @@ class ProductCards
                 ->first();
 
             $product->setAttribute('display_colors', $colors);
-            $product->setAttribute('display_image', $galleryImage ?? $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage);
+            $product->setAttribute('display_image', Thumb::url($galleryImage ?? $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage));
         });
 
         return $products;
