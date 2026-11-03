@@ -45,7 +45,7 @@
                         <div class="grid h-full place-items-center px-6 text-center text-sm font-semibold text-slate-400">Sin imagen principal</div>
                     @endif
                 </div>
-                <form action="{{ route('admin.productos.image', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3">
+                <form action="{{ route('admin.productos.image', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3" data-compress-images>
                     @csrf
                     <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" required class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
                     <button type="submit" class="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">Guardar imagen</button>
@@ -56,7 +56,7 @@
                 <h2 class="text-lg font-black text-slate-950">Imagenes por color</h2>
                 <p class="mt-1 text-sm text-slate-500">Sube hasta 5 imagenes. Al guardar, reemplaza las anteriores de ese color.</p>
 
-                <form action="{{ route('admin.productos.color-images', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3">
+                <form action="{{ route('admin.productos.color-images', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3" data-compress-images>
                     @csrf
                     <select name="color" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
                         <option value="">Selecciona color</option>
@@ -81,7 +81,7 @@
                     @endif
                 </div>
 
-                <form action="{{ route('admin.productos.size-guide', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3">
+                <form action="{{ route('admin.productos.size-guide', $producto) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3" data-compress-images>
                     @csrf
                     <input type="file" name="guia_tallas_imagen" accept=".png,.jpg,.jpeg,.webp" required class="block w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:font-bold file:text-white hover:file:bg-cyan-600">
                     <button type="submit" class="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700">Guardar guia de tallas</button>

@@ -13,6 +13,19 @@ use Illuminate\View\View;
 
 class ProductoController extends Controller
 {
+    /** Mensajes legibles para las subidas de imágenes (sin archivos de idioma se verían las claves). */
+    private const UPLOAD_MESSAGES = [
+        'uploaded' => 'Una imagen no se pudo subir: pesa más de lo que permite el servidor. Prueba con fotos más livianas o menos fotos a la vez.',
+        'images.*.uploaded' => 'Una imagen no se pudo subir: pesa más de lo que permite el servidor. Prueba con fotos más livianas o menos fotos a la vez.',
+        'image' => 'El archivo debe ser una imagen.',
+        'images.*.image' => 'Cada archivo debe ser una imagen.',
+        'mimes' => 'Usa imágenes PNG, JPG o WEBP.',
+        'images.*.mimes' => 'Usa imágenes PNG, JPG o WEBP.',
+        'max' => 'Cada imagen puede pesar como máximo 8 MB.',
+        'images.*.max' => 'Cada imagen puede pesar como máximo 8 MB.',
+        'images.max' => 'Sube como máximo 5 imágenes por color.',
+    ];
+
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
@@ -83,7 +96,7 @@ class ProductoController extends Controller
     {
         $validated = $request->validate([
             'image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
-        ]);
+        ], self::UPLOAD_MESSAGES);
 
         $variants = $this->variantsFor($producto)->get();
         $oldImages = $variants->pluck('imagen')->filter()->unique();
@@ -133,7 +146,7 @@ class ProductoController extends Controller
     {
         $validated = $request->validate([
             'guia_tallas_imagen' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
-        ]);
+        ], self::UPLOAD_MESSAGES);
 
         $variants = $this->variantsFor($producto)->get();
         $oldImages = $variants->pluck('guia_tallas_imagen')->filter()->unique();
@@ -152,7 +165,7 @@ class ProductoController extends Controller
             'color' => ['required', 'string', 'max:255'],
             'images' => ['required', 'array', 'max:5'],
             'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
-        ]);
+        ], self::UPLOAD_MESSAGES);
 
         $record = ProductoColorImage::query()->firstOrNew([
             'product_name' => $producto->name,

@@ -101,6 +101,11 @@ class ZazuInventorySyncService
         }
 
         $company = is_array($item['empresa'] ?? null) ? $item['empresa'] : [];
+        $companyName = trim((string) ($company['nombre'] ?? $item['company_name'] ?? ''));
+        if (! $this->sellsCompany($companyName)) {
+            return null;
+        }
+
         $sourceKey = $variantId !== null
             ? "variante:{$variantId}"
             : "producto:{$productId}";
@@ -110,7 +115,7 @@ class ZazuInventorySyncService
             'zazu_product_id' => $productId,
             'zazu_variant_id' => $variantId,
             'zazu_company_id' => isset($company['id']) ? (int) $company['id'] : null,
-            'empresa_nombre' => trim((string) ($company['nombre'] ?? $item['company_name'] ?? '')) ?: null,
+            'empresa_nombre' => $companyName ?: null,
             'name' => trim((string) ($item['nombre'] ?? data_get($item, 'producto.nombre', ''))),
             'default_code' => $sku,
             'color' => $this->nullableString($item['color'] ?? null),
@@ -122,6 +127,18 @@ class ZazuInventorySyncService
             'categoria' => $this->nullableString($item['categoria'] ?? null),
             'zazu_synced_at' => now(),
         ];
+    }
+
+    /**
+     * Solo las empresas de ZAZU_COMPANIES; sin lista configurada se aceptan todas. Un ítem sin empresa
+     * se acepta, para que un cambio de formato en Zazu no deje todo el catálogo con stock 0.
+     */
+    private function sellsCompany(string $name): bool
+    {
+        $allowed = (array) config('services.zazu.companies', []);
+
+        return $allowed === [] || $name === ''
+            || collect($allowed)->contains(fn (string $part): bool => Str::contains(mb_strtoupper($name), mb_strtoupper($part)));
     }
 
     private function upsertProduct(array $mapped): void

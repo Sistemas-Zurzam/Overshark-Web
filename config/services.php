@@ -44,6 +44,9 @@ return [
         'inventory_path' => env('ZAZU_INVENTORY_PATH', '/api/external/inventario'),
         'token' => env('ZAZU_INVENTORY_TOKEN'),
         'timeout' => (int) env('ZAZU_TIMEOUT', 30),
+        // Empresas de Zazu que vende la tienda (parte del nombre, separadas por coma). Las demás
+        // (p. ej. BOX PRIME) no se sincronizan y sus productos ya guardados quedan con stock 0.
+        'companies' => array_values(array_filter(array_map('trim', explode(',', (string) env('ZAZU_COMPANIES', 'OVERSHARK,BRAVOS'))))),
     ],
 
 

@@ -19,8 +19,6 @@
         ],
     ];
     $perks = [
-        ['label' => 'Compras en vivo', 'color' => '#EF4444'],
-        ['label' => 'Asesoría personalizada', 'color' => '#5E9BEA'],
         ['label' => 'Envíos a todo el Perú', 'color' => '#FFFFFF'],
     ];
 @endphp

@@ -15,7 +15,10 @@ class CollectionSelectionTest extends TestCase
             ->assertOk()
             ->assertSee('¿Qué quieres explorar?')
             ->assertSee(route('web.home', ['linea' => 'hombre']), false)
-            ->assertSee(route('web.home', ['linea' => 'mujer']), false);
+            ->assertSee(route('web.home', ['linea' => 'mujer']), false)
+            ->assertSee('Envíos a todo el Perú')
+            ->assertDontSee('Compras en vivo')
+            ->assertDontSee('Asesoría personalizada');
     }
 
     public function test_choosing_a_line_remembers_it_and_shows_the_store(): void
