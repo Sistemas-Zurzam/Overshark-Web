@@ -227,11 +227,12 @@ Route::post('/checkout/datos-personales', function (Request $request) {
         'apellidos' => ['required', 'string', 'max:120'],
         'phone' => ['required', 'regex:/^9\d{8}$/'],
         'doc_type' => ['required', 'in:DNI,CE'],
-        'doc_number' => ['required', 'string', 'max:20', $request->input('doc_type') === 'DNI' ? 'regex:/^\d{8}$/' : 'regex:/^[A-Za-z0-9]{6,12}$/'],
-        'distrito_id' => ['required', 'integer', 'exists:distritos,id'],
-        'address' => ['required', 'string', 'max:255'],
-        'reference' => ['nullable', 'string', 'max:255'],
-        'delivery' => ['required', 'in:domicilio,agencia'],
+        'doc_number' => ['required', 'string', 'max:12', \App\Support\DocumentNumber::rule($request->input('doc_type'))],
+        // Con recojo en almacén no se pide dirección.
+        'distrito_id' => ['exclude_if:delivery,almacen', 'required', 'integer', 'exists:distritos,id'],
+        'address' => ['exclude_if:delivery,almacen', 'required', 'string', 'max:255'],
+        'reference' => ['exclude_if:delivery,almacen', 'nullable', 'string', 'max:255'],
+        'delivery' => ['required', 'in:domicilio,agencia,almacen'],
         'agency' => ['required_if:delivery,agencia', 'nullable', 'string', 'max:255'],
         'invoice' => ['required', 'in:boleta,factura'],
         'ruc' => ['required_if:invoice,factura', 'nullable', 'regex:/^(10|20)\d{9}$/'],
@@ -244,7 +245,7 @@ Route::post('/checkout/datos-personales', function (Request $request) {
         'phone.required' => 'Ingresa tu celular.',
         'phone.regex' => 'Ingresa un celular de 9 dígitos que empiece con 9.',
         'doc_number.required' => 'Ingresa tu número de documento.',
-        'doc_number.regex' => $request->input('doc_type') === 'DNI' ? 'El DNI tiene 8 dígitos.' : 'Revisa el número de tu carné de extranjería.',
+        'doc_number.regex' => \App\Support\DocumentNumber::message($request->input('doc_type')),
         'distrito_id.required' => 'Elige tu distrito.',
         'address.required' => 'Ingresa tu dirección.',
         'agency.required_if' => 'Elige la agencia donde recogerás tu pedido.',
@@ -254,7 +255,7 @@ Route::post('/checkout/datos-personales', function (Request $request) {
     ]);
 
     // Fuera de Lima solo hay recojo en agencia.
-    $department = Distrito::query()->with('provincia.departamento')->find($validated['distrito_id'])?->provincia?->departamento?->name;
+    $department = Distrito::query()->with('provincia.departamento')->find($validated['distrito_id'] ?? 0)?->provincia?->departamento?->name;
     if ($validated['delivery'] === 'domicilio' && mb_strtoupper((string) $department) !== 'LIMA') {
         return back()->withInput()->withErrors(['delivery' => 'Fuera de Lima el envío es a una agencia. Elige "Recojo en agencia".']);
     }
@@ -552,8 +553,8 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     $colorOptions = $variants
         ->whereNotNull('color')
         ->groupBy('color')
-        // Mismo orden que la tarjeta del catálogo: primero el color con más stock.
-        ->sortByDesc(fn ($items) => $items->sum('stock'))
+        // Mismo orden que la tarjeta del catálogo: primero los colores con foto propia y, entre ellos, el de más stock.
+        ->sortByDesc(fn ($items, string $color) => [$galleries->has($color) ? 1 : 0, $items->sum('stock')])
         ->map(function ($items, string $color) use ($galleries, $producto, $fallbackImage) {
             $galleryImages = $galleries->get($color)?->imageUrls() ?? [];
 
@@ -569,7 +570,9 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         ->selectRaw('MIN(id) as id, categoria_id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
-        ->where('name', '!=', $producto->name);
+        ->where('name', '!=', $producto->name)
+        // Recomendaciones de la misma línea (Overshark Girls u Overshark hombre).
+        ->tap(fn ($query) => GirlsHome::isGirls($producto->name, $producto->marca) ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query));
 
     if ($producto->categoria_id) {
         $recommendedProductsQuery->where('categoria_id', $producto->categoria_id);
@@ -584,7 +587,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         $fallbackImage,
     );
 
-    // Productos de Bravos: ficha con el diseño de la marca (Figma "PDP · Polera Neru · Desktop").
+    // Ficha con el diseño de Figma "PDP": paleta de Bravos, Overshark Girls u Overshark según el producto.
     $bravosBrand = Producto::query()->whereKey($producto->id)->ofBrand('BRAVOS')->exists()
         ? Brand::query()->active()->where('slug', 'bravos')->first()
         : null;
@@ -605,8 +608,9 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         );
     }
 
-    return view($bravosBrand ? 'web.product-show-bravos' : 'web.product-show', [
+    return view('web.product-show', [
         'brandPage' => $bravosBrand,
+        'line' => $bravosBrand ? 'bravos' : (GirlsHome::isGirls($producto->name, $producto->marca) ? 'girls' : 'hombre'),
         'producto' => $producto,
         'variants' => $variants,
         'colorOptions' => $colorOptions,
@@ -626,6 +630,8 @@ Route::get('/buscar', function (Request $request) {
     }
 
     $search = trim((string) $request->query('q', ''));
+    // En Zazu la Baby Tee se llama "Baby Ty": la búsqueda acepta el nombre con el que se vende.
+    $searchTerm = preg_replace('/\bbaby\s*tees?\b/iu', 'baby ty', $search);
     $marca = trim((string) $request->query('marca', ''));
     $categoria = StorefrontCategories::find($request->query('categoria')) ? (string) $request->query('categoria') : '';
     $orden = in_array($request->query('orden'), ['novedades', 'populares', 'precio-asc', 'precio-desc'], true) ? (string) $request->query('orden') : '';
@@ -657,12 +663,12 @@ Route::get('/buscar', function (Request $request) {
     $max = $max === $priceCeil ? null : $max;
 
     $filtered = fn (bool $withCategory) => $available()
-        ->when($search !== '', function ($query) use ($search): void {
-            $query->where(function ($searchQuery) use ($search): void {
-                $searchQuery->where('name', 'like', "%{$search}%")
-                    ->orWhere('default_code', 'like', "%{$search}%")
-                    ->orWhere('color', 'like', "%{$search}%")
-                    ->orWhere('talla', 'like', "%{$search}%");
+        ->when($search !== '', function ($query) use ($searchTerm): void {
+            $query->where(function ($searchQuery) use ($searchTerm): void {
+                $searchQuery->where('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('default_code', 'like', "%{$searchTerm}%")
+                    ->orWhere('color', 'like', "%{$searchTerm}%")
+                    ->orWhere('talla', 'like', "%{$searchTerm}%");
             });
         })
         ->when($talla !== '', fn ($query) => $query->whereRaw('UPPER(TRIM(talla)) = ?', [$talla]))
@@ -723,6 +729,8 @@ Route::get('/buscar', function (Request $request) {
 Route::get('/mujer/productos', function (Request $request) {
     session(['storefront.line' => 'mujer']);
     $search = trim((string) $request->query('q', ''));
+    // En Zazu la Baby Tee se llama "Baby Ty": la búsqueda acepta el nombre con el que se vende.
+    $searchTerm = preg_replace('/\bbaby\s*tees?\b/iu', 'baby ty', $search);
 
     return view('web.girls-products', [
         'search' => $search,
@@ -731,11 +739,11 @@ Route::get('/mujer/productos', function (Request $request) {
                 ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
                 ->where('stock', '>', 0)
-                ->when($search !== '', function ($query) use ($search): void {
-                    $query->where(function ($searchQuery) use ($search): void {
-                        $searchQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('default_code', 'like', "%{$search}%")
-                            ->orWhere('color', 'like', "%{$search}%");
+                ->when($search !== '', function ($query) use ($searchTerm): void {
+                    $query->where(function ($searchQuery) use ($searchTerm): void {
+                        $searchQuery->where('name', 'like', "%{$searchTerm}%")
+                            ->orWhere('default_code', 'like', "%{$searchTerm}%")
+                            ->orWhere('color', 'like', "%{$searchTerm}%");
                     });
                 })
                 ->groupBy('zazu_company_id', 'name')

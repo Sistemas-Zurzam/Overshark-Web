@@ -28,8 +28,9 @@ class ProductCards
             $galleries = $galleriesByProduct->get($product->name, collect())->keyBy('color');
             $colors = $variantsByProduct->get(self::productKey($product->name, $product->zazu_company_id), collect())
                 ->groupBy('color')
-                // Primero el color con más stock (es la foto de la tarjeta): así no todos salen del mismo color.
-                ->sortByDesc(fn ($variants) => $variants->sum('stock'))
+                // Primero los colores con foto propia y, entre ellos, el de más stock (es la foto de la tarjeta):
+                // así las muestras de color de la tarjeta enseñan primero las fotos reales.
+                ->sortByDesc(fn ($variants, string $color) => [$galleries->has($color) ? 1 : 0, $variants->sum('stock')])
                 ->map(function ($variants, string $color) use ($galleries, $product, $fallbackImage) {
                     $gallery = $galleries->get($color);
                     $galleryImages = $gallery?->imageUrls() ?? [];

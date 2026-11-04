@@ -44,10 +44,10 @@
     ])->values());
 @endphp
 <!DOCTYPE html>
-<html lang="es" data-line="{{ $storeLine }}">
+<html lang="es" data-line="{{ $bravosContext ? 'bravos' : $storeLine }}" data-bravos-logo="{{ asset('images/bravos/logo-bravos-full-white.svg') }}" data-overshark-logo="{{ asset('images/nav/logo-overshark-full-light.svg') }}" data-girls-logo="{{ asset('images/girls/logo-girls-full-light.svg') }}">
 <head>
     {{-- Si se viene de cambiar de colección, la cortina arranca cerrada antes del primer pintado (ver resources/js/line-transition.js). --}}
-    <script>try{var l=sessionStorage.getItem('os-line-wipe');if(l==='hombre'||l==='mujer'){document.documentElement.classList.add('line-wipe-in');document.documentElement.dataset.lineWipe=l;}}catch(e){}</script>
+    <script>try{var l=sessionStorage.getItem('os-line-wipe');if(l==='hombre'||l==='mujer'||l==='bravos'){document.documentElement.classList.add('line-wipe-in');document.documentElement.dataset.lineWipe=l;}}catch(e){}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="@yield('meta_description', 'Overshark, tienda online')">
@@ -207,7 +207,7 @@
                     $qty = (int) ($item['qty'] ?? 1);
                     $price = (float) ($item['price'] ?? 0);
                     $oldPrice = $price > 0 ? $price / 0.8 : 0;
-                    $nice = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text));
+                    $nice = fn ($text) => \App\Support\ProductName::title((string) $text);
                 @endphp
                 <div class="flex gap-4 border-b border-[var(--shop-line)] py-5 last:border-b-0">
                     <div class="h-[120px] w-[96px] shrink-0 overflow-hidden bg-[var(--hh-soft)]">

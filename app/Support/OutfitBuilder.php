@@ -7,7 +7,6 @@ use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Services\ComboSelectionService;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 /**
  * Datos de "Arma tu outfit": por cada combo de outfit, sus prendas (pasos) y, en cada una, las
@@ -59,7 +58,7 @@ class OutfitBuilder
                     $first = $variants->first();
 
                     return [
-                        'product' => Str::title(mb_strtolower($first->name)),
+                        'product' => ProductName::title($first->name),
                         'color' => $first->color,
                         'image' => Thumb::url($galleries->get($first->name)?->get($first->color)?->imageUrls()[0] ?? $first->imageUrl() ?? $fallback),
                         'price' => (float) $variants->min('price'),
@@ -75,7 +74,7 @@ class OutfitBuilder
 
             for ($i = 1; $i <= max(1, (int) $slot['quantity']); $i++) {
                 $steps[] = [
-                    'label' => Str::title(mb_strtolower($slot['product'])).($slot['quantity'] > 1 ? " {$i}" : ''),
+                    'label' => ProductName::title($slot['product']).($slot['quantity'] > 1 ? " {$i}" : ''),
                     'options' => $options,
                 ];
             }

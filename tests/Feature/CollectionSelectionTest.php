@@ -72,7 +72,7 @@ class CollectionSelectionTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('Los más vendidos')
-            ->assertSee('Baby Ty Basica · Rosa')
+            ->assertSee('Baby Tee Basica · Rosa')
             ->assertDontSee('Polo Waffle');
     }
 
@@ -145,5 +145,22 @@ class CollectionSelectionTest extends TestCase
             ->assertDontSee('os-hh--girls', false)
             ->assertSee('Casual Chino')
             ->assertDontSee('Soft Pink');
+    }
+
+    public function test_baby_ty_from_zazu_is_shown_and_found_as_baby_tee(): void
+    {
+        $this->assertSame('BABY TEE MANGA', \App\Support\ProductName::display('BABY TY MANGA'));
+        $this->assertSame('Baby Tee', \App\Support\ProductName::title('BABY TY'));
+        $this->assertSame('Top Rib', \App\Support\ProductName::title('TOP RIB'));
+
+        \App\Models\Admin\Producto::query()->create([
+            'name' => 'BABY TY', 'default_code' => 'BT-N-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 5, 'price' => 17, 'zazu_company_id' => 1,
+        ]);
+
+        $this->withSession(['storefront.line' => 'mujer'])
+            ->get(route('web.products.search', ['q' => 'baby tee']))
+            ->assertOk()
+            ->assertSee('Baby Tee · Negro')
+            ->assertDontSee('Baby Ty');
     }
 }

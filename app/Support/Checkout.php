@@ -33,7 +33,7 @@ class Checkout
     {
         $items = collect(session('cart.items', []));
         $subtotal = (float) $items->sum(fn (array $item) => (float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 0));
-        $shipping = $items->isEmpty() ? 0.0 : Shipping::costFor($subtotal);
+        $shipping = $items->isEmpty() ? 0.0 : Shipping::costFor($subtotal, session('checkout.customer.delivery'));
 
         return [
             'items' => $items,
@@ -78,7 +78,7 @@ class Checkout
 
             $variant = Producto::query()->find($item['variant_id'] ?? 0);
             if (! $variant || (float) $variant->price <= 0 || (int) $variant->stock < $qty) {
-                $name = Str::title(mb_strtolower((string) ($item['producto'] ?? 'Una prenda')));
+                $name = ProductName::title((string) ($item['producto'] ?? 'Una prenda'));
 
                 return ['lines' => $lines, 'error' => "{$name} ({$item['color']} · {$item['talla']}) ya no tiene stock suficiente. Ajusta la cantidad o quítala del carrito."];
             }
@@ -140,8 +140,12 @@ class Checkout
             );
 
             $subtotal = (float) $lines->sum(fn (array $line) => $line['price'] * $line['qty']);
-            $shipping = Shipping::costFor($subtotal);
-            $delivery = $customer['delivery'] === 'agencia' ? 'Recojo en agencia' : 'Envío a domicilio';
+            $shipping = Shipping::costFor($subtotal, $customer['delivery']);
+            $delivery = match ($customer['delivery']) {
+                'agencia' => 'Recojo en agencia',
+                Shipping::PICKUP => 'Recojo en almacén',
+                default => 'Envío a domicilio',
+            };
 
             $order = Order::query()->create([
                 'number_zazu' => 'WEB-'.Str::upper(Str::random(12)),
@@ -174,8 +178,8 @@ class Checkout
                 'entrega' => $customer['delivery'],
                 'agencia' => $customer['agency'] ?? null,
                 'tipo_registro_id' => $register->id,
-                'distrito_id' => $customer['distrito_id'],
-                'direccion' => $customer['address'],
+                'distrito_id' => $customer['distrito_id'] ?? null,
+                'direccion' => $customer['address'] ?? null,
                 'referencia' => $customer['reference'] ?? null,
                 'tipo_comprobante' => $customer['invoice'],
                 'ruc' => $customer['ruc'] ?? null,

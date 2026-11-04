@@ -121,7 +121,7 @@ class ZazuInventorySyncService
             'color' => $this->nullableString($item['color'] ?? null),
             'talla' => $this->nullableString($item['talla'] ?? null),
             'stock' => max(0, (int) round((float) ($item['disponible_venta'] ?? $item['stock_disponible'] ?? $item['stock'] ?? 0))),
-            'price' => (float) ($item['precio_venta'] ?? 0),
+            'price' => $this->price($item),
             'standard_price' => isset($item['costo']) ? (float) $item['costo'] : null,
             'imagen' => $this->imageUrl($item['imagen'] ?? null),
             'categoria' => $this->nullableString($item['categoria'] ?? null),
@@ -176,6 +176,21 @@ class ZazuInventorySyncService
                 'stock' => 0,
                 'zazu_synced_at' => now(),
             ]);
+    }
+
+    /**
+     * Precio de venta de la variante; si la variante no tiene uno propio (vacío o 0), el del producto
+     * (en Zazu el precio suele estar solo en la ficha del producto, p. ej. BABY TY a S/ 17).
+     */
+    private function price(array $item): float
+    {
+        foreach ([$item['precio_venta'] ?? null, $item['precio_variante'] ?? null, data_get($item, 'producto.precio_venta'), $item['precio_producto'] ?? null, $item['precio'] ?? null] as $price) {
+            if (is_numeric($price) && (float) $price > 0) {
+                return (float) $price;
+            }
+        }
+
+        return 0.0;
     }
 
     private function imageUrl(mixed $value): ?string

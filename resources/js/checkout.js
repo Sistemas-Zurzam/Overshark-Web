@@ -1,10 +1,12 @@
 // Checkout (web/checkout/details.blade.php y payment.blade.php).
-// Datos y entrega: departamento → provincia → distrito, domicilio solo en Lima, agencias por distrito y factura.
+// Datos y entrega: departamento → provincia → distrito, domicilio solo en Lima, agencias por distrito,
+// recojo en almacén (sin dirección ni envío) y factura.
 // Pago: muestra el panel del medio elegido, sube la captura (reducida en el navegador) y evita el doble envío.
 import { shrinkImage } from './shrink-image';
+import { productTitle } from './product-name';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const title = (s) => String(s ?? '').toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+const title = productTitle;
 const options = (items, placeholder, selected) => `<option value="">${placeholder}</option>${items
     .map((item) => `<option value="${item.id}"${String(item.id) === String(selected) ? ' selected' : ''}>${esc(title(item.name))}</option>`).join('')}`;
 
@@ -19,6 +21,9 @@ if (details) {
     const agency = $('[data-ck-agency]');
     const homeRadio = details.querySelector('input[name="delivery"][value="domicilio"]');
     const agencyRadio = details.querySelector('input[name="delivery"][value="agencia"]');
+    const pickupRadio = details.querySelector('input[name="delivery"][value="almacen"]');
+    const summary = document.querySelector('[data-ck-summary]');
+    const money = (n) => `S/ ${n.toFixed(2)}`;
 
     const currentDepartment = () => ubigeo.find((d) => String(d.id) === departamento.value);
     const currentProvince = () => currentDepartment()?.provincias.find((p) => String(p.id) === provincia.value);
@@ -86,6 +91,15 @@ if (details) {
         if (!lima && homeRadio.checked) agencyRadio.checked = true;
         $('[data-ck-agency-field]').classList.toggle('hidden', !agencyRadio.checked);
         agency.required = agencyRadio.checked;
+
+        // Recojo en almacén: sin dirección y sin costo de envío.
+        $('[data-ck-address]').classList.toggle('hidden', pickupRadio.checked);
+        if (summary) {
+            const subtotal = Number(summary.dataset.subtotal);
+            const shipping = pickupRadio.checked ? 0 : Number(summary.dataset.shippingCost);
+            summary.querySelector('[data-ck-shipping]').textContent = shipping > 0 ? money(shipping) : 'Gratis';
+            summary.querySelector('[data-ck-total]').textContent = money(subtotal + shipping);
+        }
     };
 
     fillProvinces(savedProv);
@@ -96,7 +110,7 @@ if (details) {
     departamento.addEventListener('change', () => { fillProvinces(); fillDistricts(); syncDelivery(); loadAgencies(); });
     provincia.addEventListener('change', () => { fillDistricts(); loadAgencies(); });
     distrito.addEventListener('change', loadAgencies);
-    [homeRadio, agencyRadio].forEach((radio) => radio.addEventListener('change', () => {
+    [homeRadio, agencyRadio, pickupRadio].forEach((radio) => radio.addEventListener('change', () => {
         syncDelivery();
         if (agencyRadio.checked) loadAgencies();
     }));

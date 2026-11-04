@@ -1,6 +1,7 @@
 // Arma tu outfit (web/outfit.blade.php): el look es un combo de outfit; cada prenda del combo es una
 // pestaña con sus opciones (producto + color y tallas). "Tu look" muestra lo elegido, el ahorro real
 // frente al precio normal y envía las variantes al carrito del combo (selections[] en orden de prendas).
+import { productTitle } from './product-name';
 const root = document.querySelector('[data-outfit-builder]');
 
 if (root) {
@@ -8,7 +9,7 @@ if (root) {
     const $ = (sel) => root.querySelector(sel);
     const money = (n) => `S/ ${Number(n).toFixed(2)}`;
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const title = (s) => String(s ?? '').toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+    const title = productTitle;
     const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
     let combo = combos.find((c) => c.available) ?? null;

@@ -14,11 +14,9 @@
 @endpush
 
 @php
-    $title = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text));
+    $title = fn ($text) => \App\Support\ProductName::title((string) $text);
     $selected = old('method', $methods->first()['id'] ?? null);
-    $deliveryText = ($customer['delivery'] ?? '') === 'agencia'
-        ? 'Recojo en agencia: '.($customer['agency'] ?? '')
-        : 'Envío a domicilio: '.($customer['address'] ?? '');
+    $deliveryText = \App\Support\Shipping::deliveryLabel($customer['delivery'] ?? null, $customer['agency'] ?? null, $customer['address'] ?? null);
 @endphp
 
 @section('checkout')

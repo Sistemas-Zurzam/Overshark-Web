@@ -4,7 +4,7 @@
 
 @section('title', 'Tu carrito | Overshark')
 
-@php($title = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text)))
+@php($title = fn ($text) => \App\Support\ProductName::title((string) $text))
 
 @section('checkout')
     @if ($items->isEmpty())
@@ -67,9 +67,10 @@
                 <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[280px]">SEGUIR COMPRANDO</a>
             </section>
 
-            @component('web.checkout.partials.summary', compact('items', 'count', 'subtotal', 'shipping', 'total'))
+            {{-- En el carrito aún no se eligió la entrega: sin fila de envío y el total es el subtotal. --}}
+            @component('web.checkout.partials.summary', ['items' => $items, 'count' => $count, 'subtotal' => $subtotal, 'shipping' => null, 'total' => $subtotal])
                 <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
-                <p class="text-[12px] leading-[1.45] text-[#65717c]">Envío S/ 14 a todo el Perú.</p>
+                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 14 a domicilio o agencia, gratis si recoges en almacén.</p>
             @endcomponent
         </div>
     @endif

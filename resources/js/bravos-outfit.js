@@ -1,5 +1,6 @@
 // Arma tu outfit de Bravos (web/bravos-outfit.blade.php): una prenda por paso (top y pantalón), cada una
 // con su color y talla. "Tu outfit" suma los precios individuales y envía las prendas a web.cart.look.
+import { productTitle } from './product-name';
 const root = document.querySelector('[data-bravos-outfit]');
 
 if (root) {
@@ -10,7 +11,7 @@ if (root) {
     const $ = (sel) => root.querySelector(sel);
     const money = (n) => `S/ ${Number(n).toFixed(2)}`;
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const title = (s) => String(s ?? '').toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+    const title = productTitle;
 
     const firstSize = (color) => color.sizes.find((s) => s.stock > 0)?.size ?? null;
     const pick = (model, colorIndex = 0) => ({ model, color: colorIndex, size: firstSize(model.colors[colorIndex]) });

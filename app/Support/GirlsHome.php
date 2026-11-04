@@ -26,6 +26,15 @@ class GirlsHome
         });
     }
 
+    /** Si un producto es de la línea mujer, con el mismo criterio que onlyGirls(). */
+    public static function isGirls(?string $name, ?string $marca = null): bool
+    {
+        $name = mb_strtolower((string) $name);
+
+        return str_contains(mb_strtolower((string) $marca), 'girl')
+            || collect(self::TERMINOS)->contains(fn (string $termino) => str_contains($name, $termino));
+    }
+
     /** Lo contrario de onlyGirls(); con marca vacía (NULL) el producto no es de la línea mujer. */
     public static function exceptGirls(Builder $query): Builder
     {

@@ -10,7 +10,7 @@
 --}}
 @php
     $girls = session('storefront.line') === 'mujer' && $marca === '';
-    $title = fn (string $name) => \Illuminate\Support\Str::title(mb_strtolower($name));
+    $title = fn ($text) => \App\Support\ProductName::title((string) $text);
     $url = fn (array $changes = []) => route('web.products.search', array_filter([...$filters, ...$changes], fn ($value) => $value !== null && $value !== ''));
     $categories = \App\Support\StorefrontCategories::all();
     $talla = $filters['talla'] ?? '';

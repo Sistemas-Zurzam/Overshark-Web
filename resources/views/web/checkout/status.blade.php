@@ -8,7 +8,7 @@
 @section('title', ($paid ? 'Pedido confirmado' : 'Pedido recibido').' | Overshark')
 
 @php
-    $title = fn ($text) => \Illuminate\Support\Str::title(mb_strtolower((string) $text));
+    $title = fn ($text) => \App\Support\ProductName::title((string) $text);
     $cashOnDelivery = $order->metodo_pago_nombre === 'Pago contraentrega';
 @endphp
 
@@ -32,8 +32,8 @@
         <hr class="border-[#dae0e5]">
 
         <p class="text-[16px] leading-[1.45]">
-            {{ $order->entrega === 'agencia' ? 'Recojo en agencia · '.$order->agencia : 'Entrega a domicilio · '.$order->direccion }}<br>
-            Entrega estimada: 2 a 4 días hábiles
+            {{ \App\Support\Shipping::deliveryLabel($order->entrega, $order->agencia, $order->direccion) }}<br>
+            {{ $order->entrega === \App\Support\Shipping::PICKUP ? 'Te avisaremos por WhatsApp cuando tu pedido esté listo para recoger.' : 'Entrega estimada: 2 a 4 días hábiles' }}
         </p>
 
         <ul class="flex flex-col gap-4">

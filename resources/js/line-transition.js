@@ -1,14 +1,37 @@
-// Cortina al cambiar de colección (hombre ⇄ mujer), igual que la del selector (explore.js).
-// Al hacer clic en un enlace a /?linea=… de la otra colección, la cortina sube y cubre la
-// pantalla; en la página nueva arranca cerrada (clase puesta en el <head> del layout) y se abre.
+// Cortina al cambiar de colección o marca (hombre ⇄ mujer ⇄ Bravos), igual que la del selector (explore.js).
+// Al hacer clic en un enlace a /?linea=… de otra colección o a la portada de Bravos (/marcas/bravos), la
+// cortina sube y cubre la pantalla; en la página nueva arranca cerrada (clase puesta en el <head> del layout)
+// y se abre. Bravos usa amarillo y negro con su logo (data-bravos-logo en <html>).
 const KEY = 'os-line-wipe';
 const LINES = {
     hombre: { a: '#2F6FD0', b: '#03111E' },
     mujer: { a: '#D63A78', b: '#3A1229' },
+    bravos: { a: '#FFDB00', b: '#0A0A0A' },
 };
 const EASE = 'cubic-bezier(.87,0,.13,1)';
 const root = document.documentElement;
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Los logos de la cortina se precargan para que estén listos cuando se cierre.
+[root.dataset.bravosLogo, root.dataset.oversharkLogo, root.dataset.girlsLogo].filter(Boolean).forEach((src) => {
+    new Image().src = src;
+});
+
+function logo(line) {
+    if (line === 'bravos' && root.dataset.bravosLogo) {
+        return `<img src="${root.dataset.bravosLogo}" alt="" class="line-wipe__logo-img" width="420" height="134">`;
+    }
+
+    if (line === 'hombre' && root.dataset.oversharkLogo) {
+        return `<img src="${root.dataset.oversharkLogo}" alt="" class="line-wipe__logo-img line-wipe__logo-img--wide" width="480" height="81">`;
+    }
+
+    if (line === 'mujer' && root.dataset.girlsLogo) {
+        return `<img src="${root.dataset.girlsLogo}" alt="" class="line-wipe__logo-img" width="420" height="124">`;
+    }
+
+    return line === 'mujer' ? 'OVERSHARK GIRLS' : 'OVERSHARK';
+}
 
 function buildCurtain(line, closed) {
     const colors = LINES[line] ?? LINES.hombre;
@@ -19,7 +42,7 @@ function buildCurtain(line, closed) {
     curtain.innerHTML = `
         <div class="line-wipe__layer" style="background:${colors.a};clip-path:${clip}"></div>
         <div class="line-wipe__layer line-wipe__layer--b" style="background:${colors.b};clip-path:${clip}">
-            <span class="line-wipe__logo" style="opacity:${closed ? 1 : 0}">${line === 'mujer' ? 'OVERSHARK GIRLS' : 'OVERSHARK'}</span>
+            <span class="line-wipe__logo" style="opacity:${closed ? 1 : 0}">${logo(line)}</span>
         </div>`;
     document.body.append(curtain);
     return curtain;
@@ -66,7 +89,9 @@ function wipeTo(href, line) {
 
 function targetLine(link) {
     const url = new URL(link.href, window.location.href);
-    if (url.origin !== window.location.origin || url.pathname !== '/') return null;
+    if (url.origin !== window.location.origin) return null;
+    if (url.pathname === '/marcas/bravos') return root.dataset.line !== 'bravos' ? 'bravos' : null;
+    if (url.pathname !== '/') return null;
     const line = url.searchParams.get('linea');
     return line in LINES && line !== root.dataset.line ? line : null;
 }

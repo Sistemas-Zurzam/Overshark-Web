@@ -1,8 +1,8 @@
 @extends('web.checkout.layout', ['step' => 2])
 
 {{--
-    C2 · Datos y entrega: compra como invitado, dirección (departamento → provincia → distrito), entrega a
-    domicilio (solo Lima) o recojo en agencia, y comprobante. Se guarda en sesión (web.checkout.personal.store).
+    C2 · Datos y entrega: compra como invitado, entrega a domicilio (solo Lima), recojo en agencia o recojo en
+    almacén (gratis, sin dirección), dirección (departamento → provincia → distrito) y comprobante. Se guarda en sesión (web.checkout.personal.store).
     Selects en cascada, agencias y factura: resources/js/checkout.js.
 --}}
 
@@ -17,6 +17,9 @@
     $distritoId = (int) $value('distrito_id', 0);
     $delivery = $value('delivery', 'domicilio');
     $invoice = $value('invoice', 'boleta');
+    // Costo del envío a domicilio o agencia (puede ser 0 con envío gratis); el recojo en almacén siempre es gratis.
+    $shippingCost = \App\Support\Shipping::costFor($subtotal);
+    $pickupAddress = \App\Support\Shipping::pickupAddress();
 @endphp
 
 @section('checkout')
@@ -52,7 +55,7 @@
                         <input type="text" name="apellidos" value="{{ $value('apellidos') }}" required autocomplete="family-name" placeholder="Ingresa tus apellidos" class="os-ck-input">
                     </label>
                     <label class="os-ck-field">Celular
-                        <input type="tel" name="phone" value="{{ $value('phone') }}" required autocomplete="tel-national" inputmode="numeric" maxlength="9" placeholder="999 999 999" class="os-ck-input">
+                        <input type="tel" name="phone" value="{{ $value('phone') }}" required autocomplete="tel-national" inputmode="numeric" maxlength="9" placeholder="999 999 999" class="os-ck-input" data-digits-only>
                     </label>
                     <div class="os-ck-field">
                         <span id="ck-doc">DNI / CE</span>
@@ -62,13 +65,41 @@
                                     <option value="{{ $docType }}" @selected($value('doc_type', 'DNI') === $docType)>{{ $docType }}</option>
                                 @endforeach
                             </select>
-                            <input type="text" name="doc_number" value="{{ $value('doc_number') }}" required inputmode="numeric" maxlength="12" placeholder="Número de documento" class="os-ck-input" aria-label="Número de documento">
+                            <input type="text" name="doc_number" value="{{ $value('doc_number') }}" required inputmode="numeric" maxlength="8" placeholder="8 dígitos" class="os-ck-input" aria-label="Número de documento" data-doc-number="doc_type">
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section class="flex flex-col gap-4" aria-labelledby="ck-address">
+            <fieldset class="flex flex-col gap-3">
+                <legend class="mb-3 text-[20px] font-bold leading-[1.45]">Entrega</legend>
+                <label class="os-ck-option" data-ck-home>
+                    <input type="radio" name="delivery" value="domicilio" @checked($delivery === 'domicilio') class="os-ck-radio">
+                    <span class="flex flex-col gap-1">
+                        <span class="text-[15px] font-bold">Envío a domicilio — S/ {{ number_format($shippingCost, 2) }}</span>
+                        <span class="text-[12px] text-[#65717c]" data-ck-home-note>Solo en Lima. Entrega estimada: 2 a 4 días hábiles.</span>
+                    </span>
+                </label>
+                <label class="os-ck-option">
+                    <input type="radio" name="delivery" value="agencia" @checked($delivery === 'agencia') class="os-ck-radio">
+                    <span class="flex flex-col gap-1">
+                        <span class="text-[15px] font-bold">Recojo en agencia — S/ {{ number_format($shippingCost, 2) }}</span>
+                        <span class="text-[12px] text-[#65717c]">Lima y provincias. Te avisamos cuando tu pedido llegue a la agencia.</span>
+                    </span>
+                </label>
+                <label class="os-ck-option">
+                    <input type="radio" name="delivery" value="almacen" @checked($delivery === 'almacen') class="os-ck-radio">
+                    <span class="flex flex-col gap-1">
+                        <span class="text-[15px] font-bold">Recojo en almacén — Gratis</span>
+                        <span class="text-[12px] text-[#65717c]">
+                            {{ $pickupAddress !== '' ? $pickupAddress.'.' : 'Te enviamos la dirección por WhatsApp.' }}
+                            Te avisamos cuando tu pedido esté listo para recoger.
+                        </span>
+                    </span>
+                </label>
+            </fieldset>
+
+            <section @class(['flex flex-col gap-4', 'hidden' => $delivery === 'almacen']) aria-labelledby="ck-address" data-ck-address>
                 <h2 id="ck-address" class="text-[20px] font-bold leading-[1.45]">Dirección de envío</h2>
                 <div class="grid gap-4 sm:grid-cols-3">
                     <label class="os-ck-field">Departamento
@@ -87,30 +118,12 @@
                 <label class="os-ck-field">Referencia (opcional)
                     <input type="text" name="reference" value="{{ $value('reference') }}" placeholder="Ayúdanos a encontrar tu dirección" class="os-ck-input">
                 </label>
-            </section>
-
-            <fieldset class="flex flex-col gap-3">
-                <legend class="mb-3 text-[20px] font-bold leading-[1.45]">Entrega</legend>
-                <label class="os-ck-option" data-ck-home>
-                    <input type="radio" name="delivery" value="domicilio" @checked($delivery === 'domicilio') class="os-ck-radio">
-                    <span class="flex flex-col gap-1">
-                        <span class="text-[15px] font-bold">Envío a domicilio — S/ 14.00</span>
-                        <span class="text-[12px] text-[#65717c]" data-ck-home-note>Solo en Lima. Entrega estimada: 2 a 4 días hábiles.</span>
-                    </span>
-                </label>
-                <label class="os-ck-option">
-                    <input type="radio" name="delivery" value="agencia" @checked($delivery === 'agencia') class="os-ck-radio">
-                    <span class="flex flex-col gap-1">
-                        <span class="text-[15px] font-bold">Recojo en agencia — S/ 14.00</span>
-                        <span class="text-[12px] text-[#65717c]">Lima y provincias. Te avisamos cuando tu pedido llegue a la agencia.</span>
-                    </span>
-                </label>
                 <label class="os-ck-field hidden" data-ck-agency-field>Agencia de recojo
                     <select name="agency" class="os-ck-input" data-ck-agency data-selected="{{ $value('agency') }}">
                         <option value="">Elige primero tu distrito</option>
                     </select>
                 </label>
-            </fieldset>
+            </section>
 
             <fieldset class="flex flex-col gap-3">
                 <legend class="mb-3 text-[14px] font-bold">Comprobante</legend>
@@ -135,7 +148,7 @@
             </div>
         </form>
 
-        @component('web.checkout.partials.summary', compact('items', 'count', 'subtotal', 'shipping', 'total'))
+        @component('web.checkout.partials.summary', compact('items', 'count', 'subtotal', 'shipping', 'total', 'shippingCost'))
         @endcomponent
     </div>
 @endsection

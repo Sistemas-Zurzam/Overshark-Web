@@ -106,7 +106,7 @@
                                             <input id="document_number" name="document_number"
                                                 value="{{ old('document_number') }}"
                                                 class="w-full min-w-0 rounded-lg border border-edge bg-panel px-3 py-3 text-sm outline-none placeholder:text-haze focus:border-neon-soft focus:ring-4 focus:ring-neon/25"
-                                                placeholder="75351525" required>
+                                                placeholder="75351525" required data-doc-number="document_type">
                                         </div>
                                         @error('document_number')
                                             <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
@@ -181,7 +181,7 @@
                                             documento</label>
                                         <input id="guardian_document_number" name="guardian_document_number"
                                             value="{{ old('guardian_document_number') }}" class="{{ $fieldClass }}"
-                                            placeholder="Documento">
+                                            placeholder="Documento" data-doc-number="guardian_document_type">
                                     </div>
                                 </div>
 

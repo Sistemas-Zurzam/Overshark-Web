@@ -733,6 +733,21 @@ html.line-wipe-in[data-line-wipe="mujer"]::after {
     background: #3A1229;
 }
 
+html.line-wipe-in[data-line-wipe="bravos"]::after {
+    background: #0A0A0A;
+}
+
+.line-wipe__logo-img {
+    display: block;
+    width: clamp(180px, 34vw, 420px);
+    height: auto;
+}
+
+/* El logo de Overshark es apaisado: un poco más ancho para igualar la presencia de los otros. */
+.line-wipe__logo-img--wide {
+    width: clamp(220px, 40vw, 480px);
+}
+
 .line-wipe {
     position: fixed;
     inset: 0;
@@ -1747,7 +1762,7 @@ button.os-nav-icon:hover {
     }
 }
 
-/* Ficha de producto de Bravos (web/product-show-bravos.blade.php, Figma "PDP · Polera Neru"). */
+/* Ficha de producto (web/product-show.blade.php, Figma "PDP · Polera Neru"): colores de la línea vía variables. */
 .os-bpdp-swatch {
     width: 30px;
     height: 30px;
@@ -1764,7 +1779,7 @@ button.os-nav-icon:hover {
 }
 
 .os-bpdp-swatch[aria-checked='true'] {
-    outline-color: #2467cf;
+    outline-color: var(--hh-accent, #2467cf);
 }
 
 .os-bpdp-size {
@@ -1782,11 +1797,11 @@ button.os-nav-icon:hover {
 }
 
 .os-bpdp-size:hover:not(:disabled) {
-    border-color: #061c2d;
+    border-color: var(--shop-deep, #061c2d);
 }
 
 .os-bpdp-size[aria-checked='true'] {
-    background: #061c2d;
+    background: var(--shop-deep, #061c2d);
     color: #ffffff;
 }
 
@@ -1818,7 +1833,7 @@ button.os-nav-icon:hover {
 }
 
 .os-bpdp .os-pdp-dot.is-active {
-    background: #061c2d;
+    background: var(--shop-deep, #061c2d);
 }
 
 /* Arma tu outfit de Bravos (web/bravos-outfit.blade.php): tarjeta de prenda; la elegida va con borde amarillo. */
@@ -2055,4 +2070,28 @@ button.os-nav-icon:hover {
     .os-hh--bravos .os-hh-title {
         font-size: 36px;
     }
+}
+
+/* Detalle de combo en celular: el botón de WhatsApp sube para no tapar la barra de compra fija. */
+@media (max-width: 1023px) {
+    body:has(.os-combo [data-combo-builder]) .os-wa {
+        bottom: 88px;
+    }
+}
+
+/* Colores en las tarjetas de producto (web/partials/hh-product-card.blade.php). */
+.os-card-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--sw);
+    box-shadow: inset 0 0 0 1px rgb(11 15 20 / 15%);
+    outline: 1.5px solid transparent;
+    outline-offset: 2px;
+    transition: outline-color 140ms ease;
+}
+
+.os-card-swatch:hover,
+.os-card-swatch[aria-pressed='true'] {
+    outline-color: #0b0f14;
 }

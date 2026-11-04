@@ -49,4 +49,23 @@ class ZazuInventorySyncTest extends TestCase
         $this->assertDatabaseMissing('productos', ['name' => 'CASE LA']);
         $this->assertDatabaseHas('productos', ['name' => 'AIRPODS PRO 2', 'stock' => 0]);
     }
+
+    public function test_variant_without_its_own_price_uses_the_product_price(): void
+    {
+        config(['services.zazu.base_url' => 'https://zazu.test', 'services.zazu.token' => 'token', 'services.zazu.companies' => ['OVERSHARK']]);
+
+        Http::fake(['zazu.test/*' => Http::response([
+            'data' => [[
+                'zazu_product_id' => 7, 'zazu_variant_id' => 70, 'sku' => 'BT-NEGRO-S', 'nombre' => 'BABY TY',
+                'talla' => 'S', 'color' => 'NEGRO', 'disponible_venta' => 3, 'precio_venta' => null,
+                'producto' => ['id' => 7, 'nombre' => 'BABY TY', 'precio_venta' => '17.00'],
+                'empresa' => ['id' => 1, 'nombre' => 'OVERSHARK PERU S.A.C'],
+            ]],
+            'last_page' => 1,
+        ])]);
+
+        app(ZazuInventorySyncService::class)->sync();
+
+        $this->assertDatabaseHas('productos', ['name' => 'BABY TY', 'color' => 'NEGRO', 'price' => 17, 'stock' => 3]);
+    }
 }

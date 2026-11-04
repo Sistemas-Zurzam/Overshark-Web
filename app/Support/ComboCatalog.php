@@ -7,7 +7,6 @@ use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Combos para la página pública /combos.
@@ -76,7 +75,7 @@ class ComboCatalog
         }
 
         $quantity = $isChoice ? max(1, (int) $combo->selection_limit) : $items->sum('qty');
-        $label = fn (string $key) => Str::title(mb_strtolower($key));
+        $label = fn (string $key) => ProductName::title($key);
         $single = ! $isChoice && $items->count() === 1;
 
         // Los nombres tipo "10x99" no dicen qué prenda es: se nombra por el producto.

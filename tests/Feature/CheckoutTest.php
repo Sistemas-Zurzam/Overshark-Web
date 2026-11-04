@@ -53,19 +53,22 @@ class CheckoutTest extends TestCase
         ], $overrides);
     }
 
-    public function test_cart_shows_prices_with_taxes_included_and_shipping(): void
+    public function test_cart_shows_prices_with_taxes_included_and_shipping_only_after_choosing_delivery(): void
     {
         $this->get(route('web.cart.index'))->assertOk()->assertSee('TU CARRITO ESTÁ VACÍO');
 
         $this->addToCart();
 
+        // En el carrito aún no hay tipo de entrega: el total es el subtotal, sin fila de envío.
         $this->get(route('web.cart.index'))
             ->assertOk()
             ->assertSee('2 prendas para tu próximo look')
             ->assertSee('S/ 80.00')
-            ->assertSee('S/ 14.00')
-            ->assertSee('S/ 94.00')
+            ->assertDontSee('S/ 14.00')
+            ->assertDontSee('S/ 94.00')
             ->assertDontSee('IGV');
+
+        $this->get(route('web.checkout.personal'))->assertOk()->assertSee('S/ 94.00');
     }
 
     public function test_details_are_validated_and_home_delivery_is_only_for_lima(): void
@@ -74,6 +77,12 @@ class CheckoutTest extends TestCase
 
         $this->post(route('web.checkout.personal.store'), $this->customer(['phone' => '12345']))
             ->assertSessionHasErrors('phone');
+
+        // DNI de 8 dígitos y CE de 9 a 12 caracteres.
+        $this->post(route('web.checkout.personal.store'), $this->customer(['doc_number' => '729865355555']))
+            ->assertSessionHasErrors(['doc_number' => 'El DNI tiene 8 dígitos.']);
+        $this->post(route('web.checkout.personal.store'), $this->customer(['doc_type' => 'CE', 'doc_number' => '0012345678901']))
+            ->assertSessionHasErrors('doc_number');
 
         $this->post(route('web.checkout.personal.store'), $this->customer(['distrito_id' => $this->wanchaq->id]))
             ->assertSessionHasErrors('delivery');
@@ -141,6 +150,26 @@ class CheckoutTest extends TestCase
         $order = Order::query()->sole();
         $this->assertNull($order->comprobante_pago);
         $this->get(route('web.checkout.done', $order))->assertOk()->assertSee('¡RECIBIMOS TU PEDIDO!');
+    }
+
+    public function test_warehouse_pickup_needs_no_address_and_has_no_shipping_cost(): void
+    {
+        config(['services.storefront.pickup_address' => 'Jr. Gamarra 100, La Victoria']);
+        $this->addToCart();
+
+        $this->post(route('web.checkout.personal.store'), $this->customer(['delivery' => 'almacen', 'distrito_id' => null, 'address' => '']))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('web.checkout.payment'));
+
+        $this->get(route('web.checkout.payment'))->assertOk()->assertSee('Recojo en almacén (gratis): Jr. Gamarra 100, La Victoria')->assertSee('S/ 80.00');
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'token' => session('checkout.token'), 'terms' => 1]);
+
+        $order = Order::query()->sole();
+        $this->assertSame('almacen', $order->entrega);
+        $this->assertSame('0.00', (string) $order->envio);
+        $this->assertSame('80.00', (string) $order->precio_total);
+        $this->assertNull($order->direccion);
+        $this->get(route('web.checkout.done', $order))->assertOk()->assertSee('listo para recoger');
     }
 
     public function test_an_order_page_is_only_visible_to_its_buyer(): void

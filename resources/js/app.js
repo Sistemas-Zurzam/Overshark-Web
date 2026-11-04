@@ -1232,120 +1232,6 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-document.querySelectorAll('[data-combo-slot]').forEach((slot) => {
-    const productSelect = slot.querySelector('[data-combo-product]');
-    const sizeSelect = slot.querySelector('[data-combo-size]');
-    const colorSelect = slot.querySelector('[data-combo-color]');
-    const variantInput = slot.querySelector('[data-combo-variant]');
-    const sizeOptions = Array.from(slot.querySelectorAll('[data-combo-size-option]'));
-    const colorOptions = Array.from(slot.querySelectorAll('[data-combo-color-option]'));
-    const selectedColorLabel = slot.querySelector('[data-combo-selected-color]');
-
-    if (!sizeSelect || !colorSelect || !variantInput) {
-        return;
-    }
-
-    let variants = [];
-
-    try {
-        variants = JSON.parse(slot.dataset.variants || '[]');
-    } catch {
-        variants = [];
-    }
-
-    const filteredVariants = () => variants.filter((variant) => !productSelect || variant.producto === productSelect.value);
-    const uniqueValues = (values) => [...new Set(values.filter(Boolean))];
-    const setOptions = (select, values, selectedValue) => {
-        select.replaceChildren(...values.map((value) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            option.selected = value === selectedValue;
-            return option;
-        }));
-    };
-
-    const syncOptionButtons = (buttons, values, selectedValue, dataKey) => {
-        buttons.forEach((button) => {
-            const value = button.dataset[dataKey];
-            const isAvailable = values.includes(value);
-            const isSelected = value === selectedValue;
-
-            button.classList.toggle('hidden', !isAvailable);
-            button.disabled = !isAvailable;
-
-            if (dataKey === 'comboSizeOption') {
-                button.classList.toggle('bg-neon', isSelected);
-                button.classList.toggle('bg-panel', !isSelected);
-            } else {
-                button.classList.toggle('ring-2', isSelected);
-                button.classList.toggle('ring-neon-soft', isSelected);
-            }
-        });
-    };
-
-    const refreshComboSlot = (preferredVariantId = null) => {
-        const availableVariants = filteredVariants();
-        const currentVariant = availableVariants.find((variant) => String(variant.id) === String(preferredVariantId ?? variantInput.value)) || availableVariants[0];
-
-        if (!currentVariant) {
-            sizeSelect.innerHTML = '<option value="">Sin tallas disponibles</option>';
-            colorSelect.innerHTML = '<option value="">Sin colores disponibles</option>';
-            syncOptionButtons(sizeOptions, [], '', 'comboSizeOption');
-            syncOptionButtons(colorOptions, [], '', 'comboColorOption');
-            variantInput.value = '';
-            return;
-        }
-
-        if (productSelect) {
-            productSelect.value = currentVariant.producto;
-        }
-
-        const sizes = uniqueValues(availableVariants.map((variant) => variant.talla));
-        const size = sizes.includes(sizeSelect.value) ? sizeSelect.value : currentVariant.talla;
-        setOptions(sizeSelect, sizes, size);
-
-        const colors = uniqueValues(availableVariants.filter((variant) => variant.talla === size).map((variant) => variant.color));
-        const colorVariants = availableVariants.filter((variant) => variant.talla === size);
-        const color = colors.includes(colorSelect.value) ? colorSelect.value : colorVariants[0]?.color;
-        setOptions(colorSelect, colors, color);
-        syncOptionButtons(sizeOptions, sizes, size, 'comboSizeOption');
-        syncOptionButtons(colorOptions, colors, color, 'comboColorOption');
-        if (selectedColorLabel) {
-            selectedColorLabel.textContent = color || 'Elige un color';
-        }
-
-        const selectedVariant = colorVariants.find((variant) => variant.color === color) || currentVariant;
-        variantInput.value = selectedVariant.id;
-    };
-
-    productSelect?.addEventListener('change', () => refreshComboSlot());
-    sizeSelect.addEventListener('change', () => refreshComboSlot());
-    colorSelect.addEventListener('change', () => refreshComboSlot());
-    sizeOptions.forEach((button) => button.addEventListener('click', () => {
-        sizeSelect.value = button.dataset.comboSizeOption || '';
-        refreshComboSlot();
-    }));
-    colorOptions.forEach((button) => button.addEventListener('click', () => {
-        colorSelect.value = button.dataset.comboColorOption || '';
-        refreshComboSlot();
-    }));
-    refreshComboSlot(variantInput.value);
-});
-
-document.querySelector('[data-combo-cart-form]')?.addEventListener('submit', (event) => {
-    const emptySelection = Array.from(document.querySelectorAll('[data-combo-variant]')).some((input) => !input.value);
-    const error = document.querySelector('[data-combo-selection-error]');
-
-    if (emptySelection) {
-        event.preventDefault();
-        if (error) {
-            error.textContent = 'Completa la talla y el color de cada unidad.';
-            error.classList.remove('hidden');
-        }
-    }
-});
-
 // Home hombre · "Los más vendidos": las flechas desplazan el carrusel una tarjeta.
 document.querySelectorAll('[data-hh-carousel]').forEach((section) => {
     const track = section.querySelector('[data-hh-track]');
@@ -1444,4 +1330,59 @@ document.querySelectorAll('form[data-compress-images]').forEach((form) => {
         }
         form.requestSubmit(button ?? undefined);
     });
+});
+
+// Documento de identidad (checkout y Libro de Reclamaciones): el campo con data-doc-number="<select>" se
+// ajusta al tipo elegido (largo máximo, teclado y caracteres válidos). El servidor valida lo mismo
+// (App\Support\DocumentNumber).
+const DOC_FORMATS = {
+    DNI: { max: 8, invalid: /\D/g, mode: 'numeric', hint: '8 dígitos' },
+    CE: { max: 12, invalid: /[^0-9a-z]/gi, mode: 'text', hint: '9 a 12 caracteres' },
+    RUC: { max: 11, invalid: /\D/g, mode: 'numeric', hint: '11 dígitos' },
+    Pasaporte: { max: 12, invalid: /[^0-9a-z]/gi, mode: 'text', hint: '6 a 12 caracteres' },
+};
+
+document.querySelectorAll('[data-doc-number]').forEach((input) => {
+    const select = input.form?.querySelector(`[name="${input.dataset.docNumber}"]`);
+    if (!select) return;
+
+    const apply = () => {
+        const format = DOC_FORMATS[select.value] ?? DOC_FORMATS.DNI;
+        input.maxLength = format.max;
+        input.inputMode = format.mode;
+        input.placeholder = format.hint;
+        input.value = input.value.replace(format.invalid, '').slice(0, format.max).toUpperCase();
+    };
+
+    select.addEventListener('change', apply);
+    input.addEventListener('input', apply);
+    apply();
+});
+
+document.querySelectorAll('[data-digits-only]').forEach((input) => {
+    input.addEventListener('input', () => {
+        input.value = input.value.replace(/\D/g, '').slice(0, input.maxLength > 0 ? input.maxLength : undefined);
+    });
+});
+
+// Tarjetas de producto (web/partials/hh-product-card.blade.php): al pasar el mouse o tocar un color,
+// la foto y el nombre de la tarjeta cambian a ese color.
+const showCardSwatch = (swatch) => {
+    const card = swatch.closest('[data-card]');
+    if (!card) return;
+    const image = card.querySelector('[data-card-image]');
+    if (image && swatch.dataset.image) image.src = swatch.dataset.image;
+    const title = card.querySelector('[data-card-title]');
+    if (title) title.textContent = `${title.dataset.cardTitle} · ${swatch.dataset.name}`;
+    card.querySelectorAll('[data-card-swatch]').forEach((other) => other.setAttribute('aria-pressed', String(other === swatch)));
+};
+
+document.addEventListener('click', (event) => {
+    const swatch = event.target.closest('[data-card-swatch]');
+    if (swatch) showCardSwatch(swatch);
+});
+
+document.addEventListener('mouseover', (event) => {
+    const swatch = event.target.closest('[data-card-swatch]');
+    if (swatch) showCardSwatch(swatch);
 });

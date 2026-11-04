@@ -61,10 +61,10 @@
                             @php $colors = collect($product->display_colors ?? [])->take(6); @endphp
                             <article class="gl-prod" data-gl-reveal>
                                 <a href="{{ route('web.products.show', $product->id) }}" class="gl-prod__media">
-                                    <img src="{{ $product->display_image }}" alt="{{ \Illuminate\Support\Str::title(mb_strtolower($product->name)) }}" loading="lazy" decoding="async" data-gl-prod-image>
+                                    <img src="{{ $product->display_image }}" alt="{{ \App\Support\ProductName::title($product->name) }}" loading="lazy" decoding="async" data-gl-prod-image>
                                 </a>
                                 <div class="gl-prod__info">
-                                    <h2 class="gl-prod__name">{{ \Illuminate\Support\Str::title(mb_strtolower($product->name)) }}</h2>
+                                    <h2 class="gl-prod__name">{{ \App\Support\ProductName::title($product->name) }}</h2>
                                     <p class="gl-prod__price"><b>S/ {{ number_format((float) $product->min_price, 2) }}</b></p>
                                     @if ($colors->isNotEmpty())
                                         <div class="gl-swatches" role="group" aria-label="Colores de {{ $product->name }}">

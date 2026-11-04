@@ -114,10 +114,11 @@ class ComboManagementTest extends TestCase
         $this->get(route('web.combos.show', $combo))
             ->assertOk()
             ->assertSee('Elige talla y color')
-            ->assertSee('Los productos repetidos se agrupan en una sola tarjeta.')
+            ->assertSee('Usar la misma elección en todas')
             ->assertSee('Talla')
             ->assertSee('Color')
             ->assertSee('×2 unidades')
+            ->assertSee('TU COMBO')
             ->assertSee('Unidad 1')
             ->assertSee('Unidad 2');
 

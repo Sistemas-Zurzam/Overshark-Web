@@ -63,7 +63,7 @@
                 <dl class="mt-3 space-y-2">
                     <div><dt class="text-xs font-bold uppercase text-slate-500">Cliente</dt><dd>{{ $order->cliente_name }} · {{ $order->cliente_doc_identidad }}</dd></div>
                     <div><dt class="text-xs font-bold uppercase text-slate-500">Contacto</dt><dd>{{ $order->cliente_cel }} · {{ $order->email }}</dd></div>
-                    <div><dt class="text-xs font-bold uppercase text-slate-500">Entrega</dt><dd>{{ $order->entrega === 'agencia' ? 'Recojo en agencia: '.$order->agencia : 'Domicilio: '.$order->direccion }}</dd></div>
+                    <div><dt class="text-xs font-bold uppercase text-slate-500">Entrega</dt><dd>{{ \App\Support\Shipping::deliveryLabel($order->entrega, $order->agencia, $order->direccion) }}</dd></div>
                     @if ($place)<div><dt class="text-xs font-bold uppercase text-slate-500">Distrito</dt><dd>{{ $place }}</dd></div>@endif
                     @if ($order->referencia)<div><dt class="text-xs font-bold uppercase text-slate-500">Referencia</dt><dd>{{ $order->referencia }}</dd></div>@endif
                     <div><dt class="text-xs font-bold uppercase text-slate-500">Comprobante</dt><dd>{{ ucfirst((string) $order->tipo_comprobante) }}@if ($order->ruc) · RUC {{ $order->ruc }} · {{ $order->razon_social }}@endif</dd></div>

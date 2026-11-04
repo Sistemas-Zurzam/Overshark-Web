@@ -1,4 +1,4 @@
-// Ficha de producto (web/product-show.blade.php y web/product-show-bravos.blade.php): galería, color, talla y cantidad.
+// Ficha de producto (web/product-show.blade.php): galería, color, talla y cantidad.
 // Al elegir un color se muestran sus fotos y solo se habilitan las tallas con stock en ese color.
 const page = document.querySelector('[data-pdp]');
 

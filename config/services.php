@@ -55,6 +55,8 @@ return [
         'chat_url' => env('STOREFRONT_CHAT_URL'),
         // Envío gratis desde este subtotal (S/). 0 = sin envío gratis y sin barra en el header.
         'free_shipping_from' => (float) env('STOREFRONT_FREE_SHIPPING_FROM', 0),
+        // Dirección y horario del almacén para "Recojo en almacén" (sin costo). Vacío = se coordina por WhatsApp.
+        'pickup_address' => env('STOREFRONT_PICKUP_ADDRESS'),
     ],
 
 ];
