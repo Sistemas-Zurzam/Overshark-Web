@@ -8,11 +8,15 @@ use App\Models\Admin\ProductoColorImage;
 use App\Models\Brand;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProductoController extends Controller
 {
+    private const BULK_IMAGES_SESSION_KEY = 'admin.bulk_product_images.v2';
+
     /** Mensajes legibles para las subidas de imágenes (sin archivos de idioma se verían las claves). */
     private const UPLOAD_MESSAGES = [
         'uploaded' => 'Una imagen no se pudo subir: pesa más de lo que permite el servidor. Prueba con fotos más livianas o menos fotos a la vez.',
@@ -69,6 +73,324 @@ class ProductoController extends Controller
                 ->unique()
                 ->values(),
         ]);
+    }
+
+    public function bulkImages(Request $request): View
+    {
+        $normalize = fn ($value) => mb_strtolower(trim((string) $value));
+        $galleryImages = ProductoColorImage::query()->get(['product_name', 'color', 'images'])
+            ->mapWithKeys(fn (ProductoColorImage $gallery) => [
+                $normalize($gallery->product_name).'|'.$normalize($gallery->color) => collect($gallery->images ?? [])->filter()->count(),
+            ]);
+
+        $allCoverageProducts = Producto::query()
+            ->whereNotNull('color')
+            ->where('color', '<>', '')
+            ->get(['name', 'color', 'imagen'])
+            ->groupBy('name')
+            ->map(function ($variants, string $name) use ($galleryImages, $normalize): array {
+                $colors = $variants->groupBy('color')->map(function ($colorVariants, string $color) use ($name, $galleryImages, $normalize): array {
+                    $galleryCount = (int) $galleryImages->get($normalize($name).'|'.$normalize($color), 0);
+                    $variantCount = $colorVariants->count();
+                    $mainImageCount = $colorVariants->filter(fn (Producto $variant) => filled($variant->imagen))->count();
+                    $complete = $galleryCount > 0 || $mainImageCount === $variantCount;
+
+                    return [
+                        'name' => $color,
+                        'gallery_count' => $galleryCount,
+                        'variant_count' => $variantCount,
+                        'main_image_count' => $mainImageCount,
+                        'complete' => $complete,
+                        'source' => $galleryCount > 0 ? 'gallery' : ($mainImageCount === 0 ? 'missing' : ($complete ? 'main' : 'partial')),
+                    ];
+                })->values();
+                $missingCount = $colors->where('complete', false)->count();
+
+                return [
+                    'name' => $name,
+                    'colors' => $colors,
+                    'color_count' => $colors->count(),
+                    'covered_count' => $colors->where('complete', true)->count(),
+                    'missing_count' => $missingCount,
+                    'complete' => $missingCount === 0,
+                ];
+            })
+            ->sortBy('name')
+            ->values();
+
+        $search = trim((string) $request->query('coverage_search', ''));
+        $status = (string) $request->query('coverage_status', 'all');
+        if (! in_array($status, ['all', 'missing', 'complete'], true)) {
+            $status = 'all';
+        }
+        $filteredCoverage = $allCoverageProducts
+            ->when($search !== '', fn ($items) => $items->filter(fn ($item) => Str::contains(Str::lower($item['name']), Str::lower($search))))
+            ->when($status === 'missing', fn ($items) => $items->where('complete', false))
+            ->when($status === 'complete', fn ($items) => $items->where('complete', true))
+            ->values();
+        $perPage = 15;
+        $page = LengthAwarePaginator::resolveCurrentPage('coverage_page');
+        $coverageProducts = new LengthAwarePaginator(
+            $filteredCoverage->forPage($page, $perPage)->values(),
+            $filteredCoverage->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'pageName' => 'coverage_page',
+                'query' => $request->except('coverage_page'),
+            ],
+        );
+
+        $allColors = $allCoverageProducts->flatMap(fn ($product) => $product['colors']);
+
+        return view('admin.productos.bulk-images', [
+            'preview' => session(self::BULK_IMAGES_SESSION_KEY),
+            'coverageProducts' => $coverageProducts,
+            'coverageSearch' => $search,
+            'coverageStatus' => $status,
+            'coverageSummary' => [
+                'products' => $allCoverageProducts->count(),
+                'colors' => $allColors->count(),
+                'covered' => $allColors->where('complete', true)->count(),
+                'missing' => $allColors->where('complete', false)->count(),
+            ],
+        ]);
+    }
+
+    public function previewBulkImages(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'images' => ['required', 'array', 'min:1', 'max:20'],
+            'images.*' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+        ], [
+            'images.required' => 'Selecciona al menos una imagen.',
+            'images.max' => 'Puedes revisar hasta 20 imágenes por lote.',
+            'images.*.image' => 'Cada archivo debe ser una imagen PNG, JPG o WEBP.',
+            'images.*.mimes' => 'Usa imágenes PNG, JPG o WEBP.',
+            'images.*.max' => 'Cada imagen puede pesar como máximo 8 MB.',
+        ] + self::UPLOAD_MESSAGES);
+
+        $this->forgetBulkImagePreview();
+        $token = Str::random(40);
+        $files = collect($validated['images'])->values();
+        $parsedFiles = $files->map(function ($file): array {
+            $stem = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $parts = explode('__', $stem);
+            $normalize = fn ($value) => Str::upper(preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value));
+
+            return [
+                'product_name' => $normalize($parts[0] ?? ''),
+                'color' => count($parts) > 1 ? $normalize($parts[1]) : null,
+                'order' => count($parts) > 2 && ctype_digit($parts[2]) ? (int) $parts[2] : null,
+                'invalid_parts' => count($parts) > 3 || (count($parts) === 3 && ! ctype_digit($parts[2])),
+            ];
+        });
+        $items = [];
+
+        foreach ($files as $index => $file) {
+            $parsed = $parsedFiles[$index];
+            $productName = $parsed['product_name'];
+            $color = $parsed['color'];
+            $item = [
+                'filename' => $file->getClientOriginalName(),
+                'product_name' => $productName,
+                'color' => $color,
+                'order' => $parsed['order'],
+                'has_order' => $parsed['order'] !== null,
+                'matches' => 0,
+                'products' => [],
+                'temp_path' => null,
+                'error' => null,
+            ];
+
+            if ($parsed['invalid_parts'] || $productName === '' || mb_strlen($productName) > 255 || ($color !== null && ($color === '' || mb_strlen($color) > 255))) {
+                $item['error'] = 'Usa Nombre del producto__Color__número.jpg o Nombre del producto.jpg.';
+                $items[] = $item;
+
+                continue;
+            }
+
+            $productsQuery = Producto::query()->whereRaw('UPPER(TRIM(name)) = ?', [$productName]);
+            if ($color !== null) {
+                $productsQuery->whereRaw('UPPER(TRIM(color)) = ?', [$color]);
+            }
+            $products = $productsQuery->get(['name', 'color', 'empresa_nombre']);
+
+            $item['products'] = $products
+                ->map(fn (Producto $product) => trim($product->name.($color !== null ? ' · '.$product->color : '').' · '.($product->empresa_nombre ?: 'Sin empresa')))
+                ->unique()
+                ->values()
+                ->all();
+            $item['matches'] = count($item['products']);
+
+            if ($products->isEmpty()) {
+                $item['error'] = $color === null
+                    ? 'No encontramos ese nombre exacto en el catálogo.'
+                    : 'No encontramos ese producto con ese color en el catálogo.';
+                $items[] = $item;
+
+                continue;
+            }
+
+            $safeExtension = $file->guessExtension() ?: 'img';
+            $tempPath = $file->storeAs("bulk-product-images/{$token}", $index.'.'.$safeExtension, 'local');
+            if (! $tempPath) {
+                $item['error'] = 'No se pudo guardar temporalmente este archivo. Inténtalo de nuevo.';
+                $items[] = $item;
+
+                continue;
+            }
+            $item['temp_path'] = $tempPath;
+            $items[] = $item;
+        }
+
+        $mainGroups = collect($items)->filter(fn ($item) => $item['color'] === null && empty($item['error']))
+            ->groupBy('product_name');
+        foreach ($mainGroups as $group) {
+            if ($group->count() > 1) {
+                foreach ($group as $groupIndex => $groupItem) {
+                    $items[$groupIndex]['error'] = 'Solo puede haber una imagen principal por producto en cada lote.';
+                    if (! empty($items[$groupIndex]['temp_path'])) {
+                        Storage::disk('local')->delete($items[$groupIndex]['temp_path']);
+                        $items[$groupIndex]['temp_path'] = null;
+                    }
+                }
+            }
+        }
+
+        $colorGroups = collect($items)->filter(fn ($item) => $item['color'] !== null && empty($item['error']))
+            ->groupBy(fn ($item) => $item['product_name'].'|'.$item['color']);
+        foreach ($colorGroups as $group) {
+            $orders = $group->pluck('order');
+            $groupError = $group->count() > 5
+                ? 'Máximo 5 imágenes por producto y color.'
+                : ($group->count() > 1 && $group->contains(fn ($item) => ! $item['has_order'])
+                    ? 'Numera cada imagen del color al subir varias, por ejemplo __01, __02.'
+                    : ($orders->count() !== $orders->unique()->count() ? 'Los números de imagen deben ser distintos.' : null));
+            if ($groupError !== null) {
+                foreach ($group as $groupIndex => $groupItem) {
+                    $items[$groupIndex]['error'] = $groupError;
+                    if (! empty($items[$groupIndex]['temp_path'])) {
+                        Storage::disk('local')->delete($items[$groupIndex]['temp_path']);
+                        $items[$groupIndex]['temp_path'] = null;
+                    }
+                }
+            }
+        }
+
+        $manifest = ['token' => $token, 'items' => $items];
+        session()->put(self::BULK_IMAGES_SESSION_KEY, $manifest);
+
+        return redirect()->route('admin.productos.images.bulk')->with('preview_ready', true);
+    }
+
+    public function applyBulkImages(Request $request): RedirectResponse
+    {
+        $manifest = session(self::BULK_IMAGES_SESSION_KEY);
+        abort_unless(is_array($manifest) && hash_equals((string) ($manifest['token'] ?? ''), (string) $request->input('token')), 419);
+
+        $updated = 0;
+        $errors = [];
+        $oldPaths = collect();
+        $validItems = collect($manifest['items'] ?? [])->filter(fn ($item) => empty($item['error']) && ! empty($item['temp_path']));
+
+        $mainImages = $validItems->filter(fn ($item) => $item['color'] === null);
+        foreach ($mainImages as $item) {
+            $productName = (string) $item['product_name'];
+            $imagePath = 'productos/'.Str::uuid().'.'.pathinfo($item['temp_path'], PATHINFO_EXTENSION);
+            try {
+                $contents = Storage::disk('local')->get($item['temp_path']);
+                if (! Storage::disk('public')->put($imagePath, $contents)) {
+                    throw new \RuntimeException('No se pudo escribir la imagen en el almacenamiento público.');
+                }
+                $variants = Producto::query()->whereRaw('UPPER(TRIM(name)) = ?', [$productName]);
+                $oldPaths = $oldPaths->merge((clone $variants)->whereNotNull('imagen')->pluck('imagen'));
+                if ($variants->update(['imagen' => $imagePath]) < 1) {
+                    Storage::disk('public')->delete($imagePath);
+                    $errors[] = "{$productName}: el producto ya no existe.";
+                    continue;
+                }
+                $updated++;
+            } catch (\Throwable $exception) {
+                Storage::disk('public')->delete($imagePath);
+                $errors[] = "{$productName}: no se pudo guardar la imagen principal.";
+            }
+        }
+
+        $colorGroups = $validItems->filter(fn ($item) => $item['color'] !== null)
+            ->groupBy(fn ($item) => $item['product_name'].'|'.$item['color']);
+        foreach ($colorGroups as $images) {
+            $first = $images->first();
+            $productName = (string) $first['product_name'];
+            $color = (string) $first['color'];
+            $savedPaths = [];
+            try {
+                $images = $images->sortBy(fn ($item) => $item['order'] ?? 0)->values();
+                foreach ($images as $item) {
+                    $path = 'productos/colores/'.Str::uuid().'.'.pathinfo($item['temp_path'], PATHINFO_EXTENSION);
+                    $contents = Storage::disk('local')->get($item['temp_path']);
+                    if (! Storage::disk('public')->put($path, $contents)) {
+                        throw new \RuntimeException('No se pudo escribir una imagen en el almacenamiento público.');
+                    }
+                    $savedPaths[] = $path;
+                }
+
+                $catalogProduct = Producto::query()
+                    ->whereRaw('UPPER(TRIM(name)) = ?', [$productName])
+                    ->whereRaw('UPPER(TRIM(color)) = ?', [$color])
+                    ->first(['name', 'color']);
+                if (! $catalogProduct) {
+                    throw new \RuntimeException('El producto o color ya no existe en el catálogo.');
+                }
+
+                $record = ProductoColorImage::query()->firstOrNew([
+                    'product_name' => $catalogProduct->name,
+                    'color' => $catalogProduct->color,
+                ]);
+                $oldPaths = $oldPaths->merge($record->images ?? []);
+                $record->images = $savedPaths;
+                $record->save();
+                $updated++;
+            } catch (\Throwable $exception) {
+                Storage::disk('public')->delete($savedPaths);
+                $errors[] = "{$productName} · {$color}: no se pudo guardar la galería de color.";
+            }
+        }
+
+        Producto::refreshCacheVersion();
+        $this->forgetBulkImagePreview();
+
+        $oldPaths->filter()->unique()->each(function (string $path): void {
+            if (! Str::startsWith($path, ['http://', 'https://'])
+                && ! Producto::query()->where('imagen', $path)->exists()
+                && ! ProductoColorImage::query()->whereJsonContains('images', $path)->exists()) {
+                Storage::disk('public')->delete($path);
+            }
+        });
+
+        $message = "Imágenes aplicadas a {$updated} productos o colores.";
+        if ($errors !== []) {
+            $message .= ' No se pudieron aplicar: '.implode(' ', $errors);
+        }
+
+        return redirect()->route('admin.productos.index')->with($errors === [] ? 'status' : 'error', $message);
+    }
+
+    public function cancelBulkImages(): RedirectResponse
+    {
+        $this->forgetBulkImagePreview();
+
+        return redirect()->route('admin.productos.images.bulk');
+    }
+
+    private function forgetBulkImagePreview(): void
+    {
+        $manifest = session(self::BULK_IMAGES_SESSION_KEY);
+        if (! empty($manifest['token'])) {
+            Storage::disk('local')->deleteDirectory('bulk-product-images/'.$manifest['token']);
+        }
+        session()->forget(self::BULK_IMAGES_SESSION_KEY);
     }
 
     public function show(Producto $producto): View

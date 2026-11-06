@@ -225,7 +225,57 @@
     }
 
     .admin-nav-link {
-        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-cyan-700;
+        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition duration-200 hover:bg-white/[0.07] hover:text-white;
+        color: var(--color-mist);
+    }
+
+    .admin-nav-link.is-active {
+        color: #ffffff;
+        background: linear-gradient(100deg, rgb(38 117 255 / 34%), rgb(38 117 255 / 10%));
+        box-shadow: inset 3px 0 var(--color-electric);
+    }
+
+    .admin-topbar {
+        border-bottom: 1px solid #e3e8ef;
+        box-shadow: 0 2px 14px rgb(3 10 28 / 6%);
+    }
+
+    .admin-topbar::after {
+        position: absolute;
+        inset: auto 0 -1px 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--color-brand-blue), var(--color-electric) 45%, var(--color-tide));
+        content: '';
+    }
+
+    .admin-sidebar {
+        background:
+            radial-gradient(120% 40% at 0% 0%, rgb(38 117 255 / 18%), transparent 60%),
+            linear-gradient(180deg, var(--color-night) 0%, var(--color-ink) 100%);
+        box-shadow: 8px 0 28px rgb(3 10 28 / 14%);
+    }
+
+    .admin-nav-icon {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 7px;
+        border-radius: 999px;
+        background: var(--color-edge-strong);
+        transition: background 200ms ease, box-shadow 200ms ease;
+    }
+
+    .admin-nav-link:hover .admin-nav-icon {
+        background: var(--color-neon-soft);
+    }
+
+    .admin-nav-link.is-active .admin-nav-icon {
+        background: var(--color-electric-soft);
+        box-shadow: 0 0 0 4px rgb(38 117 255 / 25%);
+    }
+
+    .admin-shell ::selection {
+        background: var(--color-electric);
+        color: #ffffff;
     }
 
     .combo-trigger {

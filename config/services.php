@@ -68,6 +68,7 @@ return [
     'zazu' => [
         'base_url' => env('ZAZU_BASE_URL'),
         'inventory_path' => env('ZAZU_INVENTORY_PATH', '/api/external/inventario'),
+        'agencies_path' => env('ZAZU_AGENCIES_PATH', '/api/external/sedes'),
         'token' => env('ZAZU_INVENTORY_TOKEN'),
         'timeout' => (int) env('ZAZU_TIMEOUT', 30),
         // Empresas de Zazu que vende la tienda (parte del nombre, separadas por coma). Las demás

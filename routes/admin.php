@@ -10,13 +10,30 @@ use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductoController;
+use App\Models\Admin\Cliente;
+use App\Models\Admin\Order;
+use App\Models\Admin\Producto;
+use App\Services\Orders\OrderPayments;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'create'])->name('login');
 Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
 
 Route::middleware('jwt.auth')->group(function () {
-    Route::view('/', 'admin.dashboard')->name('dashboard');
+    Route::get('/', function () {
+        $recentOrders = Order::query()->with('statusOrder')->latest('id')->limit(6)->get();
+        $month = Order::query()->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
+
+        return view('admin.dashboard', [
+            'ordersToday' => Order::query()->whereDate('created_at', today())->count(),
+            'customersCount' => Cliente::query()->count(),
+            'productsCount' => Producto::query()->count(),
+            'collectedThisMonth' => (clone $month)
+                ->whereHas('statusOrder', fn ($query) => $query->whereIn('name', OrderPayments::PAID_STATUSES))
+                ->sum('pago_monto'),
+            'recentOrders' => $recentOrders,
+        ]);
+    })->name('dashboard');
     Route::get('/pedidos', [OrderController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('pedidos.show');
     Route::patch('/pedidos/{order}/estado', [OrderController::class, 'updateStatus'])->name('pedidos.status');
@@ -31,6 +48,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::view('/usuarios', 'admin.usuarios.index')->name('usuarios.index');
     Route::view('/bodegas', 'admin.bodegas.index')->name('bodegas.index');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+    Route::get('/productos/carga-masiva-imagenes', [ProductoController::class, 'bulkImages'])->name('productos.images.bulk');
+    Route::post('/productos/carga-masiva-imagenes/revisar', [ProductoController::class, 'previewBulkImages'])->name('productos.images.preview');
+    Route::post('/productos/carga-masiva-imagenes/aplicar', [ProductoController::class, 'applyBulkImages'])->name('productos.images.apply');
+    Route::post('/productos/carga-masiva-imagenes/cancelar', [ProductoController::class, 'cancelBulkImages'])->name('productos.images.cancel');
     Route::get('/productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
     Route::patch('/productos/{producto}/marca', [ProductoController::class, 'updateBrand'])->name('productos.brand');
     Route::patch('/productos/{producto}/detalle', [ProductoController::class, 'updateDetails'])->name('productos.details');
