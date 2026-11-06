@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\DB;
  * Combos para la página pública /combos.
  * El catálogo ZAZU trae el mismo combo repetido por canal de venta (Live, Publicidad, Posventa…)
  * y sin foto propia; aquí se dejan solo los de la colección actual, sin duplicados, con productos
- * que realmente se pueden comprar y con la foto de las prendas incluidas.
+ * que realmente se pueden comprar y con la foto de las prendas incluidas. Un combo con flyer propio
+ * (imagen subida en Admin → Combos) se muestra con ese flyer.
  */
 class ComboCatalog
 {
@@ -47,7 +48,8 @@ class ComboCatalog
         return $combos
             ->map(fn (Combo $combo) => self::card($combo, $available, $images))
             ->filter()
-            // Mismo contenido y precio en otro canal de venta = el mismo combo.
+            // Mismo contenido y precio en otro canal de venta = el mismo combo; si uno trae flyer, es el que se muestra.
+            ->sortByDesc(fn (array $card) => $card['flyer'] ? 1 : 0)
             ->unique('signature')
             ->sortBy([['kind', 'desc'], ['unit_price', 'asc']])
             ->values();
@@ -87,6 +89,9 @@ class ComboCatalog
 
         return [
             'id' => $combo->id,
+            // Flyer propio del combo (Admin → Combos): la tarjeta lo muestra completo, como el diseño "Elige tu combo".
+            'flyer' => $custom,
+            'brand' => mb_strtoupper(trim((string) $combo->brand)),
             'url' => $combo->url ?: route('web.combos.show', $combo),
             'title' => $title,
             'kind' => $single ? 'pack' : 'mix',

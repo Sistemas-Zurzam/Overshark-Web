@@ -1,6 +1,7 @@
 // Arma tu outfit de Bravos (web/bravos-outfit.blade.php): una prenda por paso (top y pantalón), cada una
 // con su color y talla. "Tu outfit" suma los precios individuales y envía las prendas a web.cart.look.
 import { productTitle } from './product-name';
+import { submitOnce } from './submit-once';
 const root = document.querySelector('[data-bravos-outfit]');
 
 if (root) {
@@ -97,5 +98,6 @@ if (root) {
         render();
     });
 
+    submitOnce($('[data-bo-form]'));
     render();
 }

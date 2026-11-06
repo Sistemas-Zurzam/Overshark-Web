@@ -12,6 +12,11 @@
     $cartCount = $cartItems->sum('qty');
     $cartTotal = $cartItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * ((int) ($item['qty'] ?? 0)));
     $storeLine = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
+    $customerAccount = auth('customer')->user();
+    // Al agregar una prenda con sugerencias se abre el modal "Te puede interesar"; sin ellas, el carrito lateral.
+    $suggestAdded = session('cart_suggest') ? \App\Models\Admin\Producto::query()->find(session('cart_suggest')) : null;
+    $suggestions = $suggestAdded ? \App\Support\CartSuggestions::forProduct($suggestAdded) : collect();
+    $cartOpen = session('cart_open') || ($suggestAdded && $suggestions->isEmpty());
     $otherLine = $storeLine === 'mujer' ? 'hombre' : 'mujer';
     $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
@@ -108,9 +113,32 @@
                     <button type="button" data-search-toggle class="os-focus os-nav-icon" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
                         <img src="{{ asset('images/nav/buscar.svg') }}" alt="" width="22" height="22">
                     </button>
-                    <span class="os-nav-icon os-nav-icon--account" role="img" aria-label="Mi cuenta, próximamente" title="Mi cuenta · Próximamente">
-                        <img src="{{ asset('images/nav/cuenta.svg') }}" alt="" width="22" height="22">
-                    </span>
+                    {{-- Cuenta de comprador (opcional): invitados y registrados usan la misma tienda y el mismo carrito. --}}
+                    @if ($customerAccount)
+                    <details data-account-menu class="os-nav-icon os-nav-icon--account">
+                        <summary class="os-focus os-nav-icon relative cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="{{ $customerAccount ? 'Mi cuenta, '.$customerAccount->name : 'Mi cuenta' }}">
+                            <img src="{{ asset('images/nav/cuenta.svg') }}" alt="" width="22" height="22">
+                            @if ($customerAccount)<span class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#2fb37f] ring-2 ring-[#061c2d]" aria-hidden="true"></span>@endif
+                        </summary>
+                        <div class="absolute right-0 top-[calc(100%+14px)] z-[65] w-56 bg-white py-2 text-[14px] font-bold text-[#0b0f14] shadow-[0_12px_40px_rgb(11_15_20/22%)]">
+                            @if ($customerAccount)
+                                <p class="truncate border-b border-[#eef1f4] px-4 pb-2 text-[12px] font-semibold text-[#65717c]">{{ $customerAccount->email }}</p>
+                                <a href="{{ route('customer.account') }}" class="block px-4 py-2.5 hover:bg-[#f5f7f9]">Mi cuenta</a>
+                                <a href="{{ route('customer.orders') }}" class="block px-4 py-2.5 hover:bg-[#f5f7f9]">Mis pedidos</a>
+                                <a href="{{ route('customer.addresses') }}" class="block px-4 py-2.5 hover:bg-[#f5f7f9]">Mis direcciones</a>
+                                <form method="POST" action="{{ route('customer.logout') }}">
+                                    @csrf
+                                    <button type="submit" class="block w-full px-4 py-2.5 text-left text-[#a3261c] hover:bg-[#fdecec]">Cerrar sesión</button>
+                                </form>
+                            @endif
+                        </div>
+                    </details>
+                    @else
+                        {{-- Invitado: el ícono lleva directo a iniciar sesión (desde ahí también se crea la cuenta). --}}
+                        <a href="{{ route('login') }}" class="os-focus os-nav-icon os-nav-icon--account" aria-label="Iniciar sesión">
+                            <img src="{{ asset('images/nav/cuenta.svg') }}" alt="" width="22" height="22">
+                        </a>
+                    @endif
                     <button type="button" data-cart-open class="os-focus os-nav-icon relative" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}, total S/{{ number_format($cartTotal, 2) }}">
                         <img src="{{ asset('images/nav/bolsa.svg') }}" alt="" width="22" height="22">
                         @if ($cartCount > 0)
@@ -125,10 +153,10 @@
             </div>
         </div>
 
-        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="Combos 3 por S/ 50, envío S/ 14 a todo el Perú, pago contraentrega. Ver combos">
+        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="Combos 3 por S/ 50, envío desde S/ 15 a todo el Perú, pago contraentrega. Ver combos">
             <span>Combos 3 × S/ 50</span>
             <span class="hidden sm:inline" aria-hidden="true">·</span>
-            <span class="hidden sm:inline">Envío S/ 14 a todo el Perú</span>
+            <span class="hidden sm:inline">Envío desde S/ 15 a todo el Perú</span>
             <span class="hidden md:inline" aria-hidden="true">·</span>
             <span class="hidden md:inline">Pago contraentrega</span>
         </a>
@@ -170,9 +198,21 @@
                     </div>
                 </div>
                 <a href="{{ route('web.home', ['linea' => $otherLine]) }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5">Cambiar a {{ $otherLine }}</a>
-                <div class="mt-2 rounded-lg border border-edge bg-panel/60 px-3 py-3">
-                    <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta · Próximamente</p>
-                    <p class="mt-1 text-xs font-medium leading-5 text-mist">Por ahora puedes comprar como invitado.</p>
+                <div class="mt-2 flex flex-col gap-1 rounded-lg border border-edge bg-panel/60 px-3 py-3">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-electric-soft">Mi cuenta</p>
+                    @if ($customerAccount)
+                        <a href="{{ route('customer.account') }}" class="os-focus rounded-lg px-2 py-2 hover:bg-white/5">Mi cuenta</a>
+                        <a href="{{ route('customer.orders') }}" class="os-focus rounded-lg px-2 py-2 hover:bg-white/5">Mis pedidos</a>
+                        <a href="{{ route('customer.addresses') }}" class="os-focus rounded-lg px-2 py-2 hover:bg-white/5">Mis direcciones</a>
+                        <form method="POST" action="{{ route('customer.logout') }}">
+                            @csrf
+                            <button type="submit" class="os-focus w-full rounded-lg px-2 py-2 text-left hover:bg-white/5">Cerrar sesión</button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}" class="os-focus rounded-lg px-2 py-2 hover:bg-white/5">Iniciar sesión</a>
+                        <a href="{{ route('customer.register') }}" class="os-focus rounded-lg px-2 py-2 hover:bg-white/5">Crear cuenta</a>
+                        <p class="px-2 text-xs font-medium leading-5 text-mist">También puedes comprar como invitado.</p>
+                    @endif
                 </div>
             </div>
         </nav>
@@ -182,7 +222,7 @@
 
     {{-- Carrito lateral: mismo sistema visual que las páginas nuevas (.os-hh); en la línea mujer usa la paleta Girls. --}}
     <div data-cart-overlay class="fixed inset-0 z-[60] hidden bg-[#0b0f14]/55" aria-hidden="true"></div>
-    <aside data-cart-drawer data-open="{{ session('cart_open') ? 'true' : 'false' }}" @class(['cart-drawer os-hh fixed bottom-0 right-0 top-0 z-[70] flex w-full translate-x-full flex-col shadow-[-12px_0_40px_rgb(11_15_20/18%)] transition-transform duration-300 sm:max-w-[440px]', 'os-hh--girls' => $storeLine === 'mujer']) aria-label="Carrito de compras">
+    <aside data-cart-drawer data-open="{{ $cartOpen ? 'true' : 'false' }}" @class(['cart-drawer os-hh fixed bottom-0 right-0 top-0 z-[70] flex w-full translate-x-full flex-col shadow-[-12px_0_40px_rgb(11_15_20/18%)] transition-transform duration-300 sm:max-w-[440px]', 'os-hh--girls' => $storeLine === 'mujer']) aria-label="Carrito de compras">
         <div class="flex items-center justify-between gap-4 border-b border-[var(--shop-line)] px-5 py-5 sm:px-6">
             <div class="flex items-baseline gap-3">
                 <h2 @class(['leading-none', 'os-josefin text-[26px] uppercase' => $storeLine === 'mujer', 'os-hh-display text-[34px]' => $storeLine !== 'mujer'])>Tu carrito</h2>
@@ -193,9 +233,16 @@
             </button>
         </div>
 
+        {{-- Avisos de las rutas del carrito (stock insuficiente, cantidad máxima, talla agotada). --}}
+        @if (isset($errors) && $errors->has('cart'))
+            <p class="bg-[#fdecec] px-5 py-3 text-[14px] font-bold text-[#a3261c] sm:px-6" role="alert">{{ $errors->first('cart') }}</p>
+        @elseif (session('cart_notice'))
+            <p class="bg-[#fff6e0] px-5 py-3 text-[14px] font-bold text-[#8a5a00] sm:px-6" role="status">{{ session('cart_notice') }}</p>
+        @endif
+
         @if ($cartItems->isNotEmpty())
             <p class="flex flex-wrap items-center justify-center gap-x-2 bg-[var(--hh-soft)] px-5 py-2.5 text-center text-[12px] font-extrabold uppercase tracking-[1px] text-[var(--hh-accent)]">
-                <span>Envío S/ 14 a todo el Perú</span><span aria-hidden="true">·</span><span>Pago contraentrega</span>
+                <span>Envío desde S/ 15 a todo el Perú</span><span aria-hidden="true">·</span><span>Pago contraentrega</span>
             </p>
         @endif
 
@@ -206,7 +253,6 @@
                     $isCombo = ($item['kind'] ?? null) === 'combo';
                     $qty = (int) ($item['qty'] ?? 1);
                     $price = (float) ($item['price'] ?? 0);
-                    $oldPrice = $price > 0 ? $price / 0.8 : 0;
                     $nice = fn ($text) => \App\Support\ProductName::title((string) $text);
                 @endphp
                 <div class="flex gap-4 border-b border-[var(--shop-line)] py-5 last:border-b-0">
@@ -216,12 +262,7 @@
                     <div class="flex min-w-0 flex-1 flex-col">
                         <div class="flex items-start justify-between gap-3">
                             <h3 class="min-w-0 text-[15px] font-extrabold leading-snug">{{ $nice($item['producto'] ?? 'Producto') }}</h3>
-                            <div class="shrink-0 text-right">
-                                <p class="text-[15px] font-extrabold">S/ {{ number_format($price * $qty, 2) }}</p>
-                                @if (! $isCombo && $oldPrice > 0)
-                                    <p class="text-[12px] font-medium text-[#888] line-through">S/ {{ number_format($oldPrice * $qty, 2) }}</p>
-                                @endif
-                            </div>
+                            <p class="shrink-0 text-right text-[15px] font-extrabold">S/ {{ number_format($price * $qty, 2) }}</p>
                         </div>
                         @if ($isCombo)
                             <p class="mt-1 text-[11px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">Combo</p>
@@ -299,6 +340,10 @@
         @endif
     </aside>
 
+    @if ($suggestAdded && $suggestions->isNotEmpty())
+        @include('web.partials.cart-suggestions-modal', ['added' => $suggestAdded, 'suggestions' => $suggestions, 'suggestionTitle' => $suggestionTitle ?? null])
+    @endif
+
     {{-- Una página puede traer su propio footer (p. ej. la home de Overshark Girls). --}}
     @hasSection('footer')
         @yield('footer')
@@ -359,9 +404,9 @@
 
             <section class="flex flex-col items-start gap-3">
                 <h2 class="text-[16px] font-medium">Envíos a todo el Perú</h2>
-                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Lima: delivery o agencia</p>
-                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Provincia: agencia</p>
-                <p class="rounded-[6px] bg-[#e9f7f9] px-2.5 py-1 text-[14px] font-medium leading-[18px] text-[#1c7696]">S/ 14 costo único</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Lima: delivery S/ 15</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Agencia Shalom: S/ 30</p>
+                <p class="rounded-[6px] bg-[#e9f7f9] px-2.5 py-1 text-[14px] font-medium leading-[18px] text-[#1c7696]">Recojo en almacén gratis</p>
                 <a href="{{ route('web.claims.create') }}" class="os-focus mt-2 block transition hover:opacity-80" aria-label="Libro de Reclamaciones">
                     <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="" class="h-[83px] w-[121px] object-contain">
                 </a>

@@ -22,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth' => AuthenticateJwt::class,
         ]);
+
+        // Compradores ya conectados que abren /iniciar-sesion o /registro van a su cuenta.
+        $middleware->redirectUsersTo(fn () => route('customer.account'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

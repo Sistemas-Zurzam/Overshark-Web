@@ -38,7 +38,8 @@ class SeparatedViewsTest extends TestCase
         $user = $this->createAdmin();
         $token = app(JwtService::class)->create($user);
 
-        $this->withUnencryptedCookie(config('jwt.cookie'), $token)
+        // withCookie cifra el valor como lo hace el servidor al entregar la cookie; withUnencryptedCookie la dejaba sin llegar al middleware.
+        $this->withCookie(config('jwt.cookie'), $token)
             ->get('/admin')
             ->assertOk();
     }
@@ -60,11 +61,11 @@ class SeparatedViewsTest extends TestCase
         $jwt = app(JwtService::class);
         $token = $jwt->create($user);
 
-        $this->withUnencryptedCookie(config('jwt.cookie'), $token)
+        $this->withCookie(config('jwt.cookie'), $token)
             ->post('/admin/logout')
             ->assertRedirect(route('admin.login'));
 
-        $this->withUnencryptedCookie(config('jwt.cookie'), $token)
+        $this->withCookie(config('jwt.cookie'), $token)
             ->get('/admin')
             ->assertRedirect(route('admin.login'));
     }

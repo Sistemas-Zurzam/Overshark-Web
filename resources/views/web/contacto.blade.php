@@ -22,7 +22,7 @@
     $input = 'w-full border bg-[#f5f7fa] px-4 text-[14px] font-medium text-[#0b0f14] outline-none transition placeholder:text-[#8a93a0] focus:border-[var(--hh-accent)] focus:bg-white focus:ring-4 focus:ring-[var(--hh-accent)]/15';
     $border = fn (string $field) => $errors->has($field) ? 'border-red-500' : 'border-[var(--shop-line)]';
     $faqs = [
-        ['¿Cuánto cuesta el envío?', 'El envío tiene un costo único de S/ 14 a todo el Perú. En Lima puedes elegir delivery o recojo en agencia; en provincia enviamos por agencia.'],
+        ['¿Cuánto cuesta el envío?', 'En Lima el delivery a domicilio cuesta S/ 15. A todo el Perú enviamos a la agencia Shalom que elijas por S/ 30. Si recoges en nuestro almacén, el envío es gratis.'],
         ['¿Cómo funcionan los combos?', 'En la sección Combos eliges el combo, escoges el color y la talla de cada prenda y lo agregas al carrito con su precio especial. También puedes armar un look completo en «¡Arma tu Outfit!».'],
         ['¿Qué métodos de pago aceptan?', 'Puedes pagar contraentrega o, al finalizar tu compra, con Yape, Plin o transferencia bancaria.'],
         ['¿Puedo cambiar la talla de una prenda?', 'Escríbenos con tu número de pedido y la talla que necesitas, y te indicamos cómo hacer el cambio.'],
@@ -75,8 +75,8 @@
                 <li class="flex flex-col items-start gap-3 border border-[var(--shop-line)] px-6 py-7">
                     <span class="grid h-12 w-12 place-items-center bg-[var(--hh-soft)]" aria-hidden="true"><img src="{{ $icon('envios') }}" alt="" width="22" height="22"></span>
                     <h2 class="text-[12px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">Envíos</h2>
-                    <p class="text-[16px] font-bold leading-[23px]">Lima: delivery o agencia · Provincia: agencia</p>
-                    <p class="text-[13px] font-extrabold text-[#545966]">S/ 14 costo único</p>
+                    <p class="text-[16px] font-bold leading-[23px]">Lima: delivery S/ 15 · Agencia Shalom S/ 30</p>
+                    <p class="text-[13px] font-extrabold text-[#545966]">Recojo en almacén gratis</p>
                 </li>
             </ul>
         </section>

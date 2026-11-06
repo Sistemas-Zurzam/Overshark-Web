@@ -41,6 +41,10 @@
             @if (session('status'))
                 <p class="bg-[#f5f7f9] px-4 py-3 text-[14px] font-bold text-[#0b1015]" role="status">{{ session('status') }}</p>
             @endif
+            {{-- Si el carrito lateral se abre, el aviso se muestra ahí y no se repite aquí. --}}
+            @if ($errors->any() && ! session('cart_open'))
+                <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
+            @endif
 
             <div class="grid gap-10 lg:grid-cols-2 lg:gap-16">
                 {{-- Galería --}}
@@ -115,8 +119,8 @@
                     </form>
 
                     <div class="flex flex-col gap-2 leading-[1.45]">
-                        <p class="text-[14px] font-bold">Envío a todo el Perú · S/ 14 costo único</p>
-                        <p class="text-[13px] text-[#65717c]">Lima: delivery o agencia · Provincia: agencia</p>
+                        <p class="text-[14px] font-bold">Envío a todo el Perú desde S/ 15</p>
+                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 30 · Almacén gratis</p>
                         <p class="text-[14px] font-bold">Pago con {{ $payments->isNotEmpty() ? $payments->join(', ', ' y ') : 'Yape y Plin' }} · También contraentrega</p>
                     </div>
                 </div>

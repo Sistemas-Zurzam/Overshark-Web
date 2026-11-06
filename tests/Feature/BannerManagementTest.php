@@ -22,8 +22,9 @@ class BannerManagementTest extends TestCase
             'image' => UploadedFile::fake()->createWithContent('banner.png', $this->png()),
             'time' => 8,
             'modo' => 'cover',
+            'buttons_position' => 'center-left',
             'status' => 1,
-        ])->assertRedirect();
+        ])->assertSessionHasNoErrors()->assertRedirect();
 
         $banner = BannerPortada::query()->firstOrFail();
 

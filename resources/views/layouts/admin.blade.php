@@ -53,6 +53,7 @@
                 ['admin.medios-pago.index', 'Medios de Pago'],
                 ['admin.banners.index', 'Banners'],
                 ['admin.combos.index', 'Combos'],
+                ['admin.sugerencias.index', 'Sugerencias'],
                 ['admin.outfits.index', 'Arma tu outfit'],
                 ['admin.about.edit', 'Página Nosotros'],
                 ['admin.tv.index', 'Overshark TV'],

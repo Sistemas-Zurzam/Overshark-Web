@@ -48,7 +48,7 @@
     $display = $girls ? 'os-josefin' : 'os-hh-display';
     $sorts = ['' => 'Más vendidos', 'novedades' => 'Novedades', 'precio-asc' => 'Precio: menor a mayor', 'precio-desc' => 'Precio: mayor a menor'];
     $perks = [
-        ['title' => 'Envío S/ 14 a todo el Perú', 'text' => 'Lima y provincias'],
+        ['title' => 'Envío desde S/ 15 a todo el Perú', 'text' => 'Delivery en Lima o agencia Shalom'],
         ['title' => 'Pago contraentrega', 'text' => 'Yape, Plin o efectivo'],
         ['title' => 'Cambios y devoluciones', 'text' => 'Te ayudamos por WhatsApp'],
         ['title' => 'Combos 3 × S/ 50', 'text' => 'Mezcla tus favoritos'],

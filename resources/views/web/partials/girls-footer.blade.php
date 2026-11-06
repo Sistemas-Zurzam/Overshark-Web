@@ -36,9 +36,9 @@
             <div>
                 <h2>Envíos a todo el Perú</h2>
                 <ul>
-                    <li>Lima: delivery o agencia</li>
-                    <li>Provincia: agencia</li>
-                    <li>S/ 14 costo único</li>
+                    <li>Lima: delivery S/ 15</li>
+                    <li>Agencia Shalom: S/ 30</li>
+                    <li>Recojo en almacén: gratis</li>
                 </ul>
             </div>
         </div>

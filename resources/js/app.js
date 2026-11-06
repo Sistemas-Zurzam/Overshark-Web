@@ -2,6 +2,8 @@ import './bootstrap';
 import './ocean-particles';
 import './line-transition';
 import './product-page';
+import './cart-suggestions';
+import './account';
 import { shrinkImage } from './shrink-image';
 
 const sidebar = document.querySelector('[data-sidebar]');

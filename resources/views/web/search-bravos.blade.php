@@ -65,8 +65,8 @@
                 </section>
 
                 <div class="hidden flex-col gap-3 bg-[#f2f2f2] p-5 lg:flex">
-                    <p class="text-[17px] font-extrabold leading-[1.4] text-[#0a0a0a]">ENVÍO S/ 14</p>
-                    <p class="text-[13px] leading-[1.4] text-[#595959]">A todo el Perú.<br>Lima: delivery o agencia.<br>Provincia: agencia.</p>
+                    <p class="text-[17px] font-extrabold leading-[1.4] text-[#0a0a0a]">ENVÍO DESDE S/ 15</p>
+                    <p class="text-[13px] leading-[1.4] text-[#595959]">Lima: delivery S/ 15.<br>Agencia Shalom S/ 30.<br>Almacén: gratis.</p>
                 </div>
             </aside>
 
@@ -129,7 +129,7 @@
         {{-- Entrega y pagos --}}
         <section class="bg-[#0a0a0a] text-white" aria-label="Entrega y pagos">
             <ul class="os-bravos-wrap flex flex-col gap-3 py-8 text-[15px] font-bold leading-[1.45] sm:flex-row sm:flex-wrap sm:gap-x-16 sm:text-[16px] lg:py-10">
-                <li>ENVÍO S/ 14 A TODO EL PERÚ</li>
+                <li>ENVÍO DESDE S/ 15 A TODO EL PERÚ</li>
                 <li>YAPE · PLIN · CONTRAENTREGA</li>
                 <li>COMPRA COMO INVITADO</li>
             </ul>

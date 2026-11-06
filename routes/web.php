@@ -8,8 +8,17 @@ use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Order;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
+use App\Models\Admin\StatusOrder;
+use App\Services\Orders\OrderFulfillment;
+use App\Services\Orders\OrderPayments;
+use App\Services\Payments\CulqiGateway;
+use App\Services\Payments\PaymentSimulator;
+use App\Services\Payments\YapeQr;
+use Illuminate\Validation\Rule;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
+use App\Support\AccountCheckout;
+use App\Support\CartSuggestions;
 use App\Support\Checkout;
 use App\Support\GirlsHome;
 use App\Support\ProductCards;
@@ -17,6 +26,7 @@ use App\Support\SessionCart;
 use App\Support\StorefrontCategories;
 use App\Services\ComboSelectionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -95,6 +105,11 @@ Route::post('/carrito', function (Request $request) {
         'color' => ['required', 'string', 'max:255'],
         'talla' => ['required', 'string', 'max:255'],
         'qty' => ['required', 'integer', 'min:1', 'max:99'],
+    ], [
+        'producto_id.exists' => 'Este producto ya no está disponible.',
+        'color.required' => 'Elige un color.',
+        'talla.required' => 'Elige una talla.',
+        'qty.max' => 'Puedes agregar hasta 99 unidades por vez.',
     ]);
 
     $producto = Producto::query()->findOrFail($validated['producto_id']);
@@ -108,17 +123,43 @@ Route::post('/carrito', function (Request $request) {
         ->where('talla', $validated['talla'])
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
-        ->firstOrFail();
+        ->first();
 
-    SessionCart::addVariant($variant, (int) $validated['qty'], $producto);
+    // La talla pudo agotarse en Zazu mientras la clienta tenía abierta la ficha.
+    if (! $variant) {
+        return back()->withErrors(['cart' => 'Esa talla se acaba de agotar en este color. Elige otra opción.']);
+    }
+
+    $before = SessionCart::quantityOf($variant->id);
+    $after = SessionCart::addVariant($variant, (int) $validated['qty'], $producto);
+    $added = $after - $before;
+
+    if ($added <= 0) {
+        return back()
+            ->withErrors(['cart' => "Ya tienes en tu carrito todas las unidades disponibles de esta prenda ({$after})."])
+            ->with('cart_open', true);
+    }
+
+    $notice = $added < (int) $validated['qty']
+        ? "Solo quedaban {$after} unidades disponibles: agregamos {$added} a tu carrito."
+        : null;
 
     if ($request->boolean('checkout')) {
-        return redirect()->route('web.cart.index');
+        return redirect()->route('web.cart.index')->with('cart_notice', $notice);
     }
+
+    // Desde "Te puede interesar" de la página del carrito solo se suma la prenda, sin volver a abrir nada.
+    if ($request->boolean('quiet')) {
+        return back()->with('status', 'Producto agregado al carrito.')->with('cart_notice', $notice);
+    }
+
+    // Con sugerencias disponibles se muestra primero el modal "Agregado"; si no hay, se abre el carrito lateral.
+    $hasSuggestions = CartSuggestions::forProduct($producto)->isNotEmpty();
 
     return back()
         ->with('status', 'Producto agregado al carrito.')
-        ->with('cart_open', true);
+        ->with('cart_notice', $notice)
+        ->with($hasSuggestions ? 'cart_suggest' : 'cart_open', $hasSuggestions ? $producto->id : true);
 })->name('web.cart.store');
 
 // Look de "Arma tu outfit" de Bravos: agrega cada prenda elegida (color y talla) a su precio individual.
@@ -205,8 +246,24 @@ Route::get('/checkout/datos-personales', function () {
         return redirect()->route('web.cart.index');
     }
 
+    // Con cuenta: se precargan sus datos y su dirección (la principal, o la que elija con ?direccion=). Lo que ya
+    // escribió en esta sesión manda; invitados siguen igual que antes.
+    $account = auth('customer')->user();
+    $savedAddresses = $account ? $account->addresses()->get() : collect();
+    $session = session('checkout.customer', []);
+    $address = $account
+        ? ($savedAddresses->firstWhere('id', (int) request('direccion')) ?? ($session ? null : $savedAddresses->firstWhere('is_default', true)))
+        : null;
+    $customer = $session ?: AccountCheckout::contact($account);
+
+    if ($address) {
+        $customer = AccountCheckout::withAddress($customer, $address);
+    }
+
     return view('web.checkout.details', $summary + [
-        'customer' => session('checkout.customer', []),
+        'customer' => $customer,
+        'savedAddresses' => $savedAddresses,
+        'selectedAddressId' => $address?->id,
         'ubigeo' => Departamento::query()->with('provincias.distritos:id,provincia_id,name')->orderBy('name')->get(['id', 'name'])
             ->map(fn ($departamento) => [
                 'id' => $departamento->id,
@@ -230,11 +287,17 @@ Route::post('/checkout/datos-personales', function (Request $request) {
         'doc_number' => ['required', 'string', 'max:12', \App\Support\DocumentNumber::rule($request->input('doc_type'))],
         // Con recojo en almacén no se pide dirección.
         'distrito_id' => ['exclude_if:delivery,almacen', 'required', 'integer', 'exists:distritos,id'],
-        'address' => ['exclude_if:delivery,almacen', 'required', 'string', 'max:255'],
-        'reference' => ['exclude_if:delivery,almacen', 'nullable', 'string', 'max:255'],
+        'address' => ['exclude_unless:delivery,domicilio', 'required', 'string', 'max:255'],
+        'reference' => ['exclude_unless:delivery,domicilio', 'nullable', 'string', 'max:255'],
         'delivery' => ['required', 'in:domicilio,agencia,almacen'],
-        'agency' => ['required_if:delivery,agencia', 'nullable', 'string', 'max:255'],
+        'delivery_lat' => ['exclude_unless:delivery,domicilio', 'required', 'numeric', 'between:-90,90'],
+        'delivery_lng' => ['exclude_unless:delivery,domicilio', 'required', 'numeric', 'between:-180,180'],
+        // Id de la agencia Shalom elegida (tabla courier).
+        'agency' => ['exclude_unless:delivery,agencia', 'required', 'integer', 'exists:courier,id'],
         'invoice' => ['required', 'in:boleta,factura'],
+        // Solo con cuenta: guardar esta dirección en la libreta (opción explícita).
+        'save_address' => ['nullable', 'boolean'],
+        'address_alias' => ['nullable', 'in:Casa,Trabajo,Otro'],
         'ruc' => ['required_if:invoice,factura', 'nullable', 'regex:/^(10|20)\d{9}$/'],
         'razon_social' => ['required_if:invoice,factura', 'nullable', 'string', 'max:255'],
     ], [
@@ -248,19 +311,32 @@ Route::post('/checkout/datos-personales', function (Request $request) {
         'doc_number.regex' => \App\Support\DocumentNumber::message($request->input('doc_type')),
         'distrito_id.required' => 'Elige tu distrito.',
         'address.required' => 'Ingresa tu dirección.',
-        'agency.required_if' => 'Elige la agencia donde recogerás tu pedido.',
+        'agency.required' => 'Elige la agencia Shalom donde recogerás tu pedido.',
+        'agency.integer' => 'Elige una agencia Shalom de la lista.',
+        'agency.exists' => 'Elige una agencia Shalom de la lista.',
         'ruc.required_if' => 'Para factura necesitamos el RUC.',
         'ruc.regex' => 'El RUC tiene 11 dígitos y empieza con 10 o 20.',
         'razon_social.required_if' => 'Para factura necesitamos la razón social.',
     ]);
 
-    // Fuera de Lima solo hay recojo en agencia.
-    $department = Distrito::query()->with('provincia.departamento')->find($validated['distrito_id'] ?? 0)?->provincia?->departamento?->name;
-    if ($validated['delivery'] === 'domicilio' && mb_strtoupper((string) $department) !== 'LIMA') {
-        return back()->withInput()->withErrors(['delivery' => 'Fuera de Lima el envío es a una agencia. Elige "Recojo en agencia".']);
+    if ($validated['delivery'] === 'domicilio' && ! \App\Support\DeliveryCoverage::contains((float) $validated['delivery_lat'], (float) $validated['delivery_lng'])) {
+        return back()->withInput()->withErrors(['delivery' => 'La dirección marcada está fuera de la cobertura de delivery. Elige recojo en agencia Shalom o en almacén.']);
     }
 
-    session(['checkout.customer' => $validated]);
+    // Se guarda el id (para volver a marcarla) y "Agencia — dirección" (para el pedido y el despacho).
+    if ($validated['delivery'] === 'agencia') {
+        $agency = DB::table('courier')->find($validated['agency']);
+        $validated['agency_id'] = $agency->id;
+        // ter_id: el id de la agencia en Shalom, con el que el CRM la reconoce.
+        $validated['agency_shalom_id'] = $agency->ter_id;
+        $validated['agency'] = 'Shalom '.$agency->lugar_over.' — '.$agency->direccion;
+    }
+
+    if (($account = auth('customer')->user()) && $request->boolean('save_address')) {
+        AccountCheckout::saveAddress($account, $validated, $request->input('address_alias'));
+    }
+
+    session(['checkout.customer' => Arr::except($validated, ['save_address', 'address_alias'])]);
 
     return redirect()->route('web.checkout.payment');
 })->name('web.checkout.personal.store');
@@ -284,22 +360,41 @@ Route::get('/checkout/pago', function () {
         session(['checkout.token' => Str::random(40)]);
     }
 
+    $customer = session('checkout.customer');
+    $distrito = Distrito::query()->with('provincia.departamento')->find($customer['distrito_id'] ?? 0);
+
     return view('web.checkout.payment', $summary + [
-        'customer' => session('checkout.customer'),
+        'customer' => $customer,
+        // "Distrito, Provincia, Departamento" para la tarjeta "Enviar a".
+        'place' => $distrito ? collect([$distrito->name, $distrito->provincia?->name, $distrito->provincia?->departamento?->name])->filter()->implode(', ') : null,
+        'deposit' => Checkout::depositAmount($customer['delivery'] ?? null, $summary['total']),
+        'shippingDateLabel' => Checkout::shippingDateLabel(Checkout::shippingDate($customer['delivery'] ?? null)),
+        'culqiKey' => CulqiGateway::isConfigured() ? CulqiGateway::publicKey() : null,
+        'culqiSecureUrl' => CulqiGateway::secureUrl(),
+        'simulating' => PaymentSimulator::enabled(),
         'methods' => Checkout::paymentMethods(),
         'token' => session('checkout.token'),
         'receiptPath' => session('checkout.payment_receipt_path'),
     ]);
 })->name('web.checkout.payment');
 
-Route::post('/checkout/pedido', function (Request $request) {
-    $methods = Checkout::paymentMethods();
+Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi) {
+    $methods = Checkout::availableMethods(); // los "Muy pronto" no se pueden elegir
+    $online = Checkout::onlineMethods();
+    $deposit = Checkout::depositAmount(session('checkout.customer.delivery'), Checkout::summary()['total']);
     $validated = $request->validate([
         'method' => ['required', 'in:'.$methods->pluck('id')->implode(',')],
+        // Contraentrega con separo: con qué se paga el separo ahora (tarjeta o Yape/Plin).
+        'deposit_method' => [Rule::requiredIf(fn () => $request->input('method') === Checkout::CASH_ON_DELIVERY && $deposit > 0), 'nullable', 'in:'.$online->pluck('id')->implode(',')],
+        // Token de la tarjeta generado por Culqi Checkout en el navegador.
+        'culqi_token' => ['nullable', 'string', 'max:100'],
         'token' => ['required', 'string', 'size:40'],
         'terms' => ['accepted'],
+        // Total que la clienta vio en la pantalla de pago: el pedido solo se crea por ese importe.
+        'expected_total' => ['required', 'numeric', 'min:0'],
     ], [
         'method.required' => 'Elige cómo vas a pagar.',
+        'deposit_method.required' => 'Elige cómo pagarás el separo.',
         'terms.accepted' => 'Acepta los Términos y condiciones y la Política de privacidad para continuar.',
     ]);
 
@@ -320,9 +415,19 @@ Route::post('/checkout/pedido', function (Request $request) {
     }
 
     $method = $methods->firstWhere('id', $validated['method']);
+    $isCod = $method['id'] === Checkout::CASH_ON_DELIVERY;
+    // Medio con el que se paga en línea: el elegido, o el del separo en contraentrega (sin separo: nada).
+    $payWith = $isCod ? ($deposit > 0 ? $online->firstWhere('id', $validated['deposit_method'] ?? null) : null) : $method;
+
     $receipt = session('checkout.payment_receipt_path');
-    if ($method['receipt'] && ! $receipt) {
-        return back()->withInput()->withErrors(['receipt' => 'Sube la captura de tu pago para confirmar el pedido.']);
+    if (($payWith['receipt'] ?? false) && ! $receipt) {
+        return back()->withInput()->withErrors(['receipt' => $isCod ? 'Sube la captura del pago de tu separo para confirmar el pedido.' : 'Sube la captura de tu pago para confirmar el pedido.']);
+    }
+
+    // La tarjeta se cobra con Culqi: el navegador ya creó el token con los datos de la clienta.
+    $byCulqi = ($payWith['kind'] ?? null) === 'card';
+    if ($byCulqi && blank($validated['culqi_token'] ?? null)) {
+        return back()->withInput()->withErrors(['method' => 'Ingresa los datos de tu tarjeta para continuar.']);
     }
 
     // Precio, stock y combos se vuelven a validar en el servidor; si algo cambió, el carrito se conserva.
@@ -331,7 +436,41 @@ Route::post('/checkout/pedido', function (Request $request) {
         return redirect()->route('web.cart.index')->withErrors(['cart' => $cart['error']]);
     }
 
-    $order = Checkout::place($customer, $method, $method['receipt'] ? $receipt : null, $validated['token'], $cart['lines']);
+    // Si un precio cambió mientras pagaba, no se confirma un importe distinto: se actualiza el resumen
+    // y se pide confirmar de nuevo el total nuevo.
+    $total = Checkout::totalFor($cart['lines'], $customer['delivery'] ?? null);
+    if (abs($total - round((float) $validated['expected_total'], 2)) >= 0.01) {
+        Checkout::syncPrices();
+
+        return redirect()->route('web.checkout.payment')->withErrors([
+            'method' => 'El precio de tu pedido cambió. El nuevo total es S/ '.number_format($total, 2).'. Revisa el resumen y confirma de nuevo.',
+        ]);
+    }
+
+    // El pedido se crea antes de cobrar: así nunca queda un cobro sin pedido.
+    $order = Checkout::place($customer, $method, $payWith, ($payWith['receipt'] ?? false) ? $receipt : null, $validated['token'], $cart['lines'], auth('customer')->id());
+
+    if ($order->wasRecentlyCreated) {
+        // Tarjeta: se cobra el total (o el separo) con Culqi. Si la rechaza, el pedido no queda y puede reintentar.
+        if ($byCulqi) {
+            $charge = $culqi->charge((float) $order->pago_monto, $validated['culqi_token'], $order->email, "Pedido {$order->number_zazu} Overshark", ['pedido' => $order->number_zazu]);
+
+            if (! $charge['ok']) {
+                $order->delete();
+
+                return redirect()->route('web.checkout.payment')->withErrors(['method' => $charge['message']]);
+            }
+
+            OrderPayments::confirm($order, $charge['id']);
+        } elseif (($payWith['kind'] ?? null) === 'yape') {
+            // Yape: se genera el QR y el pedido espera el pago (la página del pedido muestra el QR).
+            OrderPayments::startQr($order, app(YapeQr::class));
+        } elseif (! $payWith) {
+            // Contraentrega sin nada que pagar en línea (recojo en almacén): se procesa ya; se cobra al entregar.
+            OrderFulfillment::start($order);
+        }
+        // Captura de Yape/Plin del admin: queda pendiente hasta que el equipo confirme el pago en el admin.
+    }
 
     session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
     session()->push('checkout.orders', $order->id);
@@ -341,13 +480,30 @@ Route::post('/checkout/pedido', function (Request $request) {
 
 // Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
 Route::get('/checkout/pedido/{order}', function (Order $order) {
-    abort_unless(in_array($order->id, session('checkout.orders', []), true), 404);
+    // Lo ve quien lo hizo desde esta sesión o la cuenta dueña del pedido (nunca otra cuenta ni otro invitado).
+    $ownsOrder = auth('customer')->check() && $order->customer_account_id === auth('customer')->id();
+    abort_unless($ownsOrder || in_array($order->id, session('checkout.orders', []), true), 404);
 
     return view('web.checkout.status', [
         'order' => $order->load('statusOrder'),
         'paid' => $order->statusOrder?->name === Checkout::STATUS_PAID,
+        'depositPaid' => $order->statusOrder?->name === Checkout::STATUS_DEPOSIT_PAID,
+        'awaitingQr' => $order->statusOrder?->name === Checkout::STATUS_AWAITING_QR,
+        'cancelled' => $order->statusOrder?->name === Checkout::STATUS_CANCELLED,
+        'simulating' => PaymentSimulator::enabled(),
     ]);
 })->name('web.checkout.done');
+
+// Modo simulación: "Simular pago" del QR de Yape (en real lo confirma Ligo Pay vía Zazu).
+Route::post('/checkout/pedido/{order}/simular-pago', function (Order $order) {
+    abort_unless(PaymentSimulator::enabled() && in_array($order->id, session('checkout.orders', []), true), 404);
+
+    if ($order->load('statusOrder')->statusName() === Checkout::STATUS_AWAITING_QR) {
+        OrderPayments::confirm($order, $order->pago_referencia);
+    }
+
+    return redirect()->route('web.checkout.done', $order);
+})->name('web.checkout.simulate-qr');
 
 Route::post('/checkout/comprobante', function (Request $request) {
     $validated = $request->validate([
@@ -369,76 +525,54 @@ Route::post('/checkout/comprobante', function (Request $request) {
     ]);
 })->name('web.checkout.receipt');
 
+// Agencias Shalom (tabla courier) para "Recojo en agencia Shalom": las de la provincia elegida (o del
+// departamento si la provincia no tiene), primero las del distrito de la clienta. ?q= filtra por nombre,
+// dirección o zona.
 Route::get('/checkout/courier-agencies', function (Request $request) {
     $normalize = function (?string $value): string {
         $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $value);
 
-        return trim(preg_replace('/\s+/', ' ', strtolower($value ?: '')));
+        return trim(preg_replace('/[\s\-]+/', ' ', strtolower($value ?: '')));
     };
 
     $department = $normalize($request->query('departamento'));
     $province = $normalize($request->query('provincia'));
     $district = $normalize($request->query('distrito'));
-    $address = $normalize($request->query('address'));
-    $search = $normalize($request->query('q'));
-    $terms = collect(explode(' ', "{$district} {$province} {$department} {$address} {$search}"))
-        ->map(fn ($term) => trim($term))
-        ->filter(fn ($term) => strlen($term) >= 3)
-        ->unique()
-        ->values();
+    $terms = collect(explode(' ', $normalize($request->query('q'))))->filter(fn ($term) => strlen($term) >= 2);
 
-    $agencies = DB::table('courier')
-        ->select('id', 'ter_id', 'direccion', 'zona', 'provincia', 'departamento', 'lugar_over')
+    $all = DB::table('courier')
+        ->select('id', 'direccion', 'zona', 'provincia', 'departamento', 'lugar_over')
         ->whereNotNull('direccion')
+        ->where('direccion', '!=', '')
         ->whereNotNull('lugar_over')
         ->get()
-        ->map(function ($agency) use ($normalize, $department, $province, $district, $search, $terms) {
-            $agencyDepartment = $normalize($agency->departamento);
-            $agencyProvince = $normalize($agency->provincia);
-            $agencyZone = $normalize($agency->zona);
-            $agencyAddress = $normalize($agency->direccion);
-            $agencyName = $normalize($agency->lugar_over);
-            $haystack = "{$agencyName} {$agencyAddress} {$agencyZone} {$agencyProvince} {$agencyDepartment}";
-            $score = 0;
+        ->each(function ($agency) use ($normalize) {
+            $agency->dep = $normalize($agency->departamento);
+            $agency->prov = $normalize($agency->provincia);
+            $agency->zone = $normalize($agency->zona);
+            $agency->haystack = $normalize("{$agency->lugar_over} {$agency->direccion} {$agency->zona} {$agency->provincia}");
+        });
 
-            if ($department !== '' && $agencyDepartment === $department) {
-                $score += 80;
-            }
+    $inDepartment = $department === '' ? $all : $all->where('dep', $department);
+    $inProvince = $province === '' ? collect() : $inDepartment->where('prov', $province);
+    $pool = $inProvince->isNotEmpty() ? $inProvince : $inDepartment;
 
-            if ($province !== '' && $agencyProvince === $province) {
-                $score += 70;
-            }
-
-            if ($district !== '' && ($agencyZone === $district || str_contains($agencyName, $district) || str_contains($agencyAddress, $district))) {
-                $score += 90;
-            }
-
-            if ($search !== '' && str_contains($haystack, $search)) {
-                $score += 100;
-            }
-
-            foreach ($terms as $term) {
-                if (str_contains($haystack, $term)) {
-                    $score += 8;
-                }
-            }
-
-            $agency->score = $score;
+    $agencies = $pool
+        ->filter(fn ($agency) => $terms->every(fn ($term) => str_contains($agency->haystack, $term)))
+        ->map(function ($agency) use ($district) {
+            $agency->near = $district !== '' && $agency->zone !== '' && (str_contains($agency->zone, $district) || str_contains($district, $agency->zone));
 
             return $agency;
         })
-        ->sortByDesc(fn ($agency) => [$agency->score, $agency->departamento, $agency->provincia, $agency->zona])
-        ->take(10)
+        ->sortBy(fn ($agency) => [$agency->near ? 0 : 1, $agency->zona, $agency->lugar_over])
+        ->take(200)
         ->values()
-        ->map(fn ($agency, int $index) => [
+        ->map(fn ($agency) => [
             'id' => $agency->id,
-            'ter_id' => $agency->ter_id,
             'name' => $agency->lugar_over,
             'address' => $agency->direccion,
             'zone' => $agency->zona,
-            'province' => $agency->provincia,
-            'department' => $agency->departamento,
-            'badge' => $index === 0 ? 'Mas cercana a tu direccion' : null,
+            'near' => $agency->near,
         ]);
 
     return response()->json(['agencies' => $agencies]);
@@ -796,3 +930,6 @@ Route::get('/', function (Request $request) {
         'bravosBrand' => $bravosBrand,
     ]);
 })->name('web.home');
+
+// Cuentas de compradores (registro, acceso, Mi cuenta).
+require __DIR__.'/customer.php';

@@ -1,13 +1,20 @@
 {{--
     Resumen "TU PEDIDO" del checkout: prendas, subtotal, envío y total. $items/$count/$subtotal/$shipping/$total
     vienen de App\Support\Checkout::summary(). El botón de cada paso va en el slot $slot (opcional).
+    $priceChanges (opcional) lista los precios que cambiaron desde que se agregaron al carrito.
     Con $shipping null (carrito, aún sin entrega elegida) no se muestra la fila de envío.
-    Con $shippingCost (Datos y entrega), checkout.js recalcula envío y total al cambiar el tipo de entrega.
+    Con $shippingCosts (Datos y entrega: costo por entrega), checkout.js recalcula envío y total al cambiar la entrega.
 --}}
 @php($title = fn ($text) => \App\Support\ProductName::title((string) $text))
 <aside class="flex flex-col gap-5 bg-[#f5f7f9] p-6 text-[#0b1015] lg:sticky lg:top-[112px] lg:self-start" aria-labelledby="checkout-summary"
-    @isset($shippingCost) data-ck-summary data-subtotal="{{ $subtotal }}" data-shipping-cost="{{ $shippingCost }}" @endisset>
+    @isset($shippingCosts) data-ck-summary data-subtotal="{{ $subtotal }}" data-shipping-costs='@json($shippingCosts)' @endisset>
     <h2 id="checkout-summary" class="text-[20px] font-extrabold leading-[1.45]">TU PEDIDO</h2>
+    @if (! empty($priceChanges))
+        <div class="bg-[#fff6e0] px-4 py-3 text-[13px] leading-[1.45] text-[#8a5a00]" role="status">
+            <p class="font-bold">Actualizamos precios de tu carrito:</p>
+            @foreach ($priceChanges as $change)<p>{{ $change }}</p>@endforeach
+        </div>
+    @endif
     <ul class="flex flex-col gap-4">
         @foreach ($items as $item)
             <li class="flex gap-5">

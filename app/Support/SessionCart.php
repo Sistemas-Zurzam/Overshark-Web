@@ -12,14 +12,21 @@ class SessionCart
 {
     /**
      * Agrega unidades de una variante sin superar su stock y devuelve la cantidad resultante.
+     * Sin stock no agrega nada (devuelve lo que ya había en el carrito).
      */
     public static function addVariant(Producto $variant, int $qty, ?Producto $product = null): int
     {
         $product ??= $variant;
-        $maxQty = max(1, (int) $variant->stock);
+        $maxQty = (int) $variant->stock;
         $items = session('cart.items', []);
         $key = (string) $variant->id;
-        $newQty = min(($items[$key]['qty'] ?? 0) + max(1, $qty), $maxQty);
+        $currentQty = (int) ($items[$key]['qty'] ?? 0);
+
+        if ($maxQty <= 0 || (float) $variant->price <= 0) {
+            return $currentQty;
+        }
+
+        $newQty = min($currentQty + max(1, $qty), $maxQty);
 
         $items[$key] = [
             'producto_id' => $product->id,

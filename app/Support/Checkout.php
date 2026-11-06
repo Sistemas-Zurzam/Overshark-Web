@@ -11,6 +11,9 @@ use App\Models\Admin\StatusOrder;
 use App\Models\Admin\TipoDocumento;
 use App\Models\Admin\TipoEnvio;
 use App\Models\Admin\TipoRegistro;
+use App\Services\Payments\CulqiGateway;
+use App\Services\Payments\PaymentSimulator;
+use App\Services\Payments\YapeQr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,15 +25,66 @@ use Illuminate\Support\Str;
  */
 class Checkout
 {
+    /** Fecha de despacho a domicilio: antes de las 10:00 (Lima), hoy; desde las 10:00, mañana. */
+    public static function shippingDate(?string $delivery, ?\Illuminate\Support\Carbon $at = null): ?string
+    {
+        if ($delivery !== 'domicilio') {
+            return null;
+        }
+
+        $at = ($at ?? now('America/Lima'))->copy()->setTimezone('America/Lima');
+
+        return $at->copy()->startOfDay()->addDays($at->format('H:i') >= '10:00' ? 1 : 0)->toDateString();
+    }
+
+    /** Fecha legible para mostrar el despacho exacto en el estado del pedido. */
+    public static function shippingDateLabel(?string $date): ?string
+    {
+        if (! $date) {
+            return null;
+        }
+
+        $day = \Illuminate\Support\Carbon::parse($date, 'America/Lima');
+        $today = now('America/Lima')->startOfDay();
+        $prefix = match ((int) $today->diffInDays($day->copy()->startOfDay())) {
+            0 => 'Hoy, ',
+            1 => 'Mañana, ',
+            default => '',
+        };
+        $weekdays = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+        return $prefix.$weekdays[$day->dayOfWeek].' '.$day->format('d/m/Y');
+    }
+
     public const STATUS_PENDING = 'Pendiente de confirmación';
 
     public const STATUS_PAID = 'Pago confirmado';
 
+    // Contraentrega con el separo ya cobrado en línea (tarjeta); el saldo se paga al recibir.
+    public const STATUS_DEPOSIT_PAID = 'Separo pagado';
+
+    // Yape: el QR está generado y se espera la confirmación del pago (vence a los PAYMENTS_QR_MINUTES).
+    public const STATUS_AWAITING_QR = 'Esperando pago';
+
+    public const STATUS_CANCELLED = 'Cancelado';
+
     public const CASH_ON_DELIVERY = 'contraentrega';
 
-    /** @return array{items: Collection, count: int, subtotal: float, shipping: float, total: float} */
+    public const COD_NAME = 'Pago contraentrega';
+
+    public const CARD = 'tarjeta';
+
+    public const YAPE = 'yape';
+
+    /**
+     * Resumen del carrito con los precios vigentes. Si alguno cambió desde que se agregó, se actualiza
+     * y se devuelve el aviso en priceChanges para mostrárselo a la clienta antes de que confirme.
+     *
+     * @return array{items: Collection, count: int, subtotal: float, shipping: float, total: float, priceChanges: array<int, string>}
+     */
     public static function summary(): array
     {
+        $priceChanges = self::syncPrices();
         $items = collect(session('cart.items', []));
         $subtotal = (float) $items->sum(fn (array $item) => (float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 0));
         $shipping = $items->isEmpty() ? 0.0 : Shipping::costFor($subtotal, session('checkout.customer.delivery'));
@@ -41,7 +95,49 @@ class Checkout
             'subtotal' => $subtotal,
             'shipping' => $shipping,
             'total' => $subtotal + $shipping,
+            'priceChanges' => $priceChanges,
         ];
+    }
+
+    /**
+     * Pone en el carrito el precio vigente de cada prenda y combo. Devuelve un aviso por cada precio que
+     * cambió. Las líneas sin precio o sin stock se dejan como están: verifyCart las rechaza al confirmar.
+     *
+     * @return array<int, string>
+     */
+    public static function syncPrices(): array
+    {
+        $items = session('cart.items', []);
+        $changes = [];
+
+        foreach ($items as $key => $item) {
+            $isCombo = ($item['kind'] ?? null) === 'combo';
+            $current = $isCombo
+                ? Combo::query()->find($item['combo_id'] ?? 0)?->price
+                : Producto::query()->find($item['variant_id'] ?? 0)?->price;
+
+            if ($current === null || (float) $current <= 0 || round((float) $current, 2) === round((float) ($item['price'] ?? 0), 2)) {
+                continue;
+            }
+
+            $name = $isCombo ? (string) ($item['producto'] ?? 'Combo') : ProductName::title((string) ($item['producto'] ?? 'Una prenda'));
+            $changes[] = sprintf('El precio de %s cambió de S/ %s a S/ %s.', $name, number_format((float) $item['price'], 2), number_format((float) $current, 2));
+            $items[$key]['price'] = (float) $current;
+        }
+
+        if ($changes !== []) {
+            session(['cart.items' => $items]);
+        }
+
+        return $changes;
+    }
+
+    /** Total que se cobrará por estas líneas (precio vigente + envío según la entrega elegida). */
+    public static function totalFor(Collection $lines, ?string $delivery): float
+    {
+        $subtotal = (float) $lines->sum(fn (array $line) => $line['price'] * $line['qty']);
+
+        return round($subtotal + Shipping::costFor($subtotal, $delivery), 2);
     }
 
     /**
@@ -53,6 +149,8 @@ class Checkout
     public static function verifyCart(): array
     {
         $lines = collect();
+        // Unidades pedidas por variante sumando todas las líneas (una prenda suelta y la misma dentro de un combo).
+        $demand = [];
 
         foreach (session('cart.items', []) as $key => $item) {
             $qty = max(1, (int) ($item['qty'] ?? 1));
@@ -69,6 +167,7 @@ class Checkout
                     if (! $variant || (int) $variant->stock < $units * $qty) {
                         return ['lines' => $lines, 'error' => 'Una prenda del combo "'.$combo->name.'" ya no tiene stock suficiente.'];
                     }
+                    $demand[(int) $variantId] = ($demand[(int) $variantId] ?? 0) + $units * $qty;
                 }
 
                 $lines->push(['key' => (string) $key, 'kind' => 'combo', 'qty' => $qty, 'price' => (float) $combo->price, 'item' => $item]);
@@ -84,47 +183,104 @@ class Checkout
             }
 
             $lines->push(['key' => (string) $key, 'kind' => 'product', 'qty' => $qty, 'price' => (float) $variant->price, 'item' => $item]);
+            $demand[(int) $variant->id] = ($demand[(int) $variant->id] ?? 0) + $qty;
+        }
+
+        foreach ($demand as $variantId => $units) {
+            $variant = Producto::query()->find($variantId);
+            if ((int) $variant->stock < $units) {
+                $name = ProductName::title((string) $variant->name);
+
+                return ['lines' => $lines, 'error' => "Pediste {$units} unidades de {$name} ({$variant->color} · {$variant->talla}) entre prendas sueltas y combos, pero solo quedan {$variant->stock}. Ajusta tu carrito."];
+            }
         }
 
         return ['lines' => $lines, 'error' => $lines->isEmpty() ? 'Tu carrito está vacío.' : null];
     }
 
-    /** Medios de pago disponibles: los activos del admin (con número o QR) y el pago contraentrega. */
-    public static function paymentMethods(): Collection
+    /**
+     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 30 en agencia (configurables).
+     * Se paga en el mismo checkout con tarjeta o Yape/Plin; el saldo se paga al recibir. Almacén: sin separo.
+     */
+    public static function depositFor(?string $delivery): float
     {
-        return MetodoPago::active()
-            ->map(fn (MetodoPago $method) => [
-                'id' => (string) $method->id,
-                'name' => $method->name,
-                'owner' => $method->titular,
-                'number' => $method->numero,
-                'logo' => $method->imageUrl(),
-                'qr' => $method->qrImageUrl(),
-                'receipt' => true,
-            ])
-            ->push([
-                'id' => self::CASH_ON_DELIVERY,
-                'name' => 'Pago contraentrega',
-                'owner' => null,
-                'number' => null,
-                'logo' => null,
-                'qr' => null,
-                'receipt' => false,
-            ])
-            ->values();
+        return match ($delivery) {
+            'domicilio' => (float) config('services.storefront.cod_deposit_home', 15),
+            'agencia' => (float) config('services.storefront.cod_deposit_agency', 30),
+            default => 0.0,
+        };
+    }
+
+    /** Separo que se cobra en este checkout: el de la entrega, sin pasar el total. */
+    public static function depositAmount(?string $delivery, float $total): float
+    {
+        return min(self::depositFor($delivery), $total);
     }
 
     /**
-     * Crea el pedido con los datos de la clienta. Si el mismo checkout_token ya generó un pedido,
-     * devuelve ese (doble clic o reenvío del formulario).
+     * Medios de pago, en este orden:
+     *  - Tarjeta de crédito o débito (Culqi).
+     *  - Yape con QR de Ligo Pay (App\Services\Payments\LigoPayGateway, pendiente de su API).
+     *  - Los medios activos del admin (Plin, transferencia…: número o QR) con captura del pago.
+     *  - Pago contraentrega (el separo se paga con uno de los anteriores; ver onlineMethods()).
      */
-    public static function place(array $customer, array $method, ?string $receiptPath, string $token, Collection $lines): Order
+    public static function paymentMethods(): Collection
+    {
+        // Tarjeta (Culqi) y Yape (QR de Ligo Pay) se muestran siempre; sin configurar se ven con un aviso pero
+        // no se puede pagar (available false).
+        $methods = collect([
+            [
+                'id' => self::CARD, 'kind' => 'card', 'name' => 'Tarjeta de crédito o débito', 'available' => CulqiGateway::isConfigured() || PaymentSimulator::enabled(),
+                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
+            ],
+            [
+                'id' => self::YAPE, 'kind' => 'yape', 'name' => 'Yape', 'available' => YapeQr::isAvailable(),
+                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
+            ],
+        ]);
+
+        MetodoPago::active()->each(fn (MetodoPago $method) => $methods->push([
+            'id' => (string) $method->id,
+            'kind' => 'wallet',
+            'name' => $method->name,
+            'available' => true,
+            'owner' => $method->titular,
+            'number' => $method->numero,
+            'logo' => $method->imageUrl(),
+            'qr' => $method->qrImageUrl(),
+            'receipt' => true,
+        ]));
+
+        return $methods->push([
+            'id' => self::CASH_ON_DELIVERY, 'kind' => 'cod', 'name' => 'Pago contraentrega', 'available' => true,
+            'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
+        ])->values();
+    }
+
+    /** Medios que se pueden elegir hoy (los "Muy pronto" no). */
+    public static function availableMethods(): Collection
+    {
+        return self::paymentMethods()->where('available', true)->values();
+    }
+
+    /** Medios con los que se paga en línea (el total o el separo de contraentrega). */
+    public static function onlineMethods(): Collection
+    {
+        return self::availableMethods()->where('kind', '!=', 'cod')->values();
+    }
+
+    /**
+     * Crea el pedido con los datos de la clienta. $payWith es el medio con el que paga en línea (el mismo
+     * $method, o el elegido para el separo en contraentrega; null si no paga nada en línea). Si el mismo
+     * checkout_token ya generó un pedido, devuelve ese (doble clic o reenvío del formulario).
+     */
+    public static function place(array $customer, array $method, ?array $payWith, ?string $receiptPath, string $token, Collection $lines, ?int $accountId = null): Order
     {
         if ($existing = Order::query()->where('checkout_token', $token)->first()) {
             return $existing;
         }
 
-        return DB::transaction(function () use ($customer, $method, $receiptPath, $token, $lines) {
+        return DB::transaction(function () use ($customer, $method, $payWith, $receiptPath, $token, $lines, $accountId) {
             $documentType = TipoDocumento::query()->firstOrCreate(['code' => $customer['doc_type']], ['name' => $customer['doc_type']]);
             $register = TipoRegistro::query()->firstOrCreate(['name' => 'Web']);
             $client = Cliente::query()->updateOrCreate(
@@ -142,10 +298,12 @@ class Checkout
             $subtotal = (float) $lines->sum(fn (array $line) => $line['price'] * $line['qty']);
             $shipping = Shipping::costFor($subtotal, $customer['delivery']);
             $delivery = match ($customer['delivery']) {
-                'agencia' => 'Recojo en agencia',
+                'agencia' => 'Recojo en agencia Shalom',
                 Shipping::PICKUP => 'Recojo en almacén',
                 default => 'Envío a domicilio',
             };
+            $isCod = $method['id'] === self::CASH_ON_DELIVERY;
+            $deposit = $isCod ? self::depositAmount($customer['delivery'], $subtotal + $shipping) : null;
 
             $order = Order::query()->create([
                 'number_zazu' => 'WEB-'.Str::upper(Str::random(12)),
@@ -164,10 +322,16 @@ class Checkout
                 'subtotal' => $subtotal,
                 'envio' => $shipping,
                 'precio_total' => $subtotal + $shipping,
-                'metodo_pago_id' => ctype_digit((string) $method['id']) ? (int) $method['id'] : null,
-                'metodo_pago_nombre' => $method['name'],
+                'separo' => $isCod ? $deposit : null,
+                'pago_monto' => $payWith ? ($isCod ? $deposit : $subtotal + $shipping) : null,
+                'metodo_pago_id' => ctype_digit((string) ($payWith['id'] ?? '')) ? (int) $payWith['id'] : null,
+                'metodo_pago_nombre' => $isCod
+                    ? self::COD_NAME.($payWith ? ' · separo con '.$payWith['name'] : '')
+                    : $method['name'],
                 'comprobante_pago' => $receiptPath,
                 'cliente_id' => $client->id,
+                // Cuenta del comprador que inició sesión (la pone el servidor); nula en pedidos de invitados.
+                'customer_account_id' => $accountId,
                 'cliente_name' => trim($customer['nombres'].' '.$customer['apellidos']),
                 'cliente_cel' => $customer['phone'],
                 'email' => $customer['email'],
@@ -177,6 +341,7 @@ class Checkout
                 'tipo_envio_id' => TipoEnvio::query()->firstOrCreate(['name' => $delivery])->id,
                 'entrega' => $customer['delivery'],
                 'agencia' => $customer['agency'] ?? null,
+                'agencia_shalom_id' => $customer['agency_shalom_id'] ?? null,
                 'tipo_registro_id' => $register->id,
                 'distrito_id' => $customer['distrito_id'] ?? null,
                 'direccion' => $customer['address'] ?? null,

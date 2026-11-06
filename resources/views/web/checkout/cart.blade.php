@@ -10,7 +10,7 @@
     @if ($items->isEmpty())
         <section class="flex max-w-[560px] flex-col items-start gap-5 py-6" aria-labelledby="cart-title">
             <h1 id="cart-title" class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">TU CARRITO ESTÁ VACÍO</h1>
-            <p class="text-[16px] leading-[1.45] text-[#65717c]">Agrega tus prendas favoritas y arma tu próximo look. El envío es S/ 14 a todo el Perú.</p>
+            <p class="text-[16px] leading-[1.45] text-[#65717c]">Agrega tus prendas favoritas y arma tu próximo look. Enviamos a todo el Perú desde S/ 15.</p>
             <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">IR A LA TIENDA</a>
         </section>
     @else
@@ -18,6 +18,8 @@
 
         @if ($errors->any())
             <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
+        @elseif (session('cart_notice'))
+            <p class="bg-[#fff6e0] px-4 py-3 text-[14px] font-bold text-[#8a5a00]" role="status">{{ session('cart_notice') }}</p>
         @endif
 
         <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
@@ -68,10 +70,23 @@
             </section>
 
             {{-- En el carrito aún no se eligió la entrega: sin fila de envío y el total es el subtotal. --}}
-            @component('web.checkout.partials.summary', ['items' => $items, 'count' => $count, 'subtotal' => $subtotal, 'shipping' => null, 'total' => $subtotal])
+            @component('web.checkout.partials.summary', ['items' => $items, 'count' => $count, 'subtotal' => $subtotal, 'shipping' => null, 'total' => $subtotal, 'priceChanges' => $priceChanges])
                 <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
-                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 14 a domicilio o agencia, gratis si recoges en almacén.</p>
+                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 15 a domicilio en Lima, S/ 30 en agencia Shalom o gratis si recoges en almacén.</p>
             @endcomponent
         </div>
+
+        {{-- Te puede interesar: reglas del panel (Sugerencias). Se suma sin recargar el flujo (quiet=1). --}}
+        @php($suggestions = \App\Support\CartSuggestions::forCart())
+        @if ($suggestions->isNotEmpty())
+            <section class="os-hh border-t border-[#dae0e5] pt-8" aria-labelledby="cart-suggest">
+                <h2 id="cart-suggest" class="text-[20px] font-extrabold text-[#0b1015]">Te puede interesar</h2>
+                <div class="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    @foreach ($suggestions as $card)
+                        @include('web.partials.suggestion-card', ['card' => $card, 'quiet' => true])
+                    @endforeach
+                </div>
+            </section>
+        @endif
     @endif
 @endsection

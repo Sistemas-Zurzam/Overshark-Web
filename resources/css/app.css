@@ -2012,6 +2012,52 @@ button.os-nav-icon:hover {
     outline-offset: 2px;
 }
 
+/* Pago: tarjetas de resumen (Enviar a / Método de envío / Comprobante) y métodos de pago desplegables. */
+.os-pay-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 24px;
+    border: 1px solid #c9d0d6;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #0b1015;
+}
+
+.os-pay-box__title {
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.os-pay-box__edit {
+    font-size: 14px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.os-pay-option {
+    border: 1px solid #c9d0d6;
+    background: #ffffff;
+    transition: border-color .15s;
+}
+
+.os-pay-option:hover {
+    border-color: #0b1015;
+}
+
+.os-pay-option:has(input[data-ck-method]:checked) {
+    border-color: #0b1015;
+    box-shadow: inset 0 0 0 1px #0b1015;
+}
+
+.os-pay-option:has(input[data-ck-method]:focus-visible) {
+    outline: 2px solid #2467cf;
+    outline-offset: 2px;
+}
+
 .os-ck-upload {
     display: flex;
     cursor: pointer;
@@ -2095,3 +2141,4 @@ button.os-nav-icon:hover {
 .os-card-swatch[aria-pressed='true'] {
     outline-color: #0b0f14;
 }
+

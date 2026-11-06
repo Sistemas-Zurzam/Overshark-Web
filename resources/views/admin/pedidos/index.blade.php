@@ -43,7 +43,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($orders as $order)
                         <tr>
-                            <td class="py-3 pr-4 font-bold text-slate-950">{{ $order->number_zazu }}</td>
+                            <td class="py-3 pr-4 font-bold text-slate-950">{{ $order->displayNumber() }}@if ($order->nota_venta)<span class="block text-xs font-medium text-slate-400">{{ $order->number_zazu }}</span>@endif</td>
                             <td class="py-3 pr-4">{{ $order->cliente_name }}<span class="block text-xs text-slate-500">{{ $order->cliente_cel }}</span></td>
                             <td class="py-3 pr-4"><span @class(['rounded-full px-2.5 py-1 text-xs font-bold', 'bg-amber-50 text-amber-700' => $order->statusOrder?->name === \App\Support\Checkout::STATUS_PENDING, 'bg-emerald-50 text-emerald-700' => $order->statusOrder?->name !== \App\Support\Checkout::STATUS_PENDING])>{{ $order->statusOrder?->name }}</span></td>
                             <td class="py-3 pr-4">{{ $order->metodo_pago_nombre ?? '—' }}</td>

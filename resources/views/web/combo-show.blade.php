@@ -181,7 +181,7 @@
                             <span class="text-[16px]">Total del combo</span>
                             <span class="text-[24px]">S/ {{ number_format((float) $combo->price, 2) }}</span>
                         </p>
-                        <p class="-mt-2 text-[12px] font-medium text-[#65717c]">Envío S/ 14 a todo el Perú. Pago contraentrega o Yape / Plin.</p>
+                        <p class="-mt-2 text-[12px] font-medium text-[#65717c]">Envío desde S/ 15 a todo el Perú. Pago contraentrega o Yape / Plin.</p>
                         @unless ($hasUnavailableSlot)
                             <button type="submit" form="combo-form" class="os-hh-btn os-focus hidden w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] lg:inline-flex" data-combo-submit>Agregar combo al carrito</button>
                         @endunless

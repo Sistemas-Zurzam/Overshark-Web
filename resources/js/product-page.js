@@ -1,5 +1,7 @@
 // Ficha de producto (web/product-show.blade.php): galería, color, talla y cantidad.
 // Al elegir un color se muestran sus fotos y solo se habilitan las tallas con stock en ese color.
+import { submitOnce } from './submit-once';
+
 const page = document.querySelector('[data-pdp]');
 
 if (page) {
@@ -115,6 +117,7 @@ if (page) {
         render();
     }));
 
+    submitOnce(page.querySelector('[data-cart-form]'));
     bindThumbs();
     toggleArrows();
     render();

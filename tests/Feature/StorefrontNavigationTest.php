@@ -21,7 +21,8 @@ class StorefrontNavigationTest extends TestCase
             ->assertSeeText('Nosotros')
             ->assertSeeText('Contacto')
             ->assertSee(route('web.home', ['linea' => 'mujer']), false)
-            ->assertSee('Mi cuenta · Próximamente')
+            ->assertSee('href="'.route('login').'"', false)
+            ->assertSee('aria-label="Iniciar sesión"', false)
             ->assertDontSee(route('admin.dashboard'), false);
     }
 

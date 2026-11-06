@@ -2,6 +2,7 @@
 // pestaña con sus opciones (producto + color y tallas). "Tu look" muestra lo elegido, el ahorro real
 // frente al precio normal y envía las variantes al carrito del combo (selections[] en orden de prendas).
 import { productTitle } from './product-name';
+import { submitOnce } from './submit-once';
 const root = document.querySelector('[data-outfit-builder]');
 
 if (root) {
@@ -177,6 +178,8 @@ if (root) {
 
     root.querySelectorAll('[data-ob-pick]').forEach((b) => b.addEventListener('click', () => load(b.dataset.obPick)));
     root.querySelectorAll('[data-ob-reset]').forEach((b) => b.addEventListener('click', () => load(combo?.id, false)));
+
+    submitOnce($('[data-ob-form]'));
 
     if (combo) {
         render();

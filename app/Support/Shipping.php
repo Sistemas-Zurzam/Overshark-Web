@@ -3,15 +3,13 @@
 namespace App\Support;
 
 /**
- * Costo de envío de la tienda. Es gratis desde services.storefront.free_shipping_from
- * (STOREFRONT_FREE_SHIPPING_FROM, en soles sobre el subtotal); con 0 no hay envío gratis.
- * El recojo en almacén (la clienta pasa a recoger su pedido) no tiene costo.
+ * Costo de envío según la entrega: S/ 15 a domicilio (solo Lima), S/ 30 en agencia Shalom y gratis en el
+ * recojo en almacén (STOREFRONT_SHIPPING_HOME / STOREFRONT_SHIPPING_AGENCY). Es gratis desde
+ * services.storefront.free_shipping_from (STOREFRONT_FREE_SHIPPING_FROM, en soles sobre el subtotal); con 0
+ * no hay envío gratis.
  */
 class Shipping
 {
-    // Envío S/ 14 a todo el Perú (confirmado en el diseño del checkout; Lima delivery o agencia, provincia agencia).
-    public const COST = 14;
-
     public const PICKUP = 'almacen';
 
     public static function freeFrom(): float
@@ -19,15 +17,31 @@ class Shipping
         return (float) config('services.storefront.free_shipping_from', 0);
     }
 
+    /** Tarifa de cada entrega, sin aplicar el envío gratis. Sin entrega elegida se usa la de domicilio. */
+    public static function rate(?string $delivery): float
+    {
+        return match ($delivery) {
+            self::PICKUP => 0.0,
+            'agencia' => (float) config('services.storefront.shipping_agency', 30),
+            default => (float) config('services.storefront.shipping_home', 15),
+        };
+    }
+
     public static function costFor(float $subtotal, ?string $delivery = null): float
     {
-        if ($delivery === self::PICKUP) {
-            return 0.0;
-        }
-
         $from = self::freeFrom();
 
-        return $from > 0 && $subtotal >= $from ? 0.0 : (float) self::COST;
+        return $from > 0 && $subtotal >= $from ? 0.0 : self::rate($delivery);
+    }
+
+    /** Costo de cada entrega para este subtotal (la vista de "Datos y entrega" lo usa para recalcular). */
+    public static function costsFor(float $subtotal): array
+    {
+        return [
+            'domicilio' => self::costFor($subtotal, 'domicilio'),
+            'agencia' => self::costFor($subtotal, 'agencia'),
+            self::PICKUP => 0.0,
+        ];
     }
 
     /** Dirección y horario del almacén (STOREFRONT_PICKUP_ADDRESS); vacío si aún no se configuró. */

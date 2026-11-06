@@ -23,11 +23,19 @@
     $sorts = ['unidad' => 'Mejor precio por prenda', 'precio' => 'Precio total: menor a mayor', 'prendas' => 'Más prendas'];
     $url = fn (array $changes) => route('web.combos.index', array_filter([...request()->only(['marca', 'tipo', 'orden']), ...$changes], fn ($value) => $value !== null && $value !== ''));
 
+    // Los combos con flyer van primero y, por defecto, en el orden en que se cargaron (el del diseño).
     $sorted = match ($orden) {
         'precio' => $combos->sortBy('price'),
         'prendas' => $combos->sortByDesc('quantity'),
-        default => $combos->sortBy('unit_price'),
+        default => $combos->sortBy(fn (array $combo) => $combo['flyer'] ? [0, $combo['id']] : [1, $combo['unit_price']]),
     };
+    // Colores de la tarjeta con flyer por marca (diseño "Elige tu combo").
+    $promoThemes = [
+        'OVERSHARK' => ['card' => 'rounded-[8px] border-[#3fa9f5]/60 bg-[#f0f7ff] text-[#071226]', 'logo' => 'overshark', 'logoClass' => 'h-5 w-[120px]', 'button' => 'bg-[#071226] text-white'],
+        'BRAVOS' => ['card' => 'border-[#ffdb00]/60 bg-[#f6f6f4] text-[#050505]', 'logo' => 'bravos', 'logoClass' => 'h-7 w-[88px]', 'button' => 'border-2 border-[#050505] bg-[#ffdb00] text-[#050505]'],
+        'GIRLS' => ['card' => 'rounded-[12px] border-[#f07fa6]/60 bg-[#fff1f7] text-[#2a0a1e]', 'logo' => 'girls', 'logoClass' => 'h-7 w-[95px]', 'button' => 'bg-[#f07fa6] text-[#2a0a1e]'],
+    ];
+    $money = fn (float $amount) => 'S/ '.rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
     $grouped = $sorted->groupBy('kind');
     // El combo más conveniente de cada tipo (menor precio por prenda) lleva una etiqueta.
     $best = $combos->groupBy('kind')->map(fn ($items) => $items->sortBy('unit_price')->first()['id'] ?? null);
@@ -67,7 +75,7 @@
         {{-- Cómo funciona --}}
         <section class="border-b border-[var(--shop-line)] bg-[var(--hh-soft)]" aria-label="Cómo funciona">
             <ol class="os-hh-wrap grid gap-4 py-6 sm:grid-cols-3 sm:gap-8">
-                @foreach (['Elige tu combo' => 'Combina modelos o lleva tu favorito en varios colores.', 'Escoge talla y color' => 'De cada prenda, entre lo que hay en stock.', 'Recíbelo en casa' => 'Envío S/ 14 a todo el Perú. Pago contraentrega o Yape / Plin.'] as $step => $text)
+                @foreach (['Elige tu combo' => 'Combina modelos o lleva tu favorito en varios colores.', 'Escoge talla y color' => 'De cada prenda, entre lo que hay en stock.', 'Recíbelo en casa' => 'Envío desde S/ 15 a todo el Perú. Pago contraentrega o Yape / Plin.'] as $step => $text)
                     <li class="flex items-start gap-3">
                         <span @class(['shrink-0 leading-none text-[var(--hh-accent)]', 'os-hh-display text-[36px]' => ! $girls && ! $bravos, 'os-josefin text-[28px]' => $girls, 'text-[28px] font-extrabold' => $bravos])>{{ sprintf('%02d', $loop->iteration) }}</span>
                         <span class="flex flex-col gap-0.5">
@@ -113,8 +121,23 @@
                             <p class="text-[14px] font-medium text-[#545966]">{{ $section['text'] }}</p>
                         </div>
 
-                        <ul class="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8 lg:grid-cols-3 xl:grid-cols-4">
+                        <ul @class(['mt-6 grid gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8', 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' => ! $grouped[$kind]->contains('flyer', '!=', null), 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' => $grouped[$kind]->contains('flyer', '!=', null)])>
                             @foreach ($grouped[$kind] as $combo)
+                                @if ($combo['flyer'])
+                                    @php($theme = $promoThemes[$combo['brand']] ?? $promoThemes['OVERSHARK'])
+                                    <li>
+                                        {{-- Tarjeta con flyer (diseño "Elige tu combo"): flyer completo, marca, "N × S/ precio" y botón. --}}
+                                        <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col gap-4 border px-4 pb-5 pt-4 transition hover:shadow-[0_8px_24px_rgb(0_0_0/12%)] {{ $theme['card'] }}">
+                                            <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="h-auto w-full rounded-[10px]" loading="lazy" decoding="async">
+                                            <img src="{{ asset('images/combos/logo-'.$theme['logo'].'.svg') }}" alt="" class="shrink-0 {{ $theme['logoClass'] }}" width="120" height="28">
+                                            <h3 class="text-[21px] font-extrabold leading-[1.2]">{{ $combo['title'] }}</h3>
+                                            <p class="text-[30px] font-extrabold leading-none">{{ $combo['quantity'] }} × {{ $money($combo['price']) }}</p>
+                                            <p class="text-[14px]">Elige color y talla de cada prenda.</p>
+                                            <span class="mt-auto flex items-center justify-center py-4 text-[14px] font-extrabold tracking-[.28px] transition group-hover:opacity-90 {{ $theme['button'] }}">ELEGIR ESTE COMBO</span>
+                                        </a>
+                                    </li>
+                                    @continue
+                                @endif
                                 <li>
                                     <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col border border-[var(--shop-line)] bg-white transition hover:border-[#0b0f14]">
                                         <div class="relative grid aspect-[4/3] overflow-hidden bg-[var(--hh-soft)]" style="grid-template-columns: repeat({{ max(1, count($combo['images'])) }}, minmax(0, 1fr))">

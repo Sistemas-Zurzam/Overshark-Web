@@ -29,6 +29,13 @@
         <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Los pagos y Zazu no dependen del .env local: cada test activa lo que necesita. -->
+        <env name="PAYMENTS_SIMULATE" value="false" force="true"/>
+        <env name="CRM_SEND_SALES" value="false" force="true"/>
+        <env name="CRM_BASE_URL" value="" force="true"/>
+        <env name="CRM_API_KEY" value="" force="true"/>
+        <env name="CULQI_PUBLIC_KEY" value="" force="true"/>
+        <env name="CULQI_SECRET_KEY" value="" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\BrandSettingController;
+use App\Http\Controllers\Admin\CartSuggestionController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
@@ -19,6 +20,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/pedidos', [OrderController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('pedidos.show');
     Route::patch('/pedidos/{order}/estado', [OrderController::class, 'updateStatus'])->name('pedidos.status');
+    Route::post('/pedidos/{order}/tareas/{task}/reintentar', [OrderController::class, 'retryTask'])->name('pedidos.tasks.retry');
+    Route::get('/pedidos/{order}/correo', [OrderController::class, 'emailPreview'])->name('pedidos.email.preview');
+    Route::post('/pedidos/{order}/correo/reenviar', [OrderController::class, 'resendEmail'])->name('pedidos.email.resend');
     Route::view('/clientes', 'admin.clientes.index')->name('clientes.index');
     Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
     Route::get('/mensajes', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('messages.index');
@@ -44,6 +48,12 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/banners/{banner}/estado', [BannerController::class, 'toggle'])->name('banners.toggle');
     Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     Route::get('/combos', [ComboController::class, 'index'])->name('combos.index');
+    Route::get('/sugerencias', [CartSuggestionController::class, 'index'])->name('sugerencias.index');
+    Route::post('/sugerencias', [CartSuggestionController::class, 'store'])->name('sugerencias.store');
+    Route::get('/sugerencias/{suggestion}/editar', [CartSuggestionController::class, 'edit'])->name('sugerencias.edit');
+    Route::put('/sugerencias/{suggestion}', [CartSuggestionController::class, 'update'])->name('sugerencias.update');
+    Route::patch('/sugerencias/{suggestion}/estado', [CartSuggestionController::class, 'toggle'])->name('sugerencias.toggle');
+    Route::delete('/sugerencias/{suggestion}', [CartSuggestionController::class, 'destroy'])->name('sugerencias.destroy');
     Route::get('/arma-tu-outfit', [ComboController::class, 'outfits'])->name('outfits.index');
     Route::post('/arma-tu-outfit/flyer', [ComboController::class, 'updateFlyer'])->name('outfits.flyer');
     // Overshark TV: maqueta del estudio (sin backend todavía).

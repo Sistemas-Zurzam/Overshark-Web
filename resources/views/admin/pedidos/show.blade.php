@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Pedido '.$order->number_zazu)
+@section('title', 'Pedido '.$order->displayNumber())
 
 @php
     $place = $order->distrito ? collect([$order->distrito->name, $order->distrito->provincia?->name, $order->distrito->provincia?->departamento?->name])->filter()->implode(', ') : null;
@@ -11,8 +11,11 @@
     <div class="mb-8 mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-sm font-bold uppercase tracking-widest text-cyan-600">Pedido</p>
-            <h1 class="mt-2 text-3xl font-black text-slate-950">{{ $order->number_zazu }}</h1>
+            <h1 class="mt-2 text-3xl font-black text-slate-950">{{ $order->displayNumber() }}</h1>
             <p class="mt-2 text-slate-500">{{ $order->created_at?->format('d/m/Y H:i') }} · {{ $order->statusOrder?->name }}</p>
+            @if ($order->nota_venta)
+                <p class="mt-1 text-sm font-bold text-slate-700">Nota de venta del CRM · pedido web {{ $order->number_zazu }}</p>
+            @endif
         </div>
         <form method="POST" action="{{ route('admin.pedidos.status', $order) }}" class="flex gap-2">
             @csrf @method('PATCH')
@@ -77,8 +80,66 @@
                     <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($order->comprobante_pago) }}" target="_blank" rel="noopener" class="mt-3 block">
                         <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($order->comprobante_pago) }}" alt="Captura del pago" class="max-h-80 rounded-xl border border-slate-200">
                     </a>
-                @elseif ($order->metodo_pago_nombre !== 'Pago contraentrega')
+                @elseif ($order->pago_referencia)
+                    <p class="mt-2 text-emerald-700">Cobrado con tarjeta por Culqi · cargo {{ $order->pago_referencia }}</p>
+                @elseif ((float) $order->pago_monto > 0)
                     <p class="mt-2 text-red-600">Sin captura de pago.</p>
+                @endif
+                @if ((float) $order->pago_monto > 0)
+                    <p class="mt-2">Pagado en línea: <span class="font-bold">S/ {{ number_format((float) $order->pago_monto, 2) }}</span></p>
+                @endif
+                @if ($order->pago_qr && $order->pago_qr_expira)
+                    <p class="mt-2 text-amber-700">QR de Yape generado · vence {{ $order->pago_qr_expira->format('d/m H:i') }}</p>
+                @endif
+                @if ((float) $order->separo > 0)
+                    <dl class="mt-3 space-y-1 border-t border-slate-200 pt-3">
+                        <div class="flex justify-between"><dt>Separo (pagado en el checkout)</dt><dd class="font-bold">S/ {{ number_format((float) $order->separo, 2) }}</dd></div>
+                        <div class="flex justify-between"><dt>Saldo a cobrar al entregar</dt><dd class="font-bold">S/ {{ number_format((float) $order->precio_total - (float) $order->separo, 2) }}</dd></div>
+                    </dl>
+                @endif
+            </section>
+
+            {{-- Después del pago (App\Services\Orders\OrderFulfillment): nota de venta, ERP, comprobante y correo. --}}
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 text-sm shadow-sm">
+                <h2 class="text-lg font-black text-slate-950">Después del pago</h2>
+                @if ($order->tasks->isEmpty())
+                    <p class="mt-2 text-slate-500">Empieza cuando el pago se confirme.</p>
+                @else
+                    <ol class="mt-3 space-y-3">
+                        @foreach ($order->tasks->sortBy(fn ($task) => array_search($task->task, array_keys(\App\Services\Orders\OrderFulfillment::TASKS), true)) as $task)
+                            <li class="flex items-start gap-3">
+                                <span @class([
+                                    'mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-bold',
+                                    'bg-emerald-50 text-emerald-700' => $task->status === \App\Models\Admin\OrderTask::DONE,
+                                    'bg-slate-100 text-slate-600' => $task->status === \App\Models\Admin\OrderTask::SKIPPED,
+                                    'bg-amber-50 text-amber-700' => $task->status === \App\Models\Admin\OrderTask::PENDING,
+                                    'bg-red-50 text-red-700' => $task->status === \App\Models\Admin\OrderTask::FAILED,
+                                ])>{{ $task->status }}</span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-slate-900">{{ \App\Services\Orders\OrderFulfillment::LABELS[$task->task] ?? $task->task }}</p>
+                                    @if ($task->message)<p class="text-slate-500">{{ $task->message }}</p>@endif
+                                    @if ($task->attempts > 1)<p class="text-xs text-slate-400">{{ $task->attempts }} intentos</p>@endif
+                                    @if ($task->status === \App\Models\Admin\OrderTask::FAILED)
+                                        <form method="POST" action="{{ route('admin.pedidos.tasks.retry', [$order, $task]) }}" class="mt-1">
+                                            @csrf
+                                            <button type="submit" class="text-xs font-bold text-blue-700 hover:underline">Reintentar</button>
+                                        </form>
+                                    @endif
+                                    @if ($task->task === 'correo')
+                                        <div class="mt-1 flex gap-4">
+                                            <a href="{{ route('admin.pedidos.email.preview', $order) }}" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:underline">Ver correo</a>
+                                            @if ($task->status !== \App\Models\Admin\OrderTask::PENDING)
+                                                <form method="POST" action="{{ route('admin.pedidos.email.resend', $order) }}">
+                                                    @csrf
+                                                    <button type="submit" class="text-xs font-bold text-blue-700 hover:underline">Reenviar al cliente</button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ol>
                 @endif
             </section>
         </aside>
