@@ -12,6 +12,7 @@ class Producto extends Model
 
     protected $fillable = [
         'categoria_id',
+        'bodega_id',
         'default_code',
         'name',
         'color',
@@ -78,6 +79,11 @@ class Producto extends Model
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function bodega()
+    {
+        return $this->belongsTo(Bodega::class);
     }
 
     public function variantes()

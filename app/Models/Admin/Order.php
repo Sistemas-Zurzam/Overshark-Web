@@ -53,6 +53,13 @@ class Order extends Model
         return 'OS-'.str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
     }
 
+    public function maskedEmail(): string
+    {
+        [$local, $domain] = array_pad(explode('@', (string) $this->email, 2), 2, '');
+
+        return mb_substr($local, 0, 3).'•••@'.$domain;
+    }
+
     public function cliente() { return $this->belongsTo(Cliente::class); }
     public function metodoPago() { return $this->belongsTo(MetodoPago::class); }
     public function statusOrder() { return $this->belongsTo(StatusOrder::class); }

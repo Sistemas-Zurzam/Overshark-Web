@@ -70,6 +70,28 @@
     --color-electric: #2675ff;
     --color-electric-soft: #6aa6ff;
     --color-tide: #3fc6d8;
+
+    /* Panel admin (Figma "01 · Dashboard — corregido") */
+    --font-admin-display: 'Big Shoulders Display', 'Oswald', sans-serif;
+    --font-admin-sans: 'Manrope', 'SF Pro Display', sans-serif;
+    --color-admin-canvas: #f7f7f7;
+    --color-admin-surface: #ffffff;
+    --color-admin-subtle: #f5f6f8;
+    --color-admin-hover: #f2f2f5;
+    --color-admin-border: #e5e7eb;
+    --color-admin-border-strong: #c9ced6;
+    --color-admin-text: #0b0f14;
+    --color-admin-text-secondary: #545966;
+    --color-admin-text-muted: #65717c;
+    --color-admin-navy: #071226;
+    --color-admin-accent: #2d69b5;
+    --color-admin-accent-soft: #eef3f9;
+    --color-admin-success: #107d38;
+    --color-admin-success-soft: #e8f7ed;
+    --color-admin-warning: #a15c00;
+    --color-admin-warning-soft: #fff3d6;
+    --color-admin-danger: #c42b2b;
+    --color-admin-danger-soft: #fdecec;
 }
 
 @layer base {
@@ -225,56 +247,36 @@
     }
 
     .admin-nav-link {
-        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition duration-200 hover:bg-white/[0.07] hover:text-white;
-        color: var(--color-mist);
+        @apply flex h-9 items-center gap-3 rounded px-3 py-2 text-sm font-semibold transition duration-150;
+        color: var(--color-admin-text-secondary);
+    }
+
+    .admin-nav-link:hover {
+        background: var(--color-admin-subtle);
     }
 
     .admin-nav-link.is-active {
-        color: #ffffff;
-        background: linear-gradient(100deg, rgb(38 117 255 / 34%), rgb(38 117 255 / 10%));
-        box-shadow: inset 3px 0 var(--color-electric);
+        @apply font-extrabold;
+        color: var(--color-admin-accent);
+        background: var(--color-admin-accent-soft);
     }
 
     .admin-topbar {
-        border-bottom: 1px solid #e3e8ef;
-        box-shadow: 0 2px 14px rgb(3 10 28 / 6%);
-    }
-
-    .admin-topbar::after {
-        position: absolute;
-        inset: auto 0 -1px 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--color-brand-blue), var(--color-electric) 45%, var(--color-tide));
-        content: '';
+        background: var(--color-admin-navy);
     }
 
     .admin-sidebar {
-        background:
-            radial-gradient(120% 40% at 0% 0%, rgb(38 117 255 / 18%), transparent 60%),
-            linear-gradient(180deg, var(--color-night) 0%, var(--color-ink) 100%);
-        box-shadow: 8px 0 28px rgb(3 10 28 / 14%);
+        background: var(--color-admin-surface);
+        border-right: 1px solid var(--color-admin-border);
     }
 
-    .admin-nav-icon {
-        width: 7px;
-        height: 7px;
-        flex: 0 0 7px;
-        border-radius: 999px;
-        background: var(--color-edge-strong);
-        transition: background 200ms ease, box-shadow 200ms ease;
-    }
-
-    .admin-nav-link:hover .admin-nav-icon {
-        background: var(--color-neon-soft);
-    }
-
-    .admin-nav-link.is-active .admin-nav-icon {
-        background: var(--color-electric-soft);
-        box-shadow: 0 0 0 4px rgb(38 117 255 / 25%);
+    .admin-nav-group-label {
+        @apply pb-1.5 pl-3 text-[11px] font-extrabold uppercase tracking-[2px];
+        color: var(--color-admin-accent);
     }
 
     .admin-shell ::selection {
-        background: var(--color-electric);
+        background: var(--color-admin-accent);
         color: #ffffff;
     }
 

@@ -25,7 +25,7 @@ class SessionCart
         if ($maxQty <= 0 || (float) $variant->price <= 0) {
             return $currentQty;
         }
-
+        
         $newQty = min($currentQty + max(1, $qty), $maxQty);
 
         $items[$key] = [

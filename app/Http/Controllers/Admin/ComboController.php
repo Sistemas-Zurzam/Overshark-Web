@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
 use App\Models\Admin\Combo;
 use App\Models\Admin\Producto;
+use App\Models\Brand;
 use App\Services\ComboCatalogImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,24 +18,41 @@ class ComboController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
+        $brandId = $request->query('marca');
+        $estado = in_array($request->query('estado'), ['activos', 'borradores'], true) ? $request->query('estado') : '';
+
+        $base = Combo::query()
+            ->where(fn ($q) => $q->whereNull('modality')->orWhere('modality', '!=', 'Outfit'))
+            ->when($search !== '', function ($query) use ($search): void {
+                $like = "%{$search}%";
+                $query->where(fn ($searchQuery) => $searchQuery
+                    ->where('name', 'like', $like)
+                    ->orWhere('brand', 'like', $like)
+                    ->orWhere('modality', 'like', $like)
+                    ->orWhere('items', 'like', $like));
+            })
+            ->when($brandId !== null && $brandId !== '', fn ($query) => $query->where('brand_id', $brandId))
+            ->latest()
+            ->get();
+
+        $counts = [
+            'todos' => $base->count(),
+            'activos' => $base->where('is_draft', false)->where('status', true)->count(),
+            'borradores' => $base->where('is_draft', true)->count(),
+        ];
+
+        $combos = match ($estado) {
+            'activos' => $base->where('is_draft', false)->where('status', true)->values(),
+            'borradores' => $base->where('is_draft', true)->values(),
+            default => $base,
+        };
 
         return view('admin.combos.index', [
-            'combos' => Combo::query()
-                ->where(fn ($q) => $q->whereNull('modality')->orWhere('modality', '!=', 'Outfit'))
-                ->when($search !== '', function ($query) use ($search): void {
-                    $like = "%{$search}%";
-
-                    $query->where(function ($searchQuery) use ($like): void {
-                        $searchQuery
-                            ->where('name', 'like', $like)
-                            ->orWhere('brand', 'like', $like)
-                            ->orWhere('modality', 'like', $like)
-                            ->orWhere('items', 'like', $like);
-                    });
-                })
-                ->latest()
-                ->get(),
+            'combos' => $combos,
             'search' => $search,
+            'estado' => $estado,
+            'selectedBrandId' => $brandId,
+            'counts' => $counts,
             ...$this->formOptions(),
         ]);
     }
@@ -127,20 +144,23 @@ class ComboController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:80'],
+            'brand_id' => ['required', 'exists:brands,id'],
             'modality' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:255'],
             'outfit' => ['nullable', 'boolean'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'compare_at_price' => ['nullable', 'numeric', 'min:0', 'max:999999.99', 'gte:price'],
             'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
             'url' => ['nullable', 'string', 'max:2048', 'regex:/^(https?:\/\/|\/)/i'],
             'status' => ['nullable', 'boolean'],
+            'is_draft' => ['nullable', 'boolean'],
             'products' => ['nullable', 'array'],
             'products.*.producto_id' => ['nullable', 'integer', 'exists:productos,id'],
             'products.*.grupo' => ['nullable', 'string', 'max:40'],
             'products.*.cantidad' => ['nullable', 'integer', 'min:1', 'max:99'],
         ], [
             'url.regex' => 'La URL debe comenzar con http://, https:// o /.',
+            'compare_at_price.gte' => 'El precio regular debe ser mayor o igual al precio del combo.',
         ]);
 
         // "Mostrar en Arma tu outfit" equivale a la modalidad "Outfit", que es la que lee esa página.
@@ -151,18 +171,25 @@ class ComboController extends Controller
             $modality = 'Promoción';
         }
 
-        DB::transaction(function () use ($request, $validated, $combo, $modality): void {
+        $isDraft = $request->boolean('is_draft');
+        $brand = Brand::query()->findOrFail($validated['brand_id']);
+
+        DB::transaction(function () use ($request, $validated, $combo, $modality, $isDraft, $brand): void {
             $oldImage = $combo->imagen;
             $newImage = $request->file('image')?->store('combos', 'public');
 
             $combo->fill([
                 'name' => $validated['name'],
-                'brand' => $validated['brand'] ?? null,
+                'brand' => $brand->name,
+                'brand_id' => $brand->id,
                 'modality' => $modality,
                 'notes' => $validated['notes'] ?? null,
                 'price' => $validated['price'] ?? null,
+                'compare_at_price' => $validated['compare_at_price'] ?? null,
                 'imagen' => $newImage ?: ($oldImage ?: 'images/default-hero-banner.png'),
-                'status' => $request->boolean('status'),
+                // Un borrador nunca se muestra en la tienda, sin importar lo que diga el checkbox de estado.
+                'is_draft' => $isDraft,
+                'status' => $isDraft ? false : $request->boolean('status'),
             ])->save();
 
             if ($newImage && $oldImage && ! str_starts_with($oldImage, 'images/') && ! filter_var($oldImage, FILTER_VALIDATE_URL)) {
@@ -202,7 +229,7 @@ class ComboController extends Controller
                 ->groupBy('name', 'zazu_company_id')
                 ->orderBy('name')
                 ->get(),
-            'brands' => Brand::query()->active()->orderBy('sort_order')->orderBy('name')->pluck('name'),
+            'brands' => Brand::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
             'modalities' => ['Live', 'Publicidad', 'Promoción', 'Posventa', 'Cross-Selling'],
         ];
     }
@@ -212,6 +239,13 @@ class ComboController extends Controller
         $combo->update(['status' => ! $combo->status]);
 
         return back()->with('status', 'Estado del combo actualizado.');
+    }
+
+    public function publish(Combo $combo): RedirectResponse
+    {
+        $combo->update(['is_draft' => false, 'status' => true]);
+
+        return back()->with('status', "Combo «{$combo->name}» publicado.");
     }
 
     public function destroy(Combo $combo): RedirectResponse

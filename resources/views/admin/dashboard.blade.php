@@ -2,130 +2,192 @@
 
 @section('title', 'Dashboard')
 
+@php
+    $hour = (int) now()->format('G');
+    $greeting = $hour < 12 ? 'Buenos días' : ($hour < 19 ? 'Buenas tardes' : 'Buenas noches');
+
+    $trendFor = function (float $current, float $previous, string $noDataLabel, string $firstLabel) {
+        if ($previous > 0) {
+            $change = (int) round((($current - $previous) / $previous) * 100);
+
+            return ['text' => sprintf('%+d%% vs. periodo anterior', $change), 'muted' => false];
+        }
+
+        return $current > 0
+            ? ['text' => $firstLabel, 'muted' => false]
+            : ['text' => $noDataLabel, 'muted' => true];
+    };
+
+    $ventasTrend = $trendFor((float) $ventas30, (float) $ventasPrev30, 'Sin ventas en el periodo', 'Primeras ventas del periodo');
+    $pedidosTrend = $trendFor((float) $pedidos30, (float) $pedidosPrev30, 'Sin pedidos en el periodo', 'Primeros pedidos del periodo');
+
+    $kpis = [
+        ['label' => 'Ventas (30 días)', 'value' => 'S/ '.number_format((float) $ventas30, 2), 'trend' => $ventasTrend['text'], 'muted' => $ventasTrend['muted']],
+        ['label' => 'Pedidos', 'value' => (string) $pedidos30, 'trend' => $pedidosTrend['text'], 'muted' => $pedidosTrend['muted']],
+        ['label' => 'Clientes registrados', 'value' => (string) $clientesCount, 'trend' => null, 'muted' => false],
+        ['label' => 'Productos publicados', 'value' => (string) $productosCount, 'trend' => 'En '.$marcasCount.' '.\Illuminate\Support\Str::plural('marca', $marcasCount), 'muted' => false],
+    ];
+
+    $tasks = [];
+
+    if ($reclamosPendientes > 0) {
+        $tasks[] = [
+            'tone' => 'danger',
+            'icon' => 'book-filled',
+            'title' => $reclamosPendientes.' '.\Illuminate\Support\Str::plural('reclamo', $reclamosPendientes).' pendiente'.($reclamosPendientes === 1 ? '' : 's').' de respuesta',
+            'subtitle' => 'Libro de reclamaciones · plazo legal: 15 días hábiles',
+            'cta' => 'Responder',
+            'url' => route('admin.reclamos.index'),
+        ];
+    }
+
+    if ($productosPrecioCero > 0) {
+        $tasks[] = [
+            'tone' => 'warning',
+            'icon' => 'tag-filled',
+            'title' => $productosPrecioCero.' '.\Illuminate\Support\Str::plural('producto', $productosPrecioCero).' con precio S/ 0.00',
+            'subtitle' => 'Se mostrarían como gratis en la tienda',
+            'cta' => 'Revisar precios',
+            'url' => route('admin.productos.index'),
+        ];
+    }
+
+    if ($productosSinMarca > 0) {
+        $tasks[] = [
+            'tone' => 'warning',
+            'icon' => 'package-filled',
+            'title' => $productosSinMarca.' '.\Illuminate\Support\Str::plural('producto', $productosSinMarca).' sin marca asignada',
+            'subtitle' => 'No aparecen en ninguna tienda de marca',
+            'cta' => 'Asignar marca',
+            'url' => route('admin.productos.index'),
+        ];
+    }
+
+    $tasks[] = [
+        'tone' => 'warning',
+        'icon' => 'warehouse-filled',
+        'title' => 'Bodegas sin configurar',
+        'subtitle' => 'Organiza el stock por ubicación para controlar el inventario.',
+        'cta' => 'Configurar bodegas',
+        'url' => route('admin.bodegas.index'),
+    ];
+
+    $urgentCount = count($tasks);
+
+    $tasks[] = [
+        'tone' => 'neutral',
+        'icon' => 'mail-filled',
+        'title' => 'Mensajes de contacto',
+        'subtitle' => $mensajesPendientes > 0
+            ? $mensajesPendientes.' '.\Illuminate\Support\Str::plural('mensaje', $mensajesPendientes).' pendiente'.($mensajesPendientes === 1 ? '' : 's').' de respuesta'
+            : 'Todo al día · 0 pendientes',
+        'cta' => 'Ver mensajes',
+        'url' => route('admin.messages.index'),
+    ];
+
+    $taskTone = [
+        'danger' => 'bg-admin-danger-soft',
+        'warning' => 'bg-admin-warning-soft',
+        'neutral' => 'bg-admin-subtle',
+    ];
+@endphp
+
 @section('content')
-    <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-blue-600">Resumen general</p>
-            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Hola, {{ request()->user()->name }}</h1>
-            <p class="mt-2 max-w-2xl text-sm text-slate-500">Aquí tienes el estado de tu tienda y la actividad reciente.</p>
+    <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-4 border-b-2 border-admin-text pb-4.5 sm:flex-row sm:items-end sm:justify-between">
+            <div class="flex flex-col gap-1.5">
+                <p class="text-xs font-extrabold uppercase tracking-[2px] text-admin-accent">Inicio</p>
+                <h1 class="font-admin-display text-[32px] font-black uppercase leading-[1.05] text-admin-text sm:text-[46px] sm:leading-11.5">{{ $greeting }}, {{ request()->user()->name }}</h1>
+                <p class="text-sm text-admin-text-secondary">Resumen de la tienda y tareas pendientes.</p>
+            </div>
+            <div class="flex h-10 w-50 items-center gap-2 rounded-sm border border-admin-border-strong bg-admin-surface px-3 text-sm font-medium text-admin-text-muted">
+                <span class="flex-1">Últimos 30 días</span>
+                <img src="{{ asset('images/admin/icon-chevron-down.svg') }}" class="size-4" alt="">
+            </div>
         </div>
-        <div class="flex items-center gap-3 text-sm text-slate-500">
-            <span class="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm" aria-hidden="true">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17"/></svg>
-            </span>
-            <span class="font-semibold text-slate-600">{{ now()->translatedFormat('l, j \d\e F Y') }}</span>
-        </div>
-    </div>
 
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores de la tienda">
-        @foreach ([
-            ['Pedidos hoy', $ordersToday, 'Nuevos pedidos recibidos', 'bg-blue-50 text-blue-600 ring-blue-100', 'from-blue-500 to-sky-300', '<path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.6L20 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/>'],
-            ['Clientes', $customersCount, 'En tu base de clientes', 'bg-violet-50 text-violet-600 ring-violet-100', 'from-violet-500 to-fuchsia-300', '<circle cx="9" cy="8" r="3.5"/><path d="M2.8 19a6.2 6.2 0 0 1 12.4 0M16 5.3a3.5 3.5 0 0 1 0 6.8M17.2 13.5a5.7 5.7 0 0 1 4 5.5"/>'],
-            ['Productos', $productsCount, 'En el catálogo', 'bg-amber-50 text-amber-600 ring-amber-100', 'from-amber-400 to-orange-300', '<path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9L12 3Z"/><path d="m3.8 7.6 8.2 4.5 8.2-4.5M12 12v9M7.8 5.3l8.4 4.5"/>'],
-            ['Cobrado este mes', 'S/ '.number_format((float) $collectedThisMonth, 2), 'Pagos confirmados', 'bg-emerald-50 text-emerald-600 ring-emerald-100', 'from-emerald-500 to-teal-300', '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18M7 14h4"/>'],
-        ] as [$label, $value, $hint, $iconSurface, $stripe, $icon])
-            <article class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_20px_rgb(15_23_42_/_4%)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgb(15_23_42_/_8%)]">
-                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r {{ $stripe }} opacity-80"></div>
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-semibold text-slate-500">{{ $label }}</p>
-                        <p class="mt-4 text-3xl font-black tracking-tight text-slate-950">{{ $value }}</p>
-                        <p class="mt-2 text-xs font-medium text-slate-400">{{ $hint }}</p>
-                    </div>
-                    <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl ring-1 ring-inset {{ $iconSurface }}">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{!! $icon !!}</svg>
-                    </span>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ($kpis as $kpi)
+                <div class="flex flex-col gap-1.5 rounded-sm border border-admin-border bg-admin-surface p-5">
+                    <p class="text-[11px] font-extrabold uppercase tracking-[1.5px] text-admin-text-secondary">{{ $kpi['label'] }}</p>
+                    <p class="font-admin-display text-[32px] font-black leading-10.5 text-admin-text sm:text-[40px]">{{ $kpi['value'] }}</p>
+                    @if ($kpi['trend'])
+                        <p class="text-xs font-semibold {{ $kpi['muted'] ? 'text-admin-text-muted' : 'text-admin-success' }}">{{ $kpi['trend'] }}</p>
+                    @endif
                 </div>
-            </article>
-        @endforeach
-    </section>
-
-    <section class="mt-7 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_5px_20px_rgb(15_23_42_/_4%)]">
-        <div class="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
-            <div>
-                <h2 class="text-lg font-extrabold tracking-tight text-slate-900">Pedidos recientes</h2>
-                <p class="mt-1 text-sm text-slate-500">Revisa el estado de las últimas compras.</p>
-            </div>
-            <a href="{{ route('admin.pedidos.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100">
-                Ver todos los pedidos
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </a>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[720px] text-left text-sm">
-                <thead class="bg-slate-50/80 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
-                    <tr>
-                        <th class="px-6 py-3.5">Pedido</th>
-                        <th class="px-4 py-3.5">Cliente</th>
-                        <th class="px-4 py-3.5">Estado</th>
-                        <th class="px-4 py-3.5">Fecha</th>
-                        <th class="px-6 py-3.5 text-right">Total</th>
-                        <th class="px-5 py-3.5"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse ($recentOrders as $order)
-                        @php($status = (string) ($order->statusOrder?->name ?? 'Sin estado'))
-                        <tr class="transition hover:bg-slate-50/80">
-                            <td class="px-6 py-4">
-                                <a href="{{ route('admin.pedidos.show', $order) }}" class="font-extrabold text-slate-900 hover:text-blue-700">{{ $order->displayNumber() }}</a>
-                                @if ($order->nota_venta)<span class="mt-1 block text-xs font-medium text-slate-400">{{ $order->number_zazu }}</span>@endif
-                            </td>
-                            <td class="px-4 py-4">
-                                <span class="font-semibold text-slate-800">{{ $order->cliente_name ?: 'Cliente' }}</span>
-                                <span class="mt-1 block text-xs text-slate-400">{{ $order->cliente_cel ?: '—' }}</span>
-                            </td>
-                            <td class="px-4 py-4">
-                                <span @class([
-                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold',
-                                    'bg-emerald-50 text-emerald-700' => in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID], true),
-                                    'bg-amber-50 text-amber-700' => in_array($status, [\App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
-                                    'bg-slate-100 text-slate-600' => ! in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
-                                ])>
-                                    <span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ $status }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-4 text-xs font-medium text-slate-500">{{ $order->created_at?->format('d/m/Y · H:i') }}</td>
-                            <td class="px-6 py-4 text-right font-extrabold text-slate-900">S/ {{ number_format((float) $order->precio_total, 2) }}</td>
-                            <td class="px-5 py-4 text-right"><a href="{{ route('admin.pedidos.show', $order) }}" class="rounded-lg px-2.5 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-50">Abrir</a></td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-6 py-14 text-center">
-                                <span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400">
-                                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.6L20 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>
-                                </span>
-                                <p class="mt-3 font-bold text-slate-700">Aún no hay pedidos</p>
-                                <p class="mt-1 text-sm text-slate-400">Cuando recibas una compra, aparecerá aquí.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="mt-8">
-        <div class="mb-4 flex items-end justify-between gap-3">
-            <div>
-                <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
-                <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Configuración rápida</h2>
-            </div>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ([
-                ['admin.productos.index', 'Productos', 'Administra catálogo, precios e imágenes.', 'P', 'bg-blue-50 text-blue-700 ring-blue-100'],
-                ['admin.combos.index', 'Combos', 'Organiza productos en promociones.', 'C', 'bg-violet-50 text-violet-700 ring-violet-100'],
-                ['admin.medios-pago.index', 'Medios de pago', 'Configura las opciones de cobro.', '$', 'bg-emerald-50 text-emerald-700 ring-emerald-100'],
-                ['admin.brand.edit', 'Identidad visual', 'Actualiza logo, icono y datos de marca.', 'O', 'bg-amber-50 text-amber-700 ring-amber-100'],
-            ] as [$route, $title, $description, $mark, $toneSurface])
-                <a href="{{ route($route) }}" class="group flex min-h-40 flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_20px_rgb(15_23_42_/_3%)] transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_12px_28px_rgb(15_23_42_/_8%)]">
-                    <span class="grid h-10 w-10 place-items-center rounded-xl text-sm font-black ring-1 ring-inset {{ $toneSurface }}">{{ $mark }}</span>
-                    <span class="mt-4 font-extrabold text-slate-900">{{ $title }}</span>
-                    <span class="mt-1.5 flex-1 text-sm leading-6 text-slate-500">{{ $description }}</span>
-                    <span class="mt-4 inline-flex items-center gap-1.5 text-xs font-extrabold text-blue-700 transition group-hover:gap-2.5">Configurar <span aria-hidden="true">→</span></span>
-                </a>
             @endforeach
         </div>
-    </section>
+
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div class="flex flex-1 flex-col gap-4 rounded-sm border border-admin-border bg-admin-surface p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-admin-display text-2xl font-black uppercase leading-none text-admin-text sm:text-[28px]">Requiere atención</h2>
+                    <span class="flex shrink-0 items-center gap-1.5 rounded-sm bg-admin-warning-soft px-2 py-1">
+                        <img src="{{ asset('images/admin/dot-warning.svg') }}" class="size-1.5" alt="">
+                        <span class="text-[11px] font-extrabold uppercase tracking-[0.5px] text-admin-warning">{{ $urgentCount }} {{ \Illuminate\Support\Str::plural('tarea', $urgentCount) }}</span>
+                    </span>
+                </div>
+                <p class="text-[13px] text-admin-text-secondary">Primero lo que tiene plazo legal o bloquea ventas.</p>
+
+                <div class="flex flex-col gap-2">
+                    @foreach ($tasks as $task)
+                        <div class="flex items-center gap-3.5 rounded-sm px-3.5 py-3 {{ $taskTone[$task['tone']] }}">
+                            <img src="{{ asset('images/admin/icon-'.$task['icon'].'.svg') }}" class="size-5 shrink-0" alt="">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-admin-text">{{ $task['title'] }}</p>
+                                <p class="text-xs text-admin-text-secondary">{{ $task['subtitle'] }}</p>
+                            </div>
+                            @if ($task['tone'] === 'neutral')
+                                <a href="{{ $task['url'] }}" class="shrink-0 px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">{{ $task['cta'] }}</a>
+                            @else
+                                <a href="{{ $task['url'] }}" class="shrink-0 border border-admin-border-strong bg-admin-surface px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">{{ $task['cta'] }}</a>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="flex w-full flex-col gap-4 rounded-sm border border-admin-border bg-admin-surface p-6 lg:w-105 lg:shrink-0">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-admin-display text-2xl font-black uppercase leading-none text-admin-text sm:text-[28px]">Pedidos recientes</h2>
+                    <a href="{{ route('admin.pedidos.index') }}" class="shrink-0 px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">Ver todos</a>
+                </div>
+
+                @if ($recentOrders->isEmpty())
+                    <div class="flex flex-col items-center gap-2.5 rounded-sm bg-admin-subtle px-6 py-10 text-center">
+                        <span class="grid size-12 place-items-center rounded-full bg-admin-surface">
+                            <img src="{{ asset('images/admin/icon-bag-filled.svg') }}" class="size-5.5" alt="">
+                        </span>
+                        <p class="text-[15px] font-bold text-admin-text">Aún no hay pedidos</p>
+                        <p class="max-w-75 text-[13px] text-admin-text-secondary">Cuando un cliente compre, verás aquí el pedido, su estado y el total.</p>
+                        <a href="{{ route('admin.pedidos.index') }}" class="flex items-center gap-2 border border-admin-border-strong bg-admin-surface px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">
+                            <img src="{{ asset('images/admin/icon-plus.svg') }}" class="size-4" alt="">
+                            Registrar pedido manual
+                        </a>
+                    </div>
+                @else
+                    <div class="flex flex-col divide-y divide-admin-border">
+                        @foreach ($recentOrders as $order)
+                            @php($status = (string) ($order->statusOrder?->name ?? 'Sin estado'))
+                            <a href="{{ route('admin.pedidos.show', $order) }}" class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-extrabold text-admin-text">{{ $order->displayNumber() }}</p>
+                                    <p class="truncate text-xs text-admin-text-secondary">{{ $order->cliente_name ?: 'Cliente' }}</p>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-3">
+                                    <span @class([
+                                        'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                                        'bg-emerald-50 text-emerald-700' => in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID], true),
+                                        'bg-admin-warning-soft text-admin-warning' => in_array($status, [\App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
+                                        'bg-admin-subtle text-admin-text-secondary' => ! in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
+                                    ])>{{ $status }}</span>
+                                    <span class="text-sm font-extrabold text-admin-text">S/ {{ number_format((float) $order->precio_total, 2) }}</span>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
 @endsection

@@ -2,62 +2,171 @@
 
 @section('title', 'Pedidos')
 
+@php
+    $queryWithout = fn (string ...$keys) => request()->except($keys);
+@endphp
+
 @section('content')
-    <div class="mb-8">
-        <p class="text-sm font-bold uppercase tracking-widest text-cyan-600">Ventas</p>
-        <h1 class="mt-2 text-3xl font-black text-slate-950">Pedidos</h1>
-        <p class="mt-2 text-slate-500">Pedidos de la tienda web. Revisa la captura del pago y confirma cada pedido.</p>
-    </div>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
-        <form action="{{ route('admin.pedidos.index') }}" method="GET" class="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] lg:items-end">
-            <label class="block">
-                <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Buscar</span>
-                <input type="search" name="search" value="{{ request('search') }}" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Número, cliente, correo o celular">
-            </label>
-            <label class="block">
-                <span class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">Estado</span>
-                <select name="estado" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                    <option value="">Todos</option>
-                    @foreach ($statuses as $statusName)
-                        <option value="{{ $statusName }}" @selected(request('estado') === $statusName)>{{ $statusName }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-cyan-600">Filtrar</button>
-        </form>
-
-        <div class="mt-6 overflow-x-auto">
-            <table class="w-full min-w-[760px] text-left text-sm">
-                <thead class="border-b border-slate-200 text-xs font-black uppercase tracking-wide text-slate-500">
-                    <tr>
-                        <th class="py-3 pr-4">Número</th>
-                        <th class="py-3 pr-4">Cliente</th>
-                        <th class="py-3 pr-4">Estado</th>
-                        <th class="py-3 pr-4">Medio de pago</th>
-                        <th class="py-3 pr-4 text-right">Total</th>
-                        <th class="py-3 pr-4">Fecha</th>
-                        <th class="py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse ($orders as $order)
-                        <tr>
-                            <td class="py-3 pr-4 font-bold text-slate-950">{{ $order->displayNumber() }}@if ($order->nota_venta)<span class="block text-xs font-medium text-slate-400">{{ $order->number_zazu }}</span>@endif</td>
-                            <td class="py-3 pr-4">{{ $order->cliente_name }}<span class="block text-xs text-slate-500">{{ $order->cliente_cel }}</span></td>
-                            <td class="py-3 pr-4"><span @class(['rounded-full px-2.5 py-1 text-xs font-bold', 'bg-amber-50 text-amber-700' => $order->statusOrder?->name === \App\Support\Checkout::STATUS_PENDING, 'bg-emerald-50 text-emerald-700' => $order->statusOrder?->name !== \App\Support\Checkout::STATUS_PENDING])>{{ $order->statusOrder?->name }}</span></td>
-                            <td class="py-3 pr-4">{{ $order->metodo_pago_nombre ?? '—' }}</td>
-                            <td class="py-3 pr-4 text-right font-bold">S/ {{ number_format((float) $order->precio_total, 2) }}</td>
-                            <td class="py-3 pr-4 text-slate-500">{{ $order->created_at?->format('d/m/Y H:i') }}</td>
-                            <td class="py-3 text-right"><a href="{{ route('admin.pedidos.show', $order) }}" class="font-bold text-cyan-700 hover:underline">Ver</a></td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="7" class="py-10 text-center text-slate-500">Todavía no hay pedidos.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+    <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-4 border-b-2 border-admin-text pb-4.5 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex flex-col gap-1.5">
+                <p class="text-xs font-extrabold uppercase tracking-[2px] text-admin-accent">Ventas / Pedidos</p>
+                <h1 class="font-admin-display text-[32px] font-black uppercase leading-[1.05] text-admin-text sm:text-[46px] sm:leading-11.5">Pedidos</h1>
+                <p class="max-w-160 text-sm text-admin-text-secondary">Pedidos de las tres marcas. Confirma pagos, prepara envíos y actualiza el estado.</p>
+            </div>
+            <div class="flex shrink-0 items-center gap-3">
+                <a href="{{ route('admin.pedidos.export', request()->query()) }}" class="flex items-center gap-2 border border-admin-border-strong bg-admin-surface px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">
+                    <img src="{{ asset('images/admin/icon-download.svg') }}" class="size-4" alt="">
+                    Exportar
+                </a>
+                <a href="{{ route('admin.pedidos.index') }}" class="flex items-center gap-2 bg-admin-navy px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-white">
+                    <img src="{{ asset('images/admin/icon-plus-white.svg') }}" class="size-4" alt="">
+                    Nuevo pedido
+                </a>
+            </div>
         </div>
 
-        <div class="mt-6">{{ $orders->links() }}</div>
-    </section>
+        @if (session('status'))
+            <div class="rounded-sm border border-admin-success bg-admin-success-soft px-4 py-3 text-sm font-semibold text-admin-success">{{ session('status') }}</div>
+        @endif
+
+        <div class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
+            <div class="flex items-center gap-6 overflow-x-auto border-b border-admin-border px-5">
+                @foreach ([
+                    ['key' => '', 'label' => 'Todos', 'count' => $counts['all'], 'pill' => 'bg-admin-hover text-admin-text-secondary'],
+                ] + collect($statusGroups)->mapWithKeys(fn ($g, $key) => [$key => ['key' => $key, 'label' => $g['label'], 'count' => $counts[$key], 'pill' => match ($g['tone']) {
+                    'warning' => 'bg-admin-warning-soft text-admin-warning',
+                    'success' => 'bg-admin-success-soft text-admin-success',
+                    'info' => 'bg-admin-accent-soft text-admin-accent',
+                    default => 'bg-admin-hover text-admin-text-secondary',
+                }]])->all() as $t)
+                    <a href="{{ route('admin.pedidos.index', $queryWithout('tab', 'page') + ($t['key'] === '' ? [] : ['tab' => $t['key']])) }}"
+                       class="flex shrink-0 items-center gap-2 border-b-2 py-3.5 {{ $tab === $t['key'] ? 'border-admin-accent' : 'border-transparent' }}">
+                        <span class="text-sm {{ $tab === $t['key'] ? 'font-bold text-admin-text' : 'font-medium text-admin-text-secondary' }}">{{ $t['label'] }}</span>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-bold {{ $t['pill'] }}">{{ $t['count'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+
+            <form action="{{ route('admin.pedidos.index') }}" method="GET" class="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center">
+                @if ($tab !== '')
+                    <input type="hidden" name="tab" value="{{ $tab }}">
+                @endif
+                <div class="flex h-10 flex-1 items-center gap-2 rounded-sm border border-admin-border-strong bg-admin-surface px-3">
+                    <button type="submit" class="shrink-0" aria-label="Buscar">
+                        <img src="{{ asset('images/admin/icon-search.svg') }}" class="size-4" alt="">
+                    </button>
+                    <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="Buscar por N° de pedido, cliente o DNI" autocomplete="off" class="w-full text-sm font-medium text-admin-text outline-none placeholder:text-admin-text-muted">
+                </div>
+                <select name="pago" onchange="this.form.submit()" class="h-10 w-full shrink-0 rounded-sm border border-admin-border-strong bg-admin-surface px-3 text-sm font-medium text-admin-text-muted outline-none lg:w-45">
+                    <option value="">Pago: todos</option>
+                    @foreach ($metodosPago as $metodo)
+                        <option value="{{ $metodo }}" @selected($filters['pago'] === $metodo)>{{ $metodo }}</option>
+                    @endforeach
+                </select>
+                <select name="marca" onchange="this.form.submit()" class="h-10 w-full shrink-0 rounded-sm border border-admin-border-strong bg-admin-surface px-3 text-sm font-medium text-admin-text-muted outline-none lg:w-45">
+                    <option value="">Marca: todas</option>
+                    @foreach ($marcaOptions as $marca)
+                        <option value="{{ $marca }}" @selected($filters['marca'] === $marca)>{{ $marca }}</option>
+                    @endforeach
+                </select>
+                <select name="periodo" onchange="this.form.submit()" class="h-10 w-full shrink-0 rounded-sm border border-admin-border-strong bg-admin-surface px-3 text-sm font-medium text-admin-text-muted outline-none lg:w-45">
+                    <option value="">Período: todos</option>
+                    <option value="7" @selected($filters['periodo'] === '7')>Últimos 7 días</option>
+                    <option value="30" @selected($filters['periodo'] === '30')>Últimos 30 días</option>
+                    <option value="mes" @selected($filters['periodo'] === 'mes')>Este mes</option>
+                </select>
+            </form>
+
+            <div class="overflow-x-auto">
+                <div class="flex min-w-270 items-center gap-0 border-y border-admin-border bg-admin-subtle px-4 py-2.5">
+                    <div class="w-27.5 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Pedido</div>
+                    <div class="w-46 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Cliente</div>
+                    <div class="w-35 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Marca</div>
+                    <div class="w-32.5 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Medio de pago</div>
+                    <div class="w-25 text-right text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Total</div>
+                    <div class="w-45 pl-6 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Estado</div>
+                    <div class="w-27.5 text-[11px] font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Fecha</div>
+                    <div class="w-31.5"></div>
+                </div>
+
+                @forelse ($orders as $order)
+                    @php($group = $statusGroups[$order->status_group] ?? null)
+                    <div class="flex min-w-270 items-center gap-0 border-b border-admin-border px-4 py-3.5">
+                        <div class="w-27.5 text-sm font-bold text-admin-text">
+                            {{ $order->displayNumber() }}
+                            @if ($order->nota_venta)
+                                <span class="block text-xs font-medium text-admin-text-muted">{{ $order->number_zazu }}</span>
+                            @endif
+                        </div>
+                        <div class="w-46 pr-2">
+                            <p class="truncate text-sm font-bold text-admin-text">{{ $order->cliente_name }}</p>
+                            <p class="truncate text-xs text-admin-text-muted">{{ $order->maskedEmail() }}</p>
+                        </div>
+                        <div class="w-35 text-sm text-admin-text">{{ $order->marca_computed }}</div>
+                        <div class="w-32.5 text-sm text-admin-text">{{ $order->metodo_pago_nombre ?: '—' }}</div>
+                        <div class="w-25 text-right text-sm font-bold text-admin-text">S/ {{ number_format((float) $order->precio_total, 2) }}</div>
+                        <div class="w-45 pl-6"><x-admin.badge :tone="$group['tone'] ?? 'neutral'" :label="$group['label'] ?? $order->statusOrder?->name" /></div>
+                        <div class="w-27.5 text-[13px] text-admin-text-secondary">{{ $order->created_at?->format('d/m/Y') }}</div>
+                        <div class="flex w-31.5 justify-end">
+                            @if ($order->status_group === 'por_confirmar')
+                                <form action="{{ route('admin.pedidos.status', $order) }}" method="POST">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Support\Checkout::STATUS_PAID }}">
+                                    <button type="submit" class="border border-admin-border-strong bg-admin-surface px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">Confirmar</button>
+                                </form>
+                            @else
+                                <a href="{{ route('admin.pedidos.show', $order) }}" class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">Ver</a>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="flex min-w-270 flex-col items-center gap-2.5 px-4 py-14 text-center">
+                        <span class="grid size-12 place-items-center rounded-full bg-admin-subtle">
+                            <img src="{{ asset('images/admin/icon-bag-filled.svg') }}" class="size-5.5" alt="">
+                        </span>
+                        <p class="text-[15px] font-bold text-admin-text">Aún no hay pedidos</p>
+                        <p class="max-w-75 text-[13px] text-admin-text-secondary">Cuando un cliente compre, verás aquí el pedido, su estado y el total.</p>
+                    </div>
+                @endforelse
+            </div>
+
+            <div class="flex flex-col items-center justify-between gap-3 px-5 py-3.5 sm:flex-row">
+                <p class="text-[13px] text-admin-text-secondary">
+                    @if ($orders->total() > 0)
+                        Mostrando {{ $orders->firstItem() }}–{{ $orders->lastItem() }} de {{ $orders->total() }} pedidos
+                    @else
+                        Sin resultados
+                    @endif
+                </p>
+                @if ($orders->lastPage() > 1)
+                    <div class="flex items-center gap-2">
+                        @if ($orders->onFirstPage())
+                            <span class="flex items-center gap-2 border border-admin-border px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text-muted">
+                                <img src="{{ asset('images/admin/icon-arrow-left.svg') }}" class="size-4 opacity-40" alt="">
+                                Anterior
+                            </span>
+                        @else
+                            <a href="{{ $orders->previousPageUrl() }}" class="flex items-center gap-2 border border-admin-border-strong bg-admin-surface px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">
+                                <img src="{{ asset('images/admin/icon-arrow-left.svg') }}" class="size-4" alt="">
+                                Anterior
+                            </a>
+                        @endif
+                        @if ($orders->hasMorePages())
+                            <a href="{{ $orders->nextPageUrl() }}" class="flex items-center gap-2 border border-admin-border-strong bg-admin-surface px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">
+                                Siguiente
+                                <img src="{{ asset('images/admin/icon-chevron-right.svg') }}" class="size-4" alt="">
+                            </a>
+                        @else
+                            <span class="flex items-center gap-2 border border-admin-border px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text-muted">
+                                Siguiente
+                                <img src="{{ asset('images/admin/icon-chevron-right.svg') }}" class="size-4 opacity-40" alt="">
+                            </span>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
 @endsection

@@ -923,9 +923,11 @@ Route::get('/', function (Request $request) {
         return view('web.home-mujer', compact('bestSellers', 'bravosBrand'));
     }
 
+    $overshark = \App\Models\Brand::query()->active()->whereRaw('UPPER(name) = ?', ['OVERSHARK'])->first();
+
     return view('web.home', [
         'storeLine' => $storeLine,
-        'banners' => BannerPortada::activeForHome(),
+        'banners' => BannerPortada::activeForHome($overshark?->id),
         'bestSellers' => $bestSellers,
         'bravosBrand' => $bravosBrand,
     ]);

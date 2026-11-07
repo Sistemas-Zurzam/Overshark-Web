@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Administrador',
             'password' => '123456789',
             'status' => true,
+            'all_brands_access' => true,
         ]);
     }
 }

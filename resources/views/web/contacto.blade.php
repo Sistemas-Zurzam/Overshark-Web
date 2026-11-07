@@ -129,6 +129,15 @@
                             <span class="mb-2 block text-[13px] font-bold">N° de pedido <span class="font-medium text-[#8a93a0]">(opcional)</span></span>
                             <input type="text" name="order_number" value="{{ old('order_number') }}" placeholder="#000000" maxlength="60" class="{{ $input }} {{ $border('order_number') }} h-12">
                         </label>
+                        <label class="block">
+                            <span class="mb-2 block text-[13px] font-bold">¿Cómo prefieres que te contactemos?</span>
+                            <select name="prefers_contact" required class="{{ $input }} {{ $border('prefers_contact') }} h-12 cursor-pointer appearance-none bg-[length:16px] bg-[position:right_16px_center] bg-no-repeat pr-11" style="background-image: url('{{ asset('images/home-hombre/chevron-abajo.svg') }}')" @error('prefers_contact') aria-invalid="true" aria-describedby="e-prefers" @enderror>
+                                @foreach ($preferences as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('prefers_contact', 'correo') === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('prefers_contact')<span id="e-prefers" class="mt-1 block text-[12px] font-bold text-red-600">{{ $message }}</span>@enderror
+                        </label>
                         <label class="block sm:col-span-2">
                             <span class="mb-2 block text-[13px] font-bold">Motivo</span>
                             <select name="subject" required class="{{ $input }} {{ $border('subject') }} h-12 cursor-pointer appearance-none bg-[length:16px] bg-[position:right_16px_center] bg-no-repeat pr-11" style="background-image: url('{{ asset('images/home-hombre/chevron-abajo.svg') }}')" @error('subject') aria-invalid="true" aria-describedby="e-subject" @enderror>

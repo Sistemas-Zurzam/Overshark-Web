@@ -30,49 +30,165 @@ class ProductoController extends Controller
         'images.max' => 'Sube como máximo 5 imágenes por color.',
     ];
 
+    private const ESTADOS = ['publicado', 'sin_marca', 'precio_cero', 'sin_stock'];
+
+    private const ESTADO_LABELS = [
+        'publicado' => 'Publicado',
+        'sin_marca' => 'Sin marca',
+        'precio_cero' => 'Precio en 0',
+        'sin_stock' => 'Sin stock',
+    ];
+
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('search', ''));
-        $empresa = trim((string) $request->query('empresa', ''));
-        $marca = trim((string) $request->query('marca', ''));
+        $filters = $this->filtersFrom($request);
+        $groups = $this->groupedProducts($filters);
 
-        $productosQuery = Producto::query()
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($searchQuery) use ($search): void {
-                    $searchQuery
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('default_code', 'like', "%{$search}%");
-                });
-            })
-            ->when($empresa !== '', fn ($query) => $query->where('empresa_nombre', $empresa))
-            ->when($marca !== '', fn ($query) => $query->where('marca', $marca));
+        $tab = in_array($request->query('tab'), ['review', 'out_of_stock'], true) ? $request->query('tab') : 'all';
+        $estado = in_array($request->query('estado'), self::ESTADOS, true) ? $request->query('estado') : '';
+
+        $counts = [
+            'all' => $groups->count(),
+            'review' => $groups->whereIn('estado', ['sin_marca', 'precio_cero'])->count(),
+            'out_of_stock' => $groups->where('estado', 'sin_stock')->count(),
+        ];
+
+        $filtered = match ($tab) {
+            'review' => $groups->whereIn('estado', ['sin_marca', 'precio_cero'])->values(),
+            'out_of_stock' => $groups->where('estado', 'sin_stock')->values(),
+            default => $groups,
+        };
+        if ($estado !== '') {
+            $filtered = $filtered->where('estado', $estado)->values();
+        }
+
+        $perPage = 10;
+        $page = LengthAwarePaginator::resolveCurrentPage('page');
+        $productos = new LengthAwarePaginator(
+            $filtered->forPage($page, $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'pageName' => 'page',
+                'query' => $request->except('page'),
+            ],
+        );
 
         return view('admin.productos.index', [
-            'productos' => $productosQuery
-                ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
-                ->groupBy('zazu_company_id', 'name')
-                ->orderByDesc('updated_at')
-                ->paginate(25)
-                ->withQueryString(),
-            'empresas' => Producto::query()
-                ->whereNotNull('empresa_nombre')
-                ->where('empresa_nombre', '<>', '')
-                ->distinct()
-                ->orderBy('empresa_nombre')
-                ->pluck('empresa_nombre'),
-            'marcas' => Brand::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->pluck('name')
-                ->merge(Producto::query()
-                    ->whereNotNull('marca')
-                    ->where('marca', '<>', '')
-                    ->distinct()
-                    ->orderBy('marca')
-                    ->pluck('marca'))
-                ->unique()
-                ->values(),
+            'productos' => $productos,
+            'empresas' => $this->empresasDisponibles(),
+            'marcas' => $this->marcasDisponibles(),
+            'filters' => $filters,
+            'tab' => $tab,
+            'estado' => $estado,
+            'counts' => $counts,
+            'estadoLabels' => self::ESTADO_LABELS,
+            'lastSync' => Producto::query()->max('zazu_synced_at'),
         ]);
+    }
+
+    public function exportCsv(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filters = $this->filtersFrom($request);
+        $groups = $this->groupedProducts($filters);
+
+        $tab = in_array($request->query('tab'), ['review', 'out_of_stock'], true) ? $request->query('tab') : 'all';
+        $estado = in_array($request->query('estado'), self::ESTADOS, true) ? $request->query('estado') : '';
+
+        $rows = match ($tab) {
+            'review' => $groups->whereIn('estado', ['sin_marca', 'precio_cero']),
+            'out_of_stock' => $groups->where('estado', 'sin_stock'),
+            default => $groups,
+        };
+        if ($estado !== '') {
+            $rows = $rows->where('estado', $estado);
+        }
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['Producto', 'Variantes', 'Marca', 'Empresa', 'Precio min', 'Precio max', 'Stock', 'Estado', 'Actualizado']);
+            foreach ($rows as $group) {
+                fputcsv($handle, [
+                    $group->name,
+                    $group->variant_count,
+                    $group->marca ?: 'Sin asignar',
+                    $group->empresa_nombre ?: 'Overshark',
+                    number_format((float) $group->min_price, 2),
+                    number_format((float) $group->max_price, 2),
+                    (int) $group->total_stock,
+                    self::ESTADO_LABELS[$group->estado],
+                    optional($group->updated_at)->format('d/m/Y H:i'),
+                ]);
+            }
+            fclose($handle);
+        }, 'productos-'.now()->format('Y-m-d-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function filtersFrom(Request $request): array
+    {
+        return [
+            'search' => trim((string) $request->query('search', '')),
+            'empresa' => trim((string) $request->query('empresa', '')),
+            'marca' => trim((string) $request->query('marca', '')),
+        ];
+    }
+
+    /** Agrupa variantes en productos (mismo nombre + empresa Zazu) y calcula su estado para tabs/filtro/export. */
+    private function groupedProducts(array $filters): \Illuminate\Support\Collection
+    {
+        $productosQuery = Producto::query()
+            ->when($filters['search'] !== '', function ($query) use ($filters): void {
+                $query->where(function ($searchQuery) use ($filters): void {
+                    $searchQuery
+                        ->where('name', 'like', "%{$filters['search']}%")
+                        ->orWhere('default_code', 'like', "%{$filters['search']}%");
+                });
+            })
+            ->when($filters['empresa'] !== '', fn ($query) => $query->where('empresa_nombre', $filters['empresa']))
+            ->when($filters['marca'] !== '', fn ($query) => $query->where('marca', $filters['marca']));
+
+        return $productosQuery
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
+            ->groupBy('zazu_company_id', 'name')
+            ->orderByDesc('updated_at')
+            ->get()
+            ->each(function ($group): void {
+                $group->estado = match (true) {
+                    (float) $group->total_stock <= 0.0 => 'sin_stock',
+                    (float) $group->min_price <= 0.0 => 'precio_cero',
+                    trim((string) $group->marca) === '' => 'sin_marca',
+                    default => 'publicado',
+                };
+            });
+    }
+
+    private function empresasDisponibles()
+    {
+        return Producto::query()
+            ->whereNotNull('empresa_nombre')
+            ->where('empresa_nombre', '<>', '')
+            ->distinct()
+            ->orderBy('empresa_nombre')
+            ->pluck('empresa_nombre');
+    }
+
+    private function marcasDisponibles()
+    {
+        return Brand::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->merge(Producto::query()
+                ->whereNotNull('marca')
+                ->where('marca', '<>', '')
+                ->distinct()
+                ->orderBy('marca')
+                ->pluck('marca'))
+            ->unique()
+            ->values();
     }
 
     public function bulkImages(Request $request): View

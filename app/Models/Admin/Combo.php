@@ -2,6 +2,7 @@
 
 namespace App\Models\Admin;
 
+use App\Models\Brand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -13,14 +14,17 @@ class Combo extends Model
         'source_key',
         'name',
         'brand',
+        'brand_id',
         'modality',
         'price',
+        'compare_at_price',
         'imagen',
         'items',
         'selection_mode',
         'selection_limit',
         'notes',
         'status',
+        'is_draft',
         'url',
     ];
 
@@ -34,10 +38,25 @@ class Combo extends Model
     {
         return [
             'price' => 'decimal:2',
+            'compare_at_price' => 'decimal:2',
             'items' => 'array',
             'selection_limit' => 'integer',
             'status' => 'boolean',
+            'is_draft' => 'boolean',
         ];
+    }
+
+    public function brandModel()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    /** Precio regular a mostrar tachado, solo si es mayor que el precio actual. */
+    public function compareAtPriceToShow(): ?float
+    {
+        return $this->compare_at_price !== null && (float) $this->compare_at_price > (float) $this->price
+            ? (float) $this->compare_at_price
+            : null;
     }
 
     public static function activeForMenu()

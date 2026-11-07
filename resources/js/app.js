@@ -376,6 +376,14 @@ comboDeleteConfirm?.addEventListener('click', () => {
     form?.submit();
 });
 
+document.querySelectorAll('[data-combo-draft-toggle]').forEach((draftCheckbox) => {
+    const statusField = draftCheckbox.closest('form')?.querySelector('[data-combo-status-field]');
+    const syncStatusField = () => statusField?.classList.toggle('hidden', draftCheckbox.checked);
+
+    syncStatusField();
+    draftCheckbox.addEventListener('change', syncStatusField);
+});
+
 document.querySelectorAll('[data-product-info-tabs]').forEach((tabs) => {
     const buttons = Array.from(tabs.querySelectorAll('[data-product-info-tab]'));
     const panels = Array.from(tabs.querySelectorAll('[data-product-info-panel]'));
@@ -1154,6 +1162,108 @@ document.querySelectorAll('[data-banner-button-preview]').forEach((preview) => {
             }
         });
     });
+});
+
+const bannerGrid = document.querySelector('[data-banner-grid]');
+
+if (bannerGrid) {
+    let draggedCard = null;
+
+    bannerGrid.querySelectorAll('[data-banner-card]').forEach((card) => {
+        card.addEventListener('dragstart', () => {
+            draggedCard = card;
+            card.classList.add('opacity-50');
+        });
+
+        card.addEventListener('dragend', () => {
+            draggedCard = null;
+            card.classList.remove('opacity-50');
+        });
+
+        card.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            if (!draggedCard || draggedCard === card) {
+                return;
+            }
+
+            const rect = card.getBoundingClientRect();
+            const before = event.clientX - rect.left < rect.width / 2;
+            card.parentElement.insertBefore(draggedCard, before ? card : card.nextSibling);
+        });
+
+        card.addEventListener('drop', (event) => {
+            event.preventDefault();
+
+            const ids = Array.from(bannerGrid.querySelectorAll('[data-banner-card]')).map((el) => el.dataset.bannerId);
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            fetch(bannerGrid.dataset.bannerReorderUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token ?? '',
+                },
+                body: JSON.stringify({ ids }),
+            }).catch(() => {});
+        });
+    });
+}
+
+const bodegaForm = document.querySelector('[data-bodega-form]');
+
+document.querySelectorAll('[data-bodega-form-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        bodegaForm?.classList.toggle('hidden');
+        bodegaForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+document.querySelectorAll('[data-bodega-edit-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const form = document.getElementById(button.dataset.bodegaEditToggle);
+        form?.classList.toggle('hidden');
+        form?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+});
+
+const userForm = document.querySelector('[data-user-form]');
+
+document.querySelectorAll('[data-user-form-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        userForm?.classList.toggle('hidden');
+        userForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+document.querySelectorAll('[data-user-edit-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const form = document.getElementById(button.dataset.userEditToggle);
+        form?.classList.toggle('hidden');
+        form?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+});
+
+const roleForm = document.querySelector('[data-role-form]');
+
+document.querySelectorAll('[data-role-form-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        roleForm?.classList.toggle('hidden');
+        roleForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+document.querySelectorAll('[data-user-all-brands]').forEach((checkbox) => {
+    const list = checkbox.closest('form')?.querySelector('[data-user-brand-list]');
+    const sync = () => list?.classList.toggle('hidden', checkbox.checked);
+    sync();
+    checkbox.addEventListener('change', sync);
+});
+
+document.querySelectorAll('[data-user-all-brands-edit]').forEach((checkbox) => {
+    const list = checkbox.closest('form')?.querySelector(`[data-user-brand-list-edit="${checkbox.dataset.userAllBrandsEdit}"]`);
+    const sync = () => list?.classList.toggle('hidden', checkbox.checked);
+    sync();
+    checkbox.addEventListener('change', sync);
 });
 
 const paymentForm = document.querySelector('[data-payment-form]');
