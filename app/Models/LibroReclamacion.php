@@ -30,7 +30,13 @@ class LibroReclamacion extends Model
 
     protected $table = 'libro_reclamaciones';
 
+    public const BRAND = 'Overshark Hombre';
+
     protected $fillable = [
+        'sheet_number',
+        'brand',
+        'guardian_contact',
+        'supporting_document',
         'consumer_name',
         'document_type',
         'document_number',
@@ -62,6 +68,18 @@ class LibroReclamacion extends Model
         'claimed_amount' => 'decimal:2',
         'responded_at' => 'datetime',
     ];
+
+    /** "Reclamo · Producto" / "Queja · Atención", como se muestra en la hoja y la constancia. */
+    public function typeLabel(): string
+    {
+        return $this->claim_type === 'queja' ? 'Queja · Atención' : 'Reclamo · Producto';
+    }
+
+    /** Número de hoja LR-AAAA-NNNNNN, asignado al registrar. */
+    public static function sheetNumberFor(self $claim): string
+    {
+        return sprintf('LR-%s-%06d', $claim->created_at->format('Y'), $claim->id);
+    }
 
     public function legalDeadline(): Carbon
     {

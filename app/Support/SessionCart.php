@@ -28,12 +28,16 @@ class SessionCart
         
         $newQty = min($currentQty + max(1, $qty), $maxQty);
 
+        // Con una promoción por horas vigente se guarda su precio y, aparte, el regular para mostrarlo tachado.
+        $promo = Promotions::forVariant($variant);
+
         $items[$key] = [
             'producto_id' => $product->id,
             'variant_id' => $variant->id,
             'producto' => $variant->name,
             'qty' => $newQty,
-            'price' => (float) $variant->price,
+            'price' => $promo['price'] ?? (float) $variant->price,
+            'regular_price' => $promo ? $promo['regular'] : null,
             'color' => $variant->color,
             'talla' => $variant->talla,
             'image' => self::imageFor($variant, $product),

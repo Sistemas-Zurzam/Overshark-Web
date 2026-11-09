@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\ImageOptimizer;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\BannerPortada;
 use App\Models\Brand;
@@ -48,7 +49,7 @@ class BannerController extends Controller
         BannerPortada::query()->create([
             'brand_id' => $validated['brand_id'],
             'name' => $validated['name'],
-            'image_path' => $request->file('image')->store('banners', 'public'),
+            'image_path' => ImageOptimizer::storeUploaded($request->file('image'), 'banners', ImageOptimizer::BANNER_MAX_SIDE),
             'time' => $validated['time'] ?? 5,
             'modo' => $validated['modo'],
             'status' => $request->boolean('status'),
@@ -85,7 +86,7 @@ class BannerController extends Controller
                 Storage::disk('public')->delete($banner->image_path);
             }
 
-            $data['image_path'] = $request->file('image')->store('banners', 'public');
+            $data['image_path'] = ImageOptimizer::storeUploaded($request->file('image'), 'banners', ImageOptimizer::BANNER_MAX_SIDE);
         }
 
         $banner->update($data);

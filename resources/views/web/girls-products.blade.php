@@ -65,7 +65,12 @@
                                 </a>
                                 <div class="gl-prod__info">
                                     <h2 class="gl-prod__name">{{ \App\Support\ProductName::title($product->name) }}</h2>
-                                    <p class="gl-prod__price"><b>S/ {{ number_format((float) $product->min_price, 2) }}</b></p>
+                                    @if ($product->promo)
+                                        <p class="gl-prod__price"><b>S/ {{ number_format($product->promo['price'], 2) }}</b> <s>S/ {{ number_format($product->promo['regular'], 2) }}</s></p>
+                                        @include('web.partials.promo-countdown', ['promo' => $product->promo, 'class' => 'block text-[11px] font-bold uppercase'])
+                                    @else
+                                        <p class="gl-prod__price"><b>S/ {{ number_format((float) $product->min_price, 2) }}</b></p>
+                                    @endif
                                     @if ($colors->isNotEmpty())
                                         <div class="gl-swatches" role="group" aria-label="Colores de {{ $product->name }}">
                                             @foreach ($colors as $color)

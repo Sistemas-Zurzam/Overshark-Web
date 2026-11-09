@@ -23,6 +23,8 @@
                     <li>Envíos</li>
                     <li>Cambios y devoluciones</li>
                     <li>Métodos de pago</li>
+                    <li><a href="{{ route('web.terms') }}" data-legal-open="terms">Términos y condiciones</a></li>
+                    <li><a href="{{ route('web.privacy') }}" data-legal-open="privacy">Política de privacidad</a></li>
                     <li><a href="{{ route('web.claims.create') }}">Libro de Reclamaciones</a></li>
                 </ul>
             </div>
@@ -37,7 +39,7 @@
                 <h2>Envíos a todo el Perú</h2>
                 <ul>
                     <li>Lima: delivery S/ 15</li>
-                    <li>Agencia Shalom: S/ 15</li>
+                    <li>Agencia Shalom: S/ 14</li>
                     <li>Recojo en almacén: gratis</li>
                 </ul>
             </div>

@@ -37,6 +37,44 @@ class Producto extends Model
         'zazu_synced_at',
     ];
 
+    /**
+     * Solo lo que vende la tienda: las empresas de ZAZU_COMPANIES (p. ej. OVERSHARK, BRAVOS). Los productos de otras
+     * empresas (BOX PRIME) quedaron guardados de sincronizaciones anteriores y no deben verse en el admin. Un
+     * producto sin empresa se mantiene; sin lista configurada no se filtra nada.
+     */
+    /**
+     * Solo variantes cuyo color ya tiene imágenes subidas (galería por color del admin). Un color sin fotos no se
+     * muestra en la tienda hasta que se suban: sin esto aparecería con la foto genérica del producto.
+     */
+    public function scopeWithColorPhoto(Builder $query): Builder
+    {
+        // Sin color no hay galería a la que apuntar: esas variantes se siguen mostrando como antes.
+        return $query->where(fn (Builder $query) => $query
+            ->whereNull('productos.color')
+            ->orWhere('productos.color', '')
+            ->orWhereExists(fn ($gallery) => $gallery->selectRaw('1')
+                ->from('producto_color_images as galleries')
+                ->whereColumn('galleries.product_name', 'productos.name')
+                ->whereColumn('galleries.color', 'productos.color')
+                ->whereNotNull('galleries.images')
+                ->whereNotIn('galleries.images', ['[]', 'null', ''])));
+    }
+
+    public function scopeSoldByStore(Builder $query): Builder
+    {
+        $allowed = (array) config('services.zazu.companies', []);
+        if ($allowed === []) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $query) use ($allowed): void {
+            $query->whereNull('empresa_nombre')->orWhere('empresa_nombre', '');
+            foreach ($allowed as $part) {
+                $query->orWhereRaw('UPPER(empresa_nombre) LIKE ?', ['%'.mb_strtoupper($part).'%']);
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

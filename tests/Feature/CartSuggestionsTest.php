@@ -13,6 +13,7 @@ use Tests\TestCase;
 /** "Te puede interesar": modal al agregar al carrito, reglas del panel y prendas de respaldo de la misma marca. */
 class CartSuggestionsTest extends TestCase
 {
+    use \Tests\Concerns\GivesProductsColorPhotos;
     use RefreshDatabase;
 
     private Producto $polo;

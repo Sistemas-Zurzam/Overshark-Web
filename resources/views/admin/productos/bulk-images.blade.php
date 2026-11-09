@@ -79,6 +79,14 @@
 
                 <form action="{{ route('admin.productos.images.preview') }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    <label for="bulk-product" class="block text-sm font-extrabold text-slate-800">Producto de estas imágenes <span class="font-medium text-slate-500">(opcional)</span></label>
+                    <input id="bulk-product" name="product" list="bulk-product-list" value="{{ old('product') }}" autocomplete="off" placeholder="Ej.: Camisero Pike" class="mb-1 mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-50">
+                    <datalist id="bulk-product-list">
+                        @foreach ($productNames as $productName)
+                            <option value="{{ $productName }}"></option>
+                        @endforeach
+                    </datalist>
+                    <p class="mb-4 text-xs leading-5 text-slate-500">Si lo eliges, los archivos solo llevan el orden y el color: <code>01-perla.png</code>, <code>02-beige.png</code>, <code>11-palo-rosa.png</code>. Si lo dejas vacío, cada nombre debe llevar el producto: <code>Camisero Pike__Perla__01.png</code>.</p>
                     <label for="product-images" class="group flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 px-5 text-center transition hover:border-blue-400 hover:bg-blue-50/40">
                         <span class="grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition group-hover:text-blue-700">
                             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>

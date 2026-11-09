@@ -15,6 +15,7 @@
     'CATÁLOGO' => [
         ['admin.productos.index', 'Productos', 'package'],
         ['admin.combos.index', 'Combos', 'gift'],
+        ['admin.promociones.index', 'Promociones', 'tag'],
         ['admin.sugerencias.index', 'Sugerencias', 'tag'],
         ['admin.outfits.index', 'Arma tu outfit', 'shirt'],
         ['admin.bodegas.index', 'Bodegas', 'warehouse'],
@@ -22,7 +23,6 @@
     'CONTENIDO' => [
         ['admin.banners.index', 'Banners', 'image'],
         ['admin.about.edit', 'Página Nosotros', 'file'],
-        ['admin.tv.index', 'Overshark TV', 'tv'],
     ],
     'CONFIGURACIÓN' => [
         ['admin.brands.index', 'Marcas', 'tag'],

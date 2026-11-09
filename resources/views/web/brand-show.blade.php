@@ -99,11 +99,19 @@
                                     <p class="text-[11px] font-black uppercase tracking-[0.16em]" style="color: var(--brand-primary);">{{ $product->marca ?: $brandPage->name }}</p>
                                     <a href="{{ route('web.products.show', $product->id) }}" class="mt-1 line-clamp-2 min-h-10 text-base font-bold text-white transition hover:opacity-70">{{ $product->name }}</a>
                                     <div class="mt-2 flex items-baseline gap-2">
-                                        <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-                                        @if ($oldPrice > 0)
-                                            <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                                        @if ($product->promo)
+                                            <p class="text-xl font-black">S/ {{ number_format($product->promo['price'], 2) }}</p>
+                                            <p class="text-sm text-haze line-through">S/ {{ number_format($product->promo['regular'], 2) }}</p>
+                                        @else
+                                            <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
+                                            @if ($oldPrice > 0)
+                                                <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                                            @endif
                                         @endif
                                     </div>
+                                    @if ($product->promo)
+                                        @include('web.partials.promo-countdown', ['promo' => $product->promo, 'class' => 'mt-1 block text-[11px] font-bold uppercase tracking-[0.5px]'])
+                                    @endif
                                     <div class="mt-4 flex flex-wrap items-center gap-1.5">
                                         @foreach ($displayColors->take(8) as $color)
                                             @php($colorName = mb_strtolower($color['name']))

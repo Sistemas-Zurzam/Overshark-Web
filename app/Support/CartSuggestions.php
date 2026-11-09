@@ -147,7 +147,7 @@ class CartSuggestions
                 'id' => $product->id,
                 'name' => $product->name,
                 'brand' => $product->empresa_nombre ?: $product->marca,
-                'price' => (float) $card['rows']->min('price'),
+                'price' => (float) $card['rows']->map(fn (Producto $row) => Promotions::priceFor($row))->min(),
                 'image' => $product->display_image,
                 'colors' => $card['rows']->groupBy('color')->map(
                     fn (Collection $variants) => $variants->pluck('talla')->unique()

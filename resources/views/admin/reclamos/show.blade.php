@@ -73,6 +73,9 @@
                             <dl class="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                                 <div><dt class="text-xs text-admin-text-muted">Nombre</dt><dd class="text-sm text-admin-text">{{ $reclamo->guardian_name }}</dd></div>
                                 <div><dt class="text-xs text-admin-text-muted">Documento</dt><dd class="text-sm text-admin-text">{{ $reclamo->guardian_document_type }} {{ $reclamo->guardian_document_number }}</dd></div>
+                                @if ($reclamo->guardian_contact)
+                                    <div><dt class="text-xs text-admin-text-muted">Contacto</dt><dd class="text-sm text-admin-text">{{ $reclamo->guardian_contact }}</dd></div>
+                                @endif
                             </dl>
                         </div>
                     @endif
@@ -82,8 +85,18 @@
                     <h2 class="font-admin-display text-xl font-black uppercase leading-none text-admin-text">Compra</h2>
                     <dl class="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
                         <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">N° de pedido</dt><dd class="text-sm text-admin-text">{{ $reclamo->order_number ?: '—' }}</dd></div>
-                        <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Comprobante</dt><dd class="text-sm text-admin-text">{{ $reclamo->receipt_type }} · {{ $reclamo->purchase_date?->format('d/m/Y') }}</dd></div>
-                        <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Canal de compra</dt><dd class="text-sm text-admin-text">{{ $reclamo->purchase_channel }}</dd></div>
+                        @if ($reclamo->receipt_type || $reclamo->purchase_date)
+                            <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Comprobante</dt><dd class="text-sm text-admin-text">{{ $reclamo->receipt_type }} · {{ $reclamo->purchase_date?->format('d/m/Y') }}</dd></div>
+                        @endif
+                        @if ($reclamo->purchase_channel)
+                            <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Canal de compra</dt><dd class="text-sm text-admin-text">{{ $reclamo->purchase_channel }}</dd></div>
+                        @endif
+                        @if ($reclamo->sheet_number)
+                            <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Hoja</dt><dd class="text-sm text-admin-text">{{ $reclamo->sheet_number }}</dd></div>
+                        @endif
+                        @if ($reclamo->supporting_document)
+                            <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Documento de sustento</dt><dd class="text-sm text-admin-text">{{ basename($reclamo->supporting_document) }} <span class="text-admin-text-muted">(storage/app/private/{{ $reclamo->supporting_document }})</span></dd></div>
+                        @endif
                         <div><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Monto reclamado</dt><dd class="text-sm text-admin-text">{{ $reclamo->claimed_amount !== null ? 'S/ '.number_format((float) $reclamo->claimed_amount, 2) : '—' }}</dd></div>
                         <div class="sm:col-span-2"><dt class="text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Producto o servicio</dt><dd class="text-sm text-admin-text">{{ $reclamo->order_product }}</dd></div>
                         @if ($reclamo->order_description)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\ImageOptimizer;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
@@ -140,6 +141,7 @@ class ProductoController extends Controller
     private function groupedProducts(array $filters): \Illuminate\Support\Collection
     {
         $productosQuery = Producto::query()
+            ->soldByStore()
             ->when($filters['search'] !== '', function ($query) use ($filters): void {
                 $query->where(function ($searchQuery) use ($filters): void {
                     $searchQuery
@@ -168,6 +170,7 @@ class ProductoController extends Controller
     private function empresasDisponibles()
     {
         return Producto::query()
+            ->soldByStore()
             ->whereNotNull('empresa_nombre')
             ->where('empresa_nombre', '<>', '')
             ->distinct()
@@ -200,6 +203,7 @@ class ProductoController extends Controller
             ]);
 
         $allCoverageProducts = Producto::query()
+            ->soldByStore()
             ->whereNotNull('color')
             ->where('color', '<>', '')
             ->get(['name', 'color', 'imagen'])
@@ -261,6 +265,7 @@ class ProductoController extends Controller
         $allColors = $allCoverageProducts->flatMap(fn ($product) => $product['colors']);
 
         return view('admin.productos.bulk-images', [
+            'productNames' => Producto::query()->soldByStore()->distinct()->orderBy('name')->pluck('name'),
             'preview' => session(self::BULK_IMAGES_SESSION_KEY),
             'coverageProducts' => $coverageProducts,
             'coverageSearch' => $search,
@@ -279,6 +284,7 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'images' => ['required', 'array', 'min:1', 'max:20'],
             'images.*' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+            'product' => ['nullable', 'string', 'max:255'],
         ], [
             'images.required' => 'Selecciona al menos una imagen.',
             'images.max' => 'Puedes revisar hasta 20 imágenes por lote.',
@@ -290,10 +296,25 @@ class ProductoController extends Controller
         $this->forgetBulkImagePreview();
         $token = Str::random(40);
         $files = collect($validated['images'])->values();
-        $parsedFiles = $files->map(function ($file): array {
+        $normalize = fn ($value) => Str::upper(preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value));
+        $forcedProduct = $normalize((string) ($validated['product'] ?? ''));
+        $parsedFiles = $files->map(function ($file) use ($normalize, $forcedProduct): array {
             $stem = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+
+            // Con el producto elegido en el formulario, el archivo solo lleva el orden y el color: "01-perla",
+            // "02 beige", "11-palo-rosa" (los guiones del color pasan a espacios).
+            if ($forcedProduct !== '') {
+                $hasOrder = preg_match('/^(\d{1,3})[\s._-]+(.+)$/u', $stem, $match) === 1;
+
+                return [
+                    'product_name' => $forcedProduct,
+                    'color' => $normalize(str_replace(['-', '_'], ' ', $hasOrder ? $match[2] : $stem)),
+                    'order' => $hasOrder ? (int) $match[1] : null,
+                    'invalid_parts' => false,
+                ];
+            }
+
             $parts = explode('__', $stem);
-            $normalize = fn ($value) => Str::upper(preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value));
 
             return [
                 'product_name' => $normalize($parts[0] ?? ''),
@@ -325,6 +346,12 @@ class ProductoController extends Controller
                 $items[] = $item;
 
                 continue;
+            }
+
+            // Zazu abrevia algunos colores ("P. ROSA", "MELANGE O."): se busca el del catálogo que corresponde.
+            if ($color !== null) {
+                $color = $this->resolveCatalogColor($productName, $color);
+                $item['color'] = $color;
             }
 
             $productsQuery = Producto::query()->whereRaw('UPPER(TRIM(name)) = ?', [$productName]);
@@ -401,6 +428,48 @@ class ProductoController extends Controller
         return redirect()->route('admin.productos.images.bulk')->with('preview_ready', true);
     }
 
+    /**
+     * El color del catálogo al que se refiere el nombre del archivo. Exacto primero; si no, "PALO ROSA" encuentra
+     * "P. ROSA" (cada palabra del catálogo es el inicio de la del archivo) y "MELANGE" encuentra "MELANGE O."
+     * (el catálogo agrega solo una letra suelta). Si hay más de un candidato no se adivina: queda el nombre tal cual.
+     */
+    private function resolveCatalogColor(string $productName, string $color): string
+    {
+        $words = fn (string $value): array => preg_split('/[\s.\-_]+/u', Str::upper(Str::ascii($value)), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $catalog = Producto::query()->whereRaw('UPPER(TRIM(name)) = ?', [$productName])
+            ->whereNotNull('color')->distinct()->pluck('color')
+            ->map(fn ($catalogColor) => Str::upper(trim((string) $catalogColor)))->unique()->values();
+
+        if ($catalog->contains($color)) {
+            return $color;
+        }
+
+        $wanted = $words($color);
+        $candidates = $catalog->filter(function (string $catalogColor) use ($words, $wanted): bool {
+            $have = $words($catalogColor);
+            if ($have === [] || $wanted === []) {
+                return false;
+            }
+            if ($have === $wanted) {
+                return true;
+            }
+
+            $pairs = min(count($have), count($wanted));
+            for ($i = 0; $i < $pairs; $i++) {
+                if (! str_starts_with($wanted[$i], $have[$i])) {
+                    return false;
+                }
+            }
+
+            // Palabras que sobran en el catálogo: solo una letra suelta ("O." de oscuro), nunca otro color.
+            $extra = array_slice($have, $pairs);
+
+            return count($have) >= count($wanted) && ($extra === [] || (count($extra) === 1 && mb_strlen($extra[0]) === 1));
+        });
+
+        return $candidates->count() === 1 ? $candidates->first() : $color;
+    }
+
     public function applyBulkImages(Request $request): RedirectResponse
     {
         $manifest = session(self::BULK_IMAGES_SESSION_KEY);
@@ -414,12 +483,9 @@ class ProductoController extends Controller
         $mainImages = $validItems->filter(fn ($item) => $item['color'] === null);
         foreach ($mainImages as $item) {
             $productName = (string) $item['product_name'];
-            $imagePath = 'productos/'.Str::uuid().'.'.pathinfo($item['temp_path'], PATHINFO_EXTENSION);
+            $imagePath = null;
             try {
-                $contents = Storage::disk('local')->get($item['temp_path']);
-                if (! Storage::disk('public')->put($imagePath, $contents)) {
-                    throw new \RuntimeException('No se pudo escribir la imagen en el almacenamiento público.');
-                }
+                $imagePath = ImageOptimizer::storeContents(Storage::disk('local')->get($item['temp_path']), 'productos', pathinfo($item['temp_path'], PATHINFO_EXTENSION));
                 $variants = Producto::query()->whereRaw('UPPER(TRIM(name)) = ?', [$productName]);
                 $oldPaths = $oldPaths->merge((clone $variants)->whereNotNull('imagen')->pluck('imagen'));
                 if ($variants->update(['imagen' => $imagePath]) < 1) {
@@ -429,7 +495,9 @@ class ProductoController extends Controller
                 }
                 $updated++;
             } catch (\Throwable $exception) {
-                Storage::disk('public')->delete($imagePath);
+                if ($imagePath) {
+                    Storage::disk('public')->delete($imagePath);
+                }
                 $errors[] = "{$productName}: no se pudo guardar la imagen principal.";
             }
         }
@@ -444,12 +512,7 @@ class ProductoController extends Controller
             try {
                 $images = $images->sortBy(fn ($item) => $item['order'] ?? 0)->values();
                 foreach ($images as $item) {
-                    $path = 'productos/colores/'.Str::uuid().'.'.pathinfo($item['temp_path'], PATHINFO_EXTENSION);
-                    $contents = Storage::disk('local')->get($item['temp_path']);
-                    if (! Storage::disk('public')->put($path, $contents)) {
-                        throw new \RuntimeException('No se pudo escribir una imagen en el almacenamiento público.');
-                    }
-                    $savedPaths[] = $path;
+                    $savedPaths[] = ImageOptimizer::storeContents(Storage::disk('local')->get($item['temp_path']), 'productos/colores', pathinfo($item['temp_path'], PATHINFO_EXTENSION));
                 }
 
                 $catalogProduct = Producto::query()
@@ -538,7 +601,7 @@ class ProductoController extends Controller
 
         $variants = $this->variantsFor($producto)->get();
         $oldImages = $variants->pluck('imagen')->filter()->unique();
-        $path = $validated['image']->store('productos', 'public');
+        $path = ImageOptimizer::storeUploaded($validated['image'], 'productos');
 
         $this->variantsFor($producto)->update(['imagen' => $path]);
         Producto::refreshCacheVersion();
@@ -588,7 +651,7 @@ class ProductoController extends Controller
 
         $variants = $this->variantsFor($producto)->get();
         $oldImages = $variants->pluck('guia_tallas_imagen')->filter()->unique();
-        $path = $validated['guia_tallas_imagen']->store('productos/guias-tallas', 'public');
+        $path = ImageOptimizer::storeUploaded($validated['guia_tallas_imagen'], 'productos/guias-tallas');
 
         $this->variantsFor($producto)->update(['guia_tallas_imagen' => $path]);
         Producto::refreshCacheVersion();
@@ -617,7 +680,7 @@ class ProductoController extends Controller
         $record->fill([
             'product_name' => $producto->name,
             'images' => collect($validated['images'])
-                ->map(fn ($image) => $image->store('productos/colores', 'public'))
+                ->map(fn ($image) => ImageOptimizer::storeUploaded($image, 'productos/colores'))
                 ->all(),
         ])->save();
 

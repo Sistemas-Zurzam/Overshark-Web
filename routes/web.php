@@ -22,6 +22,7 @@ use App\Support\CartSuggestions;
 use App\Support\Checkout;
 use App\Support\GirlsHome;
 use App\Support\ProductCards;
+use App\Support\Promotions;
 use App\Support\SessionCart;
 use App\Support\StorefrontCategories;
 use App\Services\ComboSelectionService;
@@ -604,11 +605,17 @@ Route::get('/nosotros', fn (Request $request) => view('web.nosotros', [
 Route::get('/contacto', [\App\Http\Controllers\ContactController::class, 'create'])->name('web.contact');
 Route::post('/contacto', [\App\Http\Controllers\ContactController::class, 'store'])->middleware('throttle:5,1')->name('web.contact.store');
 
-// Overshark TV: maqueta del canal en vivo (datos de ejemplo, sin streaming ni chat reales).
-Route::view('/tv', 'web.tv')->name('web.tv');
+Route::view('/terminos-y-condiciones', 'web.legal-page', ['document' => 'terms'])->name('web.terms');
+Route::view('/politica-de-privacidad', 'web.legal-page', ['document' => 'privacy'])->name('web.privacy');
 
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
-Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
+Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'review'])->name('web.claims.submit');
+Route::get('/libro-de-reclamaciones/revisar', [LibroReclamacionController::class, 'showReview'])->name('web.claims.review');
+Route::get('/libro-de-reclamaciones/editar', [LibroReclamacionController::class, 'edit'])->name('web.claims.edit');
+Route::post('/libro-de-reclamaciones/confirmar', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
+Route::get('/libro-de-reclamaciones/no-se-pudo-enviar', [LibroReclamacionController::class, 'error'])->name('web.claims.error');
+Route::get('/libro-de-reclamaciones/solicitud-registrada', [LibroReclamacionController::class, 'registered'])->name('web.claims.registered');
+Route::get('/libro-de-reclamaciones/constancia', [LibroReclamacionController::class, 'receipt'])->name('web.claims.receipt');
 
 // Arma tu outfit de Bravos (Figma "03 · Arma tu Outfit Bravos"): una polera y un pantalón a precio individual.
 Route::get('/marcas/bravos/arma-tu-outfit', function () {
@@ -635,7 +642,7 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
         Producto::query()
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
             ->where('price', '>', 0)
-            ->where('stock', '>', 0)
+            ->where('stock', '>', 0)->withColorPhoto()
             ->ofBrand($brand->name)
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('total_stock')
@@ -647,7 +654,7 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
 
     // Bravos tiene su propia portada (diseño Figma "01 · Home Bravos · Black & White").
     if ($brand->slug === 'bravos') {
-        $range = Producto::query()->ofBrand($brand->name)->where('price', '>', 0)->where('stock', '>', 0);
+        $range = Producto::query()->ofBrand($brand->name)->where('price', '>', 0)->where('stock', '>', 0)->withColorPhoto();
 
         return view('web.bravos', [
             'brandPage' => $brand,
@@ -673,7 +680,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
             fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id),
         )
         ->where('price', '>', 0)
-        ->where('stock', '>', 0)
+        ->where('stock', '>', 0)->withColorPhoto()
         ->orderBy('color')
         ->orderBy('talla')
         ->get();
@@ -703,7 +710,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
     $recommendedProductsQuery = Producto::query()
         ->selectRaw('MIN(id) as id, categoria_id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
         ->where('price', '>', 0)
-        ->where('stock', '>', 0)
+        ->where('stock', '>', 0)->withColorPhoto()
         ->where('name', '!=', $producto->name)
         // Recomendaciones de la misma línea (Overshark Girls u Overshark hombre).
         ->tap(fn ($query) => GirlsHome::isGirls($producto->name, $producto->marca) ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query));
@@ -732,7 +739,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
                 ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->ofBrand($bravosBrand->name)
                 ->where('price', '>', 0)
-                ->where('stock', '>', 0)
+                ->where('stock', '>', 0)->withColorPhoto()
                 ->where('name', '!=', $producto->name)
                 ->groupBy('zazu_company_id', 'name')
                 ->orderByDesc('total_stock')
@@ -751,6 +758,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         'sizes' => $variants->pluck('talla')->filter()->unique()->values(),
         'mainImages' => $mainImages,
         'price' => (float) $variants->min('price') ?: (float) $producto->price,
+        'promo' => Promotions::best((string) $producto->name, $producto->marca, $producto->empresa_nombre, $producto->categoria_id, (float) $variants->min('price') ?: (float) $producto->price),
         'paymentMethods' => MetodoPago::active(),
         'recommendedProducts' => $recommendedProducts,
     ]);
@@ -774,7 +782,7 @@ Route::get('/buscar', function (Request $request) {
     // Variantes a la venta de la línea actual (en hombre sin Girls, salvo que se busque algo concreto).
     $available = fn () => Producto::query()
         ->where('price', '>', 0)
-        ->where('stock', '>', 0)
+        ->where('stock', '>', 0)->withColorPhoto()
         ->when($marca !== '', fn ($query) => $query->ofBrand($marca))
         ->when($marca === '' && $line === 'mujer', fn ($query) => GirlsHome::onlyGirls($query))
         ->when($marca === '' && $line === 'hombre' && $search === '', fn ($query) => GirlsHome::exceptGirls($query));
@@ -872,7 +880,7 @@ Route::get('/mujer/productos', function (Request $request) {
             GirlsHome::onlyGirls(Producto::query())
                 ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
                 ->where('price', '>', 0)
-                ->where('stock', '>', 0)
+                ->where('stock', '>', 0)->withColorPhoto()
                 ->when($search !== '', function ($query) use ($searchTerm): void {
                     $query->where(function ($searchQuery) use ($searchTerm): void {
                         $searchQuery->where('name', 'like', "%{$searchTerm}%")
@@ -909,7 +917,7 @@ Route::get('/', function (Request $request) {
         Producto::query()
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
             ->where('price', '>', 0)
-            ->where('stock', '>', 0)
+            ->where('stock', '>', 0)->withColorPhoto()
             ->tap(fn ($query) => $storeLine === 'mujer' ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query))
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('total_stock')
@@ -925,10 +933,25 @@ Route::get('/', function (Request $request) {
 
     $overshark = \App\Models\Brand::query()->active()->whereRaw('UPPER(name) = ?', ['OVERSHARK'])->first();
 
+    // "Ofertas relámpago": prendas de la línea con una promoción por horas vigente, las más baratas primero.
+    $flashDeals = ProductCards::make(
+        Promotions::constrain(Producto::query())
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
+            ->where('price', '>', 0)
+            ->where('stock', '>', 0)->withColorPhoto()
+            ->tap(fn ($query) => GirlsHome::exceptGirls($query))
+            ->groupBy('zazu_company_id', 'name')
+            ->orderByDesc('total_stock')
+            ->limit(8)
+            ->get(),
+        asset('images/default-hero-banner.png'),
+    )->filter(fn (Producto $product) => $product->promo !== null)->values();
+
     return view('web.home', [
         'storeLine' => $storeLine,
         'banners' => BannerPortada::activeForHome($overshark?->id),
         'bestSellers' => $bestSellers,
+        'flashDeals' => $flashDeals,
         'bravosBrand' => $bravosBrand,
     ]);
 })->name('web.home');

@@ -4,7 +4,7 @@
     C3 · Pago: resumen de envío (Enviar a / Método de envío / Comprobante, con "Editar") y métodos de pago en
     tarjetas que se despliegan (Checkout::paymentMethods): tarjeta de crédito o débito con Culqi (formulario en
     la página; checkout.js crea el token directo en Culqi), Yape con QR de Ligo Pay (pendiente de su API), los
-    medios activos del admin con captura, y contraentrega, cuyo separo (S/ 15 domicilio, S/ 15 agencia;
+    medios activos del admin con captura, y contraentrega, cuyo separo (S/ 15 domicilio, S/ 30 agencia;
     Checkout::depositFor) se paga aquí mismo con tarjeta o Yape. Lo no configurado se ve con un aviso.
     El pedido se crea en web.checkout.place (token contra doble envío y total confirmado).
 --}}
@@ -137,9 +137,12 @@
                                 <hr class="border-[#0b1015]">
                                 <p class="text-[13px] font-extrabold uppercase tracking-[.5px]">Separa tu pedido con {{ $money($deposit) }}</p>
                                 <dl class="flex flex-col gap-2 text-[14px] leading-[1.45]">
-                                    <div class="flex justify-between gap-4"><dt>Total del pedido (incluye envío {{ $money($shipping ?? 0) }})</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($total) }}</dd></div>
-                                    <div class="flex justify-between gap-4"><dt>Separo: lo pagas ahora</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($deposit) }}</dd></div>
-                                    <div class="flex justify-between gap-4"><dt>Saldo: lo pagas al recibir tu pedido</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($total - $deposit) }}</dd></div>
+                                    <div class="flex justify-between gap-4"><dt>Productos</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($subtotal) }}</dd></div>
+                                    <div class="flex justify-between gap-4"><dt>Envío</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $shipping > 0 ? $money($shipping) : 'Gratis' }}</dd></div>
+                                    <div class="flex justify-between gap-4 border-t border-[#dae0e5] pt-2"><dt>Total del pedido</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($total) }}</dd></div>
+                                    @php($shippingNow = ($customer['delivery'] ?? null) === 'agencia' ? min($shipping, $deposit) : 0)
+                                    <div class="flex justify-between gap-4 text-[#147d5b]"><dt>Separo: lo pagas ahora @if ($shippingNow > 0)@endif</dt><dd class="shrink-0 whitespace-nowrap font-bold">− {{ $money($deposit) }}</dd></div>
+                                    <div class="flex justify-between gap-4 border-t border-[#dae0e5] pt-2"><dt class="font-bold">Saldo: lo pagas al recibir tu pedido</dt><dd class="shrink-0 whitespace-nowrap font-extrabold">{{ $money($total - $deposit) }}</dd></div>
                                 </dl>
 
                                 <div class="flex flex-col gap-2" role="radiogroup" aria-label="Cómo pagas el separo">
@@ -195,7 +198,7 @@
             <div class="flex flex-col gap-4">
                 <label class="flex cursor-pointer items-start gap-3 text-[14px] leading-[1.45]">
                     <input type="checkbox" name="terms" value="1" @checked(old('terms')) class="mt-0.5 h-5 w-5 shrink-0 accent-[#0b1015]" data-ck-terms>
-                    <span>He leído y acepto los Términos y condiciones y la Política de privacidad.</span>
+                    <span>He leído y acepto los <a href="{{ route('web.terms') }}" data-legal-open="terms" target="_blank" rel="noopener" class="font-bold underline underline-offset-4">Términos y condiciones</a> y la <a href="{{ route('web.privacy') }}" data-legal-open="privacy" target="_blank" rel="noopener" class="font-bold underline underline-offset-4">Política de privacidad</a>.</span>
                 </label>
                 <p class="hidden bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert" data-ck-pay-error></p>
                 <button type="submit" class="os-checkout-btn os-focus w-full" data-ck-submit>REALIZAR PEDIDO</button>

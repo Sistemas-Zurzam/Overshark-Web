@@ -27,6 +27,8 @@
             <p>© {{ now()->year }} Overshark. Precios en soles, impuestos incluidos.</p>
             <p class="flex gap-4">
                 <a href="{{ route('web.contact') }}#faq" class="hover:text-[#0b1015]">Ayuda</a>
+                <a href="{{ route('web.terms') }}" data-legal-open="terms" class="hover:text-[#0b1015]">Términos y condiciones</a>
+                <a href="{{ route('web.privacy') }}" data-legal-open="privacy" class="hover:text-[#0b1015]">Política de privacidad</a>
                 <a href="{{ route('web.claims.create') }}" class="hover:text-[#0b1015]">Libro de Reclamaciones</a>
             </p>
         </div>

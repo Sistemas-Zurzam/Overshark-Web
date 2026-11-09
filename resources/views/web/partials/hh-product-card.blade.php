@@ -18,6 +18,9 @@
             @if ($rank)
                 <span @class(['os-hh-rank', 'bg-[var(--hh-accent)]' => $rank <= 3, 'bg-[#0b0f14]' => $rank > 3])>{{ $rank }}</span>
             @endif
+            @if ($product->promo)
+                <span class="absolute right-2 top-2 bg-[#b42318] px-2 py-1 text-[12px] font-extrabold leading-none text-white">{{ $product->promo['label'] ?: '-'.$product->promo['percent'].'%' }}</span>
+            @endif
         </div>
     </a>
     <div class="mt-2.5 flex flex-col gap-1">
@@ -28,7 +31,15 @@
             <h3 class="min-w-0 truncate text-[15px] font-bold" data-card-title="{{ $title($product->name) }}">{{ $title($product->name) }}@if ($color) · {{ $title($color) }}@endif</h3>
             <img src="{{ asset('images/home-hombre/icon-carrito.svg') }}" alt="" width="18" height="18" class="shrink-0">
         </a>
-        <p class="text-[16px] font-extrabold">S/ {{ number_format((float) $product->min_price, 2) }}</p>
+        @if ($product->promo)
+            <p class="flex items-baseline gap-2">
+                <span class="text-[16px] font-extrabold text-[#b42318]">S/ {{ number_format($product->promo['price'], 2) }}</span>
+                <span class="text-[13px] text-[#666] line-through">S/ {{ number_format($product->promo['regular'], 2) }}</span>
+            </p>
+            @include('web.partials.promo-countdown', ['promo' => $product->promo, 'class' => 'text-[11px] font-bold uppercase tracking-[0.5px] text-[#b42318]'])
+        @else
+            <p class="text-[16px] font-extrabold">S/ {{ number_format((float) $product->min_price, 2) }}</p>
+        @endif
         @if ($colors->count() > 1)
             <div class="mt-1 flex flex-wrap items-center gap-1.5" role="group" aria-label="Colores de {{ $title($product->name) }}">
                 @foreach ($colors->take(8) as $option)

@@ -112,12 +112,23 @@ class Checkout
 
         foreach ($items as $key => $item) {
             $isCombo = ($item['kind'] ?? null) === 'combo';
+            $variant = $isCombo ? null : Producto::query()->find($item['variant_id'] ?? 0);
+            $promo = $variant ? Promotions::forVariant($variant) : null;
+            // Una prenda se cobra con su promoción por horas si sigue vigente; al vencer vuelve a su precio regular.
             $current = $isCombo
                 ? Combo::query()->find($item['combo_id'] ?? 0)?->price
-                : Producto::query()->find($item['variant_id'] ?? 0)?->price;
+                : ($promo['price'] ?? $variant?->price);
 
-            if ($current === null || (float) $current <= 0 || round((float) $current, 2) === round((float) ($item['price'] ?? 0), 2)) {
+            if ($current === null || (float) $current <= 0) {
                 continue;
+            }
+
+            if (round((float) $current, 2) === round((float) ($item['price'] ?? 0), 2)) {
+                continue;
+            }
+
+            if (! $isCombo) {
+                $items[$key]['regular_price'] = $promo ? $promo['regular'] : null;
             }
 
             $name = $isCombo ? (string) ($item['producto'] ?? 'Combo') : ProductName::title((string) ($item['producto'] ?? 'Una prenda'));
@@ -182,7 +193,8 @@ class Checkout
                 return ['lines' => $lines, 'error' => "{$name} ({$item['color']} · {$item['talla']}) ya no tiene stock suficiente. Ajusta la cantidad o quítala del carrito."];
             }
 
-            $lines->push(['key' => (string) $key, 'kind' => 'product', 'qty' => $qty, 'price' => (float) $variant->price, 'item' => $item]);
+            // Precio con la promoción por horas si sigue vigente al confirmar (si venció, se cobra el regular).
+            $lines->push(['key' => (string) $key, 'kind' => 'product', 'qty' => $qty, 'price' => Promotions::priceFor($variant), 'item' => $item]);
             $demand[(int) $variant->id] = ($demand[(int) $variant->id] ?? 0) + $qty;
         }
 
@@ -199,14 +211,14 @@ class Checkout
     }
 
     /**
-     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 15 en agencia (configurables).
+     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 30 en agencia: 14 de envío + 16 de separo (configurables).
      * Se paga en el mismo checkout con tarjeta o Yape/Plin; el saldo se paga al recibir. Almacén: sin separo.
      */
     public static function depositFor(?string $delivery): float
     {
         return match ($delivery) {
             'domicilio' => (float) config('services.storefront.cod_deposit_home', 15),
-            'agencia' => (float) config('services.storefront.cod_deposit_agency', 15),
+            'agencia' => (float) config('services.storefront.cod_deposit_agency', 30),
             default => 0.0,
         };
     }

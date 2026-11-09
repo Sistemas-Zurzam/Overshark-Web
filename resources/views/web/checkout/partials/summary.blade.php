@@ -26,7 +26,7 @@
                     @else
                         <p class="text-[13px] text-[#65717c]">{{ $title($item['color'] ?? '') }} · Talla {{ $item['talla'] ?? '-' }}</p>
                     @endif
-                    <p class="text-[16px] font-extrabold">S/ {{ number_format((float) $item['price'] * (int) ($item['qty'] ?? 1), 2) }}</p>
+                    <p class="text-[16px] font-extrabold">@if (! empty($item['regular_price']) && (float) $item['regular_price'] > (float) $item['price'])<span class="mr-1 text-[13px] font-medium text-[#65717c] line-through">S/ {{ number_format((float) $item['regular_price'] * (int) ($item['qty'] ?? 1), 2) }}</span>@endif S/ {{ number_format((float) $item['price'] * (int) ($item['qty'] ?? 1), 2) }}</p>
                 </div>
             </li>
         @endforeach

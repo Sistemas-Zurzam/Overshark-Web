@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\ImageOptimizer;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Combo;
 use App\Models\Admin\Producto;
@@ -176,7 +177,7 @@ class ComboController extends Controller
 
         DB::transaction(function () use ($request, $validated, $combo, $modality, $isDraft, $brand): void {
             $oldImage = $combo->imagen;
-            $newImage = $request->file('image')?->store('combos', 'public');
+            $newImage = $request->file('image') ? ImageOptimizer::storeUploaded($request->file('image'), 'combos') : null;
 
             $combo->fill([
                 'name' => $validated['name'],

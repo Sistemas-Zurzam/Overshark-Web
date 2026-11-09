@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Http\Request;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
@@ -27,5 +29,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('customer.account'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Una subida más grande que post_max_size de PHP llega aquí sin pasar por la validación del formulario.
+        $exceptions->render(function (PostTooLargeException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            return back()->withErrors(['images' => 'Las imágenes pesan demasiado para un solo envío. Sube menos archivos a la vez o pide subir el límite de subida del servidor (post_max_size y upload_max_filesize).']);
+        });
     })->create();

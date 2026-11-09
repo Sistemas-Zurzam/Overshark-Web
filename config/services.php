@@ -95,13 +95,13 @@ return [
         'free_shipping_from' => (float) env('STOREFRONT_FREE_SHIPPING_FROM', 0),
         // Costo de envío (S/): a domicilio (solo Lima) y recojo en agencia Shalom. El almacén es gratis.
         'shipping_home' => (float) env('STOREFRONT_SHIPPING_HOME', 15),
-        'shipping_agency' => (float) env('STOREFRONT_SHIPPING_AGENCY', 15),
+        'shipping_agency' => (float) env('STOREFRONT_SHIPPING_AGENCY', 14),
         // Dirección y horario del almacén para "Recojo en almacén" (sin costo). Vacío = se coordina por WhatsApp.
         'pickup_address' => env('STOREFRONT_PICKUP_ADDRESS'),
         // Separo de los pedidos contraentrega (S/), pagado en el checkout con tarjeta o Yape (Culqi).
         // El recojo en almacén no lleva separo: se paga todo al recoger.
         'cod_deposit_home' => (float) env('STOREFRONT_COD_DEPOSIT_HOME', 15),
-        'cod_deposit_agency' => (float) env('STOREFRONT_COD_DEPOSIT_AGENCY', 15),
+        'cod_deposit_agency' => (float) env('STOREFRONT_COD_DEPOSIT_AGENCY', 30),
     ],
 
 ];

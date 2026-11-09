@@ -123,7 +123,7 @@ class CrmSaleTest extends TestCase
             array_map(fn ($request) => $request['external_reference'], $requests),
         );
         $this->assertSame(['delivery', 'recojo', 'agencia'], array_map(fn ($request) => $request['delivery']['type'], $requests));
-        $this->assertEquals([95, 0, 15], array_map(fn ($request) => $request['payments'][0]['amount'] ?? 0, $requests));
+        $this->assertEquals([95, 0, 30], array_map(fn ($request) => $request['payments'][0]['amount'] ?? 0, $requests));
         $this->assertSame(['NV-00014', 'NV-00015', 'NV-00016'], array_map(fn ($order) => $order->refresh()->nota_venta, [$home, $pickup, $agency]));
         foreach ([$home, $pickup, $agency] as $order) {
             $this->assertSame(OrderTask::DONE, $order->tasks()->where('task', 'crm_venta')->value('status'));
@@ -196,9 +196,9 @@ class CrmSaleTest extends TestCase
         $this->assertSame('902', $request['delivery']['shalom_agency_id']);
         $this->assertSame('WANCHAQ - AV. SOL — AV. SOL 100, WANCHAQ', $request['delivery']['agency_name']);
         $this->assertSame(['WANCHAQ', 'CUSCO', 'CUSCO'], [$request['delivery']['district'], $request['delivery']['province'], $request['delivery']['department']]);
-        // Total 80 + 15 de envío: el separo de S/ 15 va como pago y el saldo queda por cobrar en el CRM.
-        $this->assertEquals(15, $request['shipping_cost']);
-        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 15, 'reference' => 'chr_ok', 'paid_at' => now()->toDateString()]], $request['payments']);
+        // Total 80 + 14 de envío: el separo de S/ 30 (envío + separo) va como pago y el saldo queda por cobrar en el CRM.
+        $this->assertEquals(14, $request['shipping_cost']);
+        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 30, 'reference' => 'chr_ok', 'paid_at' => now()->toDateString()]], $request['payments']);
     }
 
     public function test_warehouse_pickup_without_deposit_goes_as_recojo_with_nothing_paid(): void

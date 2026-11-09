@@ -4,6 +4,8 @@ import './line-transition';
 import './product-page';
 import './cart-suggestions';
 import './account';
+import './legal-modal';
+import './promo-countdown';
 import { shrinkImage } from './shrink-image';
 
 const sidebar = document.querySelector('[data-sidebar]');

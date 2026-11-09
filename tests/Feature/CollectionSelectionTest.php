@@ -7,6 +7,7 @@ use Tests\TestCase;
 
 class CollectionSelectionTest extends TestCase
 {
+    use \Tests\Concerns\GivesProductsColorPhotos;
     use RefreshDatabase;
 
     public function test_first_visit_shows_the_collection_selector(): void

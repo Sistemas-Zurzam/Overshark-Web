@@ -33,7 +33,7 @@
         ['name' => 'Jersey', 'image' => 'tela-jersey.webp', 'text' => 'Suave, ligero y con caída natural'],
     ];
     $benefits = [
-        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => 'Envíos a todo el Perú', 'text' => 'Lima: delivery S/ 15. Agencia Shalom S/ 15 a todo el Perú. Recojo en almacén gratis.', 'cta' => 'Ver políticas de envío', 'url' => route('web.contact')],
+        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => 'Envíos a todo el Perú', 'text' => 'Lima: delivery S/ 15. Agencia Shalom S/ 14 a todo el Perú. Recojo en almacén gratis.', 'cta' => 'Ver políticas de envío', 'url' => route('web.contact')],
         ['image' => 'confianza-pago.webp', 'icon' => 'icon-pago.svg', 'title' => 'Pago contraentrega', 'text' => 'Paga al recibir o con Yape, Plin y cualquier billetera que lea QR.', 'cta' => 'Ver métodos de pago', 'url' => route('web.contact')],
         ['image' => 'confianza-atencion.webp', 'icon' => 'icon-atencion.svg', 'title' => 'Atención al cliente', 'text' => 'Te ayudamos antes, durante y después de tu compra.', 'cta' => 'Escríbenos por WhatsApp', 'url' => \App\Models\BrandSetting::current()->whatsappUrl() ?: config('services.storefront.chat_url') ?: route('web.contact')],
     ];
@@ -45,6 +45,34 @@
 @endphp
 
 <div @class(['os-hh', 'os-hh--girls' => $girls])>
+    {{-- Ofertas relámpago: promociones por horas vigentes (panel → Promociones), con su cuenta regresiva --}}
+    @if (! empty($flashDeals) && $flashDeals->isNotEmpty())
+        @php($flashEnds = $flashDeals->map(fn ($product) => $product->promo['ends_at'])->min())
+        <section class="os-hh-wrap pt-16 lg:pt-[88px]" aria-labelledby="hh-flash" data-hh-carousel>
+            <header class="os-hh-head">
+                <div>
+                    <p class="os-hh-eyebrow">Por tiempo limitado</p>
+                    <h2 id="hh-flash" class="os-hh-title">Ofertas relámpago</h2>
+                    <p class="os-hh-sub">
+                        @include('web.partials.promo-countdown', ['promo' => ['ends_at' => $flashEnds], 'prefix' => 'Termina en ', 'class' => 'font-extrabold text-[#b42318]'])
+                    </p>
+                </div>
+                <div class="hidden sm:flex">
+                    <button type="button" class="os-hh-arrow os-focus" data-hh-prev aria-label="Anteriores"><img src="{{ $shared('flecha-anterior.svg') }}" alt="" width="18" height="18"></button>
+                    <button type="button" class="os-hh-arrow os-focus" data-hh-next aria-label="Siguientes"><img src="{{ $shared('flecha-siguiente.svg') }}" alt="" width="18" height="18"></button>
+                </div>
+            </header>
+
+            <ul class="os-hh-track mt-8" data-hh-track>
+                @foreach ($flashDeals as $product)
+                    <li class="os-hh-card">
+                        @include('web.partials.hh-product-card', ['photoClass' => 'h-[314px]'])
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     {{-- Los más vendidos --}}
     @if ($bestSellers->isNotEmpty())
         <section class="os-hh-wrap py-16 lg:py-[88px]" aria-labelledby="hh-top" data-hh-carousel>

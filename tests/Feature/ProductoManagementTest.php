@@ -10,6 +10,7 @@ use Tests\TestCase;
 
 class ProductoManagementTest extends TestCase
 {
+    use \Tests\Concerns\GivesProductsColorPhotos;
     use RefreshDatabase;
 
     public function test_admin_can_assign_a_brand_to_all_product_variants(): void

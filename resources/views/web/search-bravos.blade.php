@@ -66,7 +66,7 @@
 
                 <div class="hidden flex-col gap-3 bg-[#f2f2f2] p-5 lg:flex">
                     <p class="text-[17px] font-extrabold leading-[1.4] text-[#0a0a0a]">ENVÍO DESDE S/ 15</p>
-                    <p class="text-[13px] leading-[1.4] text-[#595959]">Lima: delivery S/ 15.<br>Agencia Shalom S/ 30.<br>Almacén: gratis.</p>
+                    <p class="text-[13px] leading-[1.4] text-[#595959]">Lima: delivery S/ 15.<br>Agencia Shalom S/ 14.<br>Almacén: gratis.</p>
                 </div>
             </aside>
 

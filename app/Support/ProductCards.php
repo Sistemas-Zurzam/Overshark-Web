@@ -15,6 +15,7 @@ class ProductCards
             ->whereNotNull('color')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
+            ->withColorPhoto()
             ->when($brandName !== null, fn ($query) => $query->ofBrand($brandName))
             ->orderBy('color')
             ->get()
@@ -57,6 +58,9 @@ class ProductCards
             $product->setAttribute('display_colors', $colors);
             $product->setAttribute('display_image', Thumb::url($galleryImage ?? $colors->first()['image'] ?? $product->imageUrl() ?? $fallbackImage));
         });
+
+        // Cada tarjeta recibe su promoción por horas vigente (atributo "promo", o null) para mostrar precio, descuento y cuenta regresiva.
+        Promotions::decorate($products);
 
         return $products;
     }

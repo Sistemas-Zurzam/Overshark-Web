@@ -72,7 +72,18 @@
                 <div class="flex flex-col gap-5 text-[#0b1015]">
                     <p class="text-[12px] font-bold uppercase leading-[1.45] text-[var(--hh-accent)]">{{ $brandLabel }}</p>
                     <h1 class="text-[30px] font-extrabold uppercase leading-[1.45] sm:text-[38px]">{{ \App\Support\ProductName::display($producto->name) }}</h1>
-                    <p class="text-[30px] font-extrabold leading-[1.45]">S/ {{ number_format($price, 2) }}</p>
+                    @if ($promo)
+                        <div class="flex flex-col gap-1">
+                            <p class="flex flex-wrap items-baseline gap-3 leading-[1.45]">
+                                <span class="text-[30px] font-extrabold text-[#b42318]">S/ {{ number_format($promo['price'], 2) }}</span>
+                                <span class="text-[18px] text-[#65717c] line-through">S/ {{ number_format($promo['regular'], 2) }}</span>
+                                <span class="bg-[#b42318] px-2 py-1 text-[13px] font-extrabold leading-none text-white">{{ $promo['label'] ?: '-'.$promo['percent'].'%' }}</span>
+                            </p>
+                            @include('web.partials.promo-countdown', ['promo' => $promo, 'prefix' => 'Oferta termina en ', 'class' => 'text-[13px] font-extrabold uppercase tracking-[0.5px] text-[#b42318]'])
+                        </div>
+                    @else
+                        <p class="text-[30px] font-extrabold leading-[1.45]">S/ {{ number_format($price, 2) }}</p>
+                    @endif
 
                     <div class="flex flex-col gap-3">
                         <p class="text-[15px] font-bold leading-[1.45]">Color: <span data-pdp-color-name class="uppercase">{{ $firstColor ?? 'Elige un color' }}</span></p>
@@ -120,7 +131,7 @@
 
                     <div class="flex flex-col gap-2 leading-[1.45]">
                         <p class="text-[14px] font-bold">Envío a todo el Perú desde S/ 15</p>
-                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 15 · Almacén gratis</p>
+                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 14 · Almacén gratis</p>
                         <p class="text-[14px] font-bold">Pago con {{ $payments->isNotEmpty() ? $payments->join(', ', ' y ') : 'Yape y Plin' }} · También contraentrega</p>
                     </div>
                 </div>

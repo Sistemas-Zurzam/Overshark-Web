@@ -112,7 +112,7 @@
             <h2 id="bravos-trust" class="text-[28px] font-extrabold leading-[1.3] text-[#0a0a0a] sm:text-[36px]">TU LOOK. SIN COMPLICACIONES.</h2>
             <ul class="mt-8 grid gap-8 lg:grid-cols-3">
                 @foreach (array_filter([
-                    ['ENVÍOS A TODO EL PERÚ', 'Lima: delivery S/ 15. Agencia Shalom S/ 15. Recojo en almacén gratis.'],
+                    ['ENVÍOS A TODO EL PERÚ', 'Lima: delivery S/ 15. Agencia Shalom S/ 14. Recojo en almacén gratis.'],
                     ['PAGA A TU MANERA', 'Yape, Plin, transferencia bancaria o pago contraentrega.'],
                     $modelCount > 0 ? ['ELIGE TU COMBINACIÓN', ($modelCount === 1 ? 'Un modelo' : $modelCount.' modelos').($colorCount > 1 ? ' y una paleta de '.$colorCount.' colores' : '').' para tu estilo.'] : null,
                 ]) as [$perkTitle, $perkText])

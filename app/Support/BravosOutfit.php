@@ -20,6 +20,7 @@ class BravosOutfit
             ->ofBrand($brand->name)
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
+            ->withColorPhoto()
             ->whereNotNull('color')
             ->orderBy('id')
             ->get();

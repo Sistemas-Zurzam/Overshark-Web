@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\ImageOptimizer;
 use App\Http\Controllers\Controller;
 use App\Models\PageContent;
 use App\Support\AboutPage;
@@ -64,7 +65,7 @@ class AboutPageController extends Controller
                 if (! empty($stored[$key])) {
                     $disk->delete($stored[$key]);
                 }
-                $stored[$key] = $request->file("images.{$key}")->store('nosotros', 'public');
+                $stored[$key] = ImageOptimizer::storeUploaded($request->file("images.{$key}"), 'nosotros', ImageOptimizer::BANNER_MAX_SIDE);
             } elseif ($request->boolean("remove_images.{$key}") && ! empty($stored[$key])) {
                 $disk->delete($stored[$key]);
                 unset($stored[$key]);

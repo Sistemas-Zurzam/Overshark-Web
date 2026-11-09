@@ -9,6 +9,7 @@ use Tests\TestCase;
 
 class StorefrontNavigationTest extends TestCase
 {
+    use \Tests\Concerns\GivesProductsColorPhotos;
     use RefreshDatabase;
 
     public function test_header_links_to_real_categories_and_not_to_admin(): void

@@ -17,7 +17,7 @@
     $distritoId = (int) $value('distrito_id', 0);
     $delivery = $value('delivery', 'domicilio');
     $invoice = $value('invoice', 'boleta');
-    // Costo de cada entrega (S/ 15 domicilio, S/ 15 agencia Shalom, almacén gratis; 0 con envío gratis).
+    // Costo de cada entrega (S/ 15 domicilio, S/ 14 agencia Shalom, almacén gratis; 0 con envío gratis).
     $shippingCosts = \App\Support\Shipping::costsFor($subtotal);
     $costLabel = fn (string $delivery) => $shippingCosts[$delivery] > 0 ? 'S/ '.number_format($shippingCosts[$delivery], 2) : 'Gratis';
     $pickupAddress = \App\Support\Shipping::pickupAddress();

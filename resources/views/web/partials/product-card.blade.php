@@ -20,7 +20,7 @@
 <article class="group basis-[78vw] shrink-0 snap-start rounded-2xl border border-edge bg-panel p-3 transition hover:-translate-y-1 hover:border-neon/60 hover:shadow-[0_18px_45px_rgb(47_111_208/18%)] sm:basis-auto">
     <a href="{{ route('web.products.show', $product->id) }}" class="relative block aspect-[4/5] overflow-hidden rounded-xl bg-frame">
         <img data-product-card-image src="{{ $product->display_image }}" alt="{{ $product->name }}" class="h-full w-full object-contain object-center transition duration-500 group-hover:scale-105">
-        <span class="absolute left-3 top-3 rounded-full bg-live px-2.5 py-1 text-xs font-bold text-white">-20%</span>
+        <span class="absolute left-3 top-3 rounded-full bg-live px-2.5 py-1 text-xs font-bold text-white">{{ $product->promo ? ($product->promo['label'] ?: '-'.$product->promo['percent'].'%') : '-20%' }}</span>
         @if ($showBag)
             <span class="absolute bottom-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-neon text-white shadow-lg shadow-neon/40" aria-hidden="true">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
@@ -31,11 +31,19 @@
         <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-neon-soft">{{ $product->empresa_nombre ?? 'Overshark' }}</p>
         <a href="{{ route('web.products.show', $product->id) }}" class="mt-1 line-clamp-2 min-h-10 text-base font-bold text-white transition hover:text-neon-soft">{{ $product->name }}</a>
         <div class="mt-2 flex items-baseline gap-2">
-            <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
-            @if ($oldPrice > 0)
-                <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+            @if ($product->promo)
+                <p class="text-xl font-black">S/ {{ number_format($product->promo['price'], 2) }}</p>
+                <p class="text-sm text-haze line-through">S/ {{ number_format($product->promo['regular'], 2) }}</p>
+            @else
+                <p class="text-xl font-black">S/ {{ number_format((float) $product->min_price, 2) }}</p>
+                @if ($oldPrice > 0)
+                    <p class="text-sm text-haze line-through">S/ {{ number_format($oldPrice, 2) }}</p>
+                @endif
             @endif
         </div>
+        @if ($product->promo)
+            @include('web.partials.promo-countdown', ['promo' => $product->promo, 'class' => 'mt-1 block text-[11px] font-bold uppercase tracking-[0.5px] text-live'])
+        @endif
         <div class="mt-4 flex flex-wrap items-center gap-1.5">
             @foreach ($displayColors as $color)
                 @php

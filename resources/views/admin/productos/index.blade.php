@@ -26,6 +26,9 @@
                         @endif
                     </span>
                 </div>
+                <a href="{{ route('admin.productos.images.bulk') }}" class="flex items-center gap-2 bg-admin-navy px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-white">
+                    Carga masiva de imágenes
+                </a>
                 <a href="{{ route('admin.productos.export', request()->query()) }}" class="flex items-center gap-2 border border-admin-border-strong bg-admin-surface px-5 py-3 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">
                     <img src="{{ asset('images/admin/icon-download.svg') }}" class="size-4" alt="">
                     Exportar CSV

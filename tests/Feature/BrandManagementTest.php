@@ -12,6 +12,7 @@ use Tests\TestCase;
 
 class BrandManagementTest extends TestCase
 {
+    use \Tests\Concerns\GivesProductsColorPhotos;
     use RefreshDatabase;
 
     public function test_admin_can_create_a_brand_with_its_palette(): void

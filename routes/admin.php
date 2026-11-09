@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PromocionController;
 use App\Http\Controllers\Admin\PasswordResetController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Admin\RoleController;
@@ -115,10 +116,15 @@ Route::middleware('jwt.auth')->group(function () {
     Route::put('/sugerencias/{suggestion}', [CartSuggestionController::class, 'update'])->name('sugerencias.update');
     Route::patch('/sugerencias/{suggestion}/estado', [CartSuggestionController::class, 'toggle'])->name('sugerencias.toggle');
     Route::delete('/sugerencias/{suggestion}', [CartSuggestionController::class, 'destroy'])->name('sugerencias.destroy');
+    Route::get('/promociones', [PromocionController::class, 'index'])->name('promociones.index');
+    Route::get('/promociones/nueva', [PromocionController::class, 'create'])->name('promociones.create');
+    Route::post('/promociones', [PromocionController::class, 'store'])->name('promociones.store');
+    Route::get('/promociones/{promocion}/editar', [PromocionController::class, 'edit'])->name('promociones.edit');
+    Route::put('/promociones/{promocion}', [PromocionController::class, 'update'])->name('promociones.update');
+    Route::patch('/promociones/{promocion}/estado', [PromocionController::class, 'toggle'])->name('promociones.toggle');
+    Route::delete('/promociones/{promocion}', [PromocionController::class, 'destroy'])->name('promociones.destroy');
     Route::get('/arma-tu-outfit', [ComboController::class, 'outfits'])->name('outfits.index');
     Route::post('/arma-tu-outfit/flyer', [ComboController::class, 'updateFlyer'])->name('outfits.flyer');
-    // Overshark TV: maqueta del estudio (sin backend todavía).
-    Route::view('/tv', 'admin.tv.index')->name('tv.index');
     Route::post('/combos/importar-catalogo', [ComboController::class, 'importCatalog'])->name('combos.import');
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
     Route::get('/combos/{combo}/editar', [ComboController::class, 'edit'])->name('combos.edit');
