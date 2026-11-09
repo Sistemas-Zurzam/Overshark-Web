@@ -36,7 +36,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="preload" as="image" href="{{ asset('images/explorar/mar.jpg') }}">
+    <link rel="preload" as="image" href="{{ \App\Support\SiteContent::asset('images/explorar/mar.jpg') }}">
     @vite(['resources/css/app.css', 'resources/css/explore.css', 'resources/js/explore.js'])
 </head>
 <body class="ex antialiased">
@@ -48,7 +48,7 @@
 
     <main class="ex-view">
         <div class="ex-sea" aria-hidden="true">
-            <div class="ex-sea__img" style="background-image: url('{{ asset('images/explorar/mar.jpg') }}')"></div>
+            <div class="ex-sea__img" style="background-image: url('{{ \App\Support\SiteContent::asset('images/explorar/mar.jpg') }}')"></div>
             <div class="ex-sea__rays"><i></i><i></i><i></i><i></i><i></i></div>
             <div class="ex-sea__glow ex-sea__glow--blue"></div>
             <div class="ex-sea__glow ex-sea__glow--pink"></div>
@@ -80,10 +80,10 @@
                         aria-label="Explorar colección {{ $item['name'] }}"
                     >
                         <div class="ex-choice__media">
-                            <div class="ex-choice__sea" style="--sea: url('{{ asset('images/explorar/mar.jpg') }}')"></div>
+                            <div class="ex-choice__sea" style="--sea: url('{{ \App\Support\SiteContent::asset('images/explorar/mar.jpg') }}')"></div>
                             <img
                                 class="ex-choice__models {{ $item['key'] === 'mujer' ? 'ex-choice__models--photo' : '' }}"
-                                src="{{ asset($item['image']) }}"
+                                src="{{ \App\Support\SiteContent::asset($item['image']) }}"
                                 alt="{{ $item['alt'] }}"
                                 loading="eager"
                             >

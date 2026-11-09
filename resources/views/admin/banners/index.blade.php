@@ -145,6 +145,23 @@
                 Tamaño recomendado: 1920 × 640 px (escritorio) y 800 × 1000 px (móvil). Máximo {{ \App\Models\Admin\BannerPortada::MAX_ACTIVE_PER_BRAND }} banners activos por marca.
             </p>
 
+            @if ($drivesHome)
+                @if (! $banners->contains(fn ($banner) => $banner->scheduleState() === 'activo'))
+                    <div class="mx-5 mt-4 flex flex-col gap-4 rounded-sm border border-admin-warning bg-admin-warning-soft p-4 sm:flex-row sm:items-center">
+                        <img src="{{ \App\Support\SiteContent::imageUrl('hero_hombre') }}" alt="" class="h-24 w-auto rounded-sm bg-[#071226] object-contain">
+                        <div>
+                            <p class="text-sm font-bold text-admin-text">Ahora la portada de Hombre muestra la imagen predeterminada</p>
+                            <p class="mt-1 text-[13px] text-admin-text-secondary">No hay banners activos, así que la tienda usa el modelo de siempre sobre el fondo del mar. Agrega un banner para reemplazarla; o cambia ese modelo en «Imágenes fijas», más abajo.</p>
+                        </div>
+                    </div>
+                @endif
+            @else
+                <div class="mx-5 mt-4 rounded-sm border border-admin-border bg-admin-subtle p-4 text-[13px] text-admin-text-secondary">
+                    <p class="font-bold text-admin-text">Estos banners todavía no se muestran en la tienda de {{ $selectedBrand?->name }}</p>
+                    <p class="mt-1">El carrusel de portada solo funciona en el inicio de Overshark Hombre. La portada de {{ $selectedBrand?->name }} es una imagen fija: puedes reemplazarla en «Imágenes fijas», más abajo.</p>
+                </div>
+            @endif
+
             <div data-banner-grid data-banner-reorder-url="{{ route('admin.banners.reorder') }}" class="flex flex-wrap items-start gap-4 p-5">
                 @foreach ($banners as $banner)
                     @php
@@ -275,5 +292,7 @@
                 </button>
             </div>
         </div>
+
+        @include('admin.banners._inventory', ['inventory' => $inventory])
     </div>
 @endsection

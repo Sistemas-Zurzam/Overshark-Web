@@ -18,16 +18,10 @@
     $icon = fn (string $name) => asset('images/contacto/icon-'.$name.($bravos ? '-bravos' : ($girls ? '-girls' : '')).'.svg');
     $display = fn (string $hh, string $bv) => $bravos ? 'font-extrabold uppercase tracking-[-0.01em] '.$bv : 'os-hh-display '.$hh;
     $whatsappUrl = $brand->whatsappUrl();
-    $email = 'ventas@overshark.com';
+    $email = \App\Support\SiteContent::get('contacto.email');
     $input = 'w-full border bg-[#f5f7fa] px-4 text-[14px] font-medium text-[#0b0f14] outline-none transition placeholder:text-[#8a93a0] focus:border-[var(--hh-accent)] focus:bg-white focus:ring-4 focus:ring-[var(--hh-accent)]/15';
     $border = fn (string $field) => $errors->has($field) ? 'border-red-500' : 'border-[var(--shop-line)]';
-    $faqs = [
-        ['¿Cuánto cuesta el envío?', 'En Lima el delivery a domicilio cuesta S/ 15. A todo el Perú enviamos a la agencia Shalom que elijas por S/ 14. Si recoges en nuestro almacén, el envío es gratis.'],
-        ['¿Cómo funcionan los combos?', 'En la sección Combos eliges el combo, escoges el color y la talla de cada prenda y lo agregas al carrito con su precio especial. También puedes armar un look completo en «¡Arma tu Outfit!».'],
-        ['¿Qué métodos de pago aceptan?', 'Puedes pagar contraentrega o, al finalizar tu compra, con Yape, Plin o transferencia bancaria.'],
-        ['¿Puedo cambiar la talla de una prenda?', 'Escríbenos con tu número de pedido y la talla que necesitas, y te indicamos cómo hacer el cambio.'],
-        ['¿Cómo sé qué talla me queda?', 'Cada producto muestra sus tallas disponibles. Si tienes dudas, escríbenos con tu altura y peso y te recomendamos la talla ideal.'],
-    ];
+    $faqs = \App\Support\SiteContent::faqs();
 @endphp
 
 @if ($bravos)
@@ -69,13 +63,13 @@
                 <li class="flex flex-col items-start gap-3 border border-[var(--shop-line)] px-6 py-7">
                     <span class="grid h-12 w-12 place-items-center bg-[var(--hh-soft)]" aria-hidden="true"><img src="{{ $icon('horario') }}" alt="" width="22" height="22"></span>
                     <h2 class="text-[12px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">Horario de atención</h2>
-                    <p class="text-[16px] font-bold leading-[23px]">9am a 6pm · Lunes a viernes</p>
+                    <p class="text-[16px] font-bold leading-[23px]">{{ \App\Support\SiteContent::get('contacto.horario') }}</p>
                     <p class="text-[13px] font-extrabold text-[#545966]">Te respondemos en horario de atención</p>
                 </li>
                 <li class="flex flex-col items-start gap-3 border border-[var(--shop-line)] px-6 py-7">
                     <span class="grid h-12 w-12 place-items-center bg-[var(--hh-soft)]" aria-hidden="true"><img src="{{ $icon('envios') }}" alt="" width="22" height="22"></span>
                     <h2 class="text-[12px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">Envíos</h2>
-                    <p class="text-[16px] font-bold leading-[23px]">Lima: delivery S/ 15 · Agencia Shalom S/ 14</p>
+                    <p class="text-[16px] font-bold leading-[23px]">{{ \App\Support\SiteContent::t('Lima: delivery {lima} · Agencia Shalom {agencia}') }}</p>
                     <p class="text-[13px] font-extrabold text-[#545966]">Recojo en almacén gratis</p>
                 </li>
             </ul>

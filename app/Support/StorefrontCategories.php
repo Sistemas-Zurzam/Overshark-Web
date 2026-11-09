@@ -92,10 +92,38 @@ class StorefrontCategories
             });
     }
 
+    /** Categorías de cada línea tal como vienen en el código (el admin edita su nombre y sus términos encima). */
+    public static function defaults(): array
+    {
+        return self::LINES;
+    }
+
+    /** «polo, Clásico ,waffle» → ['polo', 'clásico', 'waffle'] (en minúsculas, sin vacíos ni repetidos). */
+    public static function parseTerms(string $terms): array
+    {
+        return collect(explode(',', $terms))->map(fn (string $term) => mb_strtolower(trim($term)))->filter()->unique()->values()->all();
+    }
+
     private static function config(?string $line): array
     {
         $line ??= session('storefront.line');
+        $key = $line === 'mujer' ? 'mujer' : 'hombre';
+        $config = self::LINES[$key];
+        $saved = SiteContent::saved()['categorias'][$key] ?? [];
 
-        return self::LINES[$line === 'mujer' ? 'mujer' : 'hombre'];
+        // Lo editado en Admin → Contenido de la tienda → Categorías va encima; un campo vacío vuelve al original.
+        foreach ($config['categories'] as $slug => $category) {
+            if (filled($saved[$slug]['label'] ?? null)) {
+                $config['categories'][$slug]['label'] = $saved[$slug]['label'];
+            }
+
+            $terms = self::parseTerms((string) ($saved[$slug]['terms'] ?? ''));
+
+            if ($terms !== []) {
+                $config['categories'][$slug]['terms'] = $terms;
+            }
+        }
+
+        return $config;
     }
 }

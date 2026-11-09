@@ -153,12 +153,12 @@
             </div>
         </div>
 
-        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="Combos 3 por S/ 50, envío desde S/ 15 a todo el Perú, pago contraentrega. Ver combos">
-            <span>Combos 3 × S/ 50</span>
+        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="{{ \App\Support\SiteContent::t('Combos {combo}, envío desde {desde} a todo el Perú, ') }}{{ \Illuminate\Support\Str::lower(\App\Support\SiteContent::get('promos.anuncio_pago')) }}. Ver combos">
+            <span>Combos {{ \App\Support\SiteContent::t('{combo}') }}</span>
             <span class="hidden sm:inline" aria-hidden="true">·</span>
-            <span class="hidden sm:inline">Envío desde S/ 15 a todo el Perú</span>
+            <span class="hidden sm:inline">{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú') }}</span>
             <span class="hidden md:inline" aria-hidden="true">·</span>
-            <span class="hidden md:inline">Pago contraentrega</span>
+            <span class="hidden md:inline">{{ \App\Support\SiteContent::get('promos.anuncio_pago') }}</span>
         </a>
         @endif
 
@@ -242,7 +242,7 @@
 
         @if ($cartItems->isNotEmpty())
             <p class="flex flex-wrap items-center justify-center gap-x-2 bg-[var(--hh-soft)] px-5 py-2.5 text-center text-[12px] font-extrabold uppercase tracking-[1px] text-[var(--hh-accent)]">
-                <span>Envío desde S/ 15 a todo el Perú</span><span aria-hidden="true">·</span><span>Pago contraentrega</span>
+                <span>{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú') }}</span><span aria-hidden="true">·</span><span>{{ \App\Support\SiteContent::get('promos.anuncio_pago') }}</span>
             </p>
         @endif
 
@@ -400,14 +400,14 @@
                 @if ($whatsappNumber = $brand->whatsappDisplay())
                     <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">WhatsApp:</span> <a href="{{ $brand->whatsappUrl() }}" target="_blank" rel="noopener" class="{{ $footerLink }}">{{ $whatsappNumber }}</a></p>
                 @endif
-                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Correo:</span> <a href="mailto:ventas@overshark.com" class="{{ $footerLink }} whitespace-nowrap text-[13px] sm:text-[14px]">ventas@overshark.com</a></p>
-                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Horario de atención:</span> 9am a 6pm L-V</p>
+                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Correo:</span> <a href="mailto:{{ \App\Support\SiteContent::get('contacto.email') }}" class="{{ $footerLink }} whitespace-nowrap text-[13px] sm:text-[14px]">{{ \App\Support\SiteContent::get('contacto.email') }}</a></p>
+                <p class="flex flex-col gap-0.5"><span class="text-[var(--ft-muted)]">Horario de atención:</span> {{ \App\Support\SiteContent::get('contacto.horario') }}</p>
             </section>
 
             <section class="flex flex-col items-start gap-3">
                 <h2 class="text-[16px] font-medium">Envíos a todo el Perú</h2>
-                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Lima: delivery S/ 15</p>
-                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Agencia Shalom: S/ 14</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">{{ \App\Support\SiteContent::t('Lima: delivery {lima}') }}</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">{{ \App\Support\SiteContent::t('Agencia Shalom: {agencia}') }}</p>
                 <p class="rounded-[6px] bg-[#e9f7f9] px-2.5 py-1 text-[14px] font-medium leading-[18px] text-[#1c7696]">Recojo en almacén gratis</p>
                 <a href="{{ route('web.claims.create') }}" class="os-focus mt-2 block transition hover:opacity-80" aria-label="Libro de Reclamaciones">
                     <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="" class="h-[83px] w-[121px] object-contain">

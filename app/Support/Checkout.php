@@ -175,7 +175,7 @@ class Checkout
                 $needed = collect($item['selections'] ?? [])->countBy('variant_id');
                 foreach ($needed as $variantId => $units) {
                     $variant = Producto::query()->find($variantId);
-                    if (! $variant || (int) $variant->stock < $units * $qty) {
+                    if (! $variant || $variant->oculto || (int) $variant->stock < $units * $qty) {
                         return ['lines' => $lines, 'error' => 'Una prenda del combo "'.$combo->name.'" ya no tiene stock suficiente.'];
                     }
                     $demand[(int) $variantId] = ($demand[(int) $variantId] ?? 0) + $units * $qty;
@@ -187,7 +187,7 @@ class Checkout
             }
 
             $variant = Producto::query()->find($item['variant_id'] ?? 0);
-            if (! $variant || (float) $variant->price <= 0 || (int) $variant->stock < $qty) {
+            if (! $variant || $variant->oculto || (float) $variant->price <= 0 || (int) $variant->stock < $qty) {
                 $name = ProductName::title((string) ($item['producto'] ?? 'Una prenda'));
 
                 return ['lines' => $lines, 'error' => "{$name} ({$item['color']} · {$item['talla']}) ya no tiene stock suficiente. Ajusta la cantidad o quítala del carrito."];
@@ -211,14 +211,15 @@ class Checkout
     }
 
     /**
-     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 30 en agencia: 14 de envío + 16 de separo (configurables).
+     * Separo de un pedido contraentrega según la entrega (Admin → Contenido de la tienda; de partida S/ 15 a domicilio y
+     * S/ 30 en agencia, que incluye el envío).
      * Se paga en el mismo checkout con tarjeta o Yape/Plin; el saldo se paga al recibir. Almacén: sin separo.
      */
     public static function depositFor(?string $delivery): float
     {
         return match ($delivery) {
-            'domicilio' => (float) config('services.storefront.cod_deposit_home', 15),
-            'agencia' => (float) config('services.storefront.cod_deposit_agency', 30),
+            'domicilio' => SiteContent::number('envio.deposit_home'),
+            'agencia' => SiteContent::number('envio.deposit_agency'),
             default => 0.0,
         };
     }

@@ -31,15 +31,15 @@
             <div>
                 <h2>Contacto</h2>
                 <ul>
-                    <li>Correo: ventas@overshark.com</li>
-                    <li>Horario de atención: 9am a 6pm L-V</li>
+                    <li>Correo: {{ \App\Support\SiteContent::get('contacto.email') }}</li>
+                    <li>Horario de atención: {{ \App\Support\SiteContent::get('contacto.horario') }}</li>
                 </ul>
             </div>
             <div>
                 <h2>Envíos a todo el Perú</h2>
                 <ul>
-                    <li>Lima: delivery S/ 15</li>
-                    <li>Agencia Shalom: S/ 14</li>
+                    <li>{{ \App\Support\SiteContent::t('Lima: delivery {lima}') }}</li>
+                    <li>{{ \App\Support\SiteContent::t('Agencia Shalom: {agencia}') }}</li>
                     <li>Recojo en almacén: gratis</li>
                 </ul>
             </div>

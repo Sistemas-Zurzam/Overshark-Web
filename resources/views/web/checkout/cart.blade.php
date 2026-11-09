@@ -10,7 +10,7 @@
     @if ($items->isEmpty())
         <section class="flex max-w-[560px] flex-col items-start gap-5 py-6" aria-labelledby="cart-title">
             <h1 id="cart-title" class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">TU CARRITO ESTÁ VACÍO</h1>
-            <p class="text-[16px] leading-[1.45] text-[#65717c]">Agrega tus prendas favoritas y arma tu próximo look. Enviamos a todo el Perú desde S/ 15.</p>
+            <p class="text-[16px] leading-[1.45] text-[#65717c]">Agrega tus prendas favoritas y arma tu próximo look. Enviamos a todo el Perú desde {{ \App\Support\SiteContent::t('{desde}') }}.</p>
             <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">IR A LA TIENDA</a>
         </section>
     @else
@@ -72,7 +72,7 @@
             {{-- En el carrito aún no se eligió la entrega: sin fila de envío y el total es el subtotal. --}}
             @component('web.checkout.partials.summary', ['items' => $items, 'count' => $count, 'subtotal' => $subtotal, 'shipping' => null, 'total' => $subtotal, 'priceChanges' => $priceChanges])
                 <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
-                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 15 a domicilio en Lima, S/ 14 en agencia Shalom o gratis si recoges en almacén.</p>
+                <p class="text-[12px] leading-[1.45] text-[#65717c]">{{ \App\Support\SiteContent::t('El envío se suma al elegir la entrega: {lima} a domicilio en Lima, {agencia} en agencia Shalom o gratis si recoges en almacén.') }}</p>
             @endcomponent
         </div>
 

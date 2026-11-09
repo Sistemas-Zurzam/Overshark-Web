@@ -63,15 +63,6 @@
         ];
     }
 
-    $tasks[] = [
-        'tone' => 'warning',
-        'icon' => 'warehouse-filled',
-        'title' => 'Bodegas sin configurar',
-        'subtitle' => 'Organiza el stock por ubicación para controlar el inventario.',
-        'cta' => 'Configurar bodegas',
-        'url' => route('admin.bodegas.index'),
-    ];
-
     $urgentCount = count($tasks);
 
     $tasks[] = [

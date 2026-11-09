@@ -90,6 +90,22 @@
         </aside>
 
         <main class="space-y-6">
+            <section @class(['rounded-2xl border p-5 shadow-sm lg:p-6', 'border-red-200 bg-red-50' => $producto->oculto, 'border-slate-200 bg-white' => ! $producto->oculto])>
+                <h2 class="text-lg font-black text-slate-950">Visibilidad en la tienda</h2>
+                <p class="mt-1 text-sm text-slate-600">
+                    @if ($producto->oculto)
+                        Este producto está <strong>oculto</strong>: no aparece en la tienda, no se encuentra en el buscador y no se puede comprar. Sus datos, fotos y stock se conservan.
+                    @else
+                        Está a la venta. Si lo ocultas deja de verse y de poder comprarse en todas sus variantes (colores y tallas), sin borrar nada. La sincronización de ZAZU no lo vuelve a mostrar.
+                    @endif
+                </p>
+                <form action="{{ route('admin.productos.visibility', $producto) }}" method="POST" class="mt-4">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">{{ $producto->oculto ? 'Mostrar en la tienda' : 'Ocultar de la tienda' }}</button>
+                </form>
+            </section>
+
             <section class="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-5 shadow-sm lg:p-6">
                 <h2 class="text-lg font-black text-slate-950">Marca del producto</h2>
                 <p class="mt-1 text-sm text-slate-600">Asigna la marca comercial. Se aplicará a todas las variantes de este producto y no será reemplazada por la sincronización de ZAZU.</p>

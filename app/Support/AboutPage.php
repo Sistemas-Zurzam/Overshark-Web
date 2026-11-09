@@ -74,8 +74,8 @@ class AboutPage
                 ],
             ],
             'datos' => [
-                ['value' => 'S/ 15', 'label' => 'Delivery en Lima · Shalom S/ 14'],
-                ['value' => '3 × S/ 50', 'label' => 'Combos todo el año'],
+                ['value' => '{lima}', 'label' => 'Delivery en Lima · Shalom {agencia}'],
+                ['value' => '{combo}', 'label' => 'Combos todo el año'],
                 ['value' => '3 marcas', 'label' => 'Overshark, Girls y Bravos'],
                 ['value' => 'L – V', 'label' => 'Atención de 9am a 6pm'],
             ],

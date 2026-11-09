@@ -9,12 +9,41 @@ namespace App\Support;
  */
 class LegalDocuments
 {
-    public const PROVIDER_FIELDS = ['Razón social', 'RUC', 'Domicilio', 'Canal de atención'];
+    /** Datos del proveedor: clave en SiteContent => etiqueta que se muestra. */
+    public const PROVIDER_FIELDS = ['razon_social' => 'Razón social', 'ruc' => 'RUC', 'domicilio' => 'Domicilio', 'canal' => 'Canal de atención'];
 
     public const DRAFT_NOTE = 'Versión de trabajo · pendiente de validación legal y datos del operador.';
 
-    /** @return array<string, array{title: string, route: string, description: string, sections: array<int, array{0: string, 1: string}>}> */
+    /**
+     * Documentos con los textos del panel (Admin → Contenido de la tienda → Documentos legales) encima de los de trabajo.
+     *
+     * @return array<string, array{title: string, route: string, description: string, sections: array<int, array{0: string, 1: string}>}>
+     */
     public static function all(): array
+    {
+        $saved = SiteContent::saved()['legal'] ?? [];
+
+        return collect(self::defaults())->map(function (array $doc, string $key) use ($saved): array {
+            foreach ($doc['sections'] as $index => [$heading, $text]) {
+                $edited = $saved[$key][$index] ?? [];
+                $doc['sections'][$index] = [
+                    filled($edited['h'] ?? null) ? $edited['h'] : $heading,
+                    filled($edited['t'] ?? null) ? $edited['t'] : $text,
+                ];
+            }
+
+            return $doc;
+        })->all();
+    }
+
+    /** Nota al pie de los documentos (null si se ocultó en el panel). */
+    public static function note(): ?string
+    {
+        return SiteContent::get('legal.hide_note') ? null : SiteContent::text('legal.note');
+    }
+
+    /** Textos de trabajo de cada documento, tal como vienen del diseño. */
+    public static function defaults(): array
     {
         return [
             'terms' => [

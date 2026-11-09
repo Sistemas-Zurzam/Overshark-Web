@@ -121,6 +121,7 @@ class ComboSelectionService
                 $baseProduct?->zazu_company_id !== null,
                 fn ($query) => $query->where('zazu_company_id', $baseProduct->zazu_company_id),
             )
+            ->inStore()
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
             ->whereNotNull('talla')

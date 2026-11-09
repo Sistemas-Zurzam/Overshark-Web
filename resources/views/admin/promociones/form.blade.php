@@ -9,7 +9,7 @@
     $values = collect($promo->scope_values ?? []);
     $chosenProducts = collect(old('scope_products', $scope === 'producto' ? $values->all() : []));
     $chosenBrands = collect(old('scope_brands', $scope === 'marca' ? $values->all() : []))->map(fn ($brand) => mb_strtoupper($brand));
-    $chosenCategories = collect(old('scope_categories', $scope === 'categoria' ? $values->all() : []))->map(fn ($id) => (string) $id);
+    $chosenCategories = collect(old('scope_categories', $scope === 'categoria' ? $values->all() : []))->map(fn ($key) => (string) $key);
     $discountType = old('discount_type', $promo->discount_type ?? 'porcentaje');
     // Fechas en hora de Lima, como las escribe quien programa la oferta.
     $startsAt = old('starts_at', $promo?->local('starts_at')->format('Y-m-d\TH:i'));
@@ -95,8 +95,8 @@
                 <div data-scope-box="categoria">
                     <span class="{{ $label }}">Categorías</span>
                     <div class="flex flex-wrap gap-4 rounded-sm border border-admin-border-strong p-3">
-                        @foreach ($categorias as $categoria)
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="scope_categories[]" value="{{ $categoria->id }}" @checked($chosenCategories->contains((string) $categoria->id)) class="size-4"> {{ $categoria->name }}</label>
+                        @foreach ($categorias as $categoryKey => $categoryLabel)
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="scope_categories[]" value="{{ $categoryKey }}" @checked($chosenCategories->contains($categoryKey)) class="size-4"> {{ $categoryLabel }}</label>
                         @endforeach
                     </div>
                     @if ($error('scope_categories')) <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $error('scope_categories') }}</span> @endif

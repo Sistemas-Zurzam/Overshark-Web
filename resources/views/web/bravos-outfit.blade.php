@@ -57,7 +57,7 @@
                     <div class="flex flex-col gap-1 leading-[1.35]">
                         <p class="text-[14px] text-[#595959]" data-bo-count>Subtotal · 2 prendas</p>
                         <p class="text-[30px] font-extrabold text-[#0a0a0a]" data-bo-total>S/ 0.00</p>
-                        <p class="text-[13px] text-[#595959]">Envío desde S/ 15 a todo el Perú.</p>
+                        <p class="text-[13px] text-[#595959]">{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú.') }}</p>
                     </div>
                     <form action="{{ route('web.cart.look') }}" method="POST" class="flex flex-col gap-3" data-bo-form>
                         @csrf

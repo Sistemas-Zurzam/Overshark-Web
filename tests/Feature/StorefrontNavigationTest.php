@@ -36,7 +36,7 @@ class StorefrontNavigationTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('Nacido del océano')
-            ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas <span class="whitespace-nowrap">× S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
+            ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas × S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
             ->assertDontSee('Baby Ty');
     }
 

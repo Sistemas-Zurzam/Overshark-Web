@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticateJwt;
-use App\Models\Admin\Categoria;
 use App\Models\Admin\Producto;
 use App\Models\Admin\Promocion;
 use App\Models\User;
@@ -67,13 +66,11 @@ class PromotionsTest extends TestCase
 
     public function test_the_promotion_applies_by_product_brand_or_category_and_the_cheapest_wins(): void
     {
-        $categoria = Categoria::query()->create(['name' => 'Polos']);
-        $this->polo->update(['categoria_id' => $categoria->id]);
-
         $this->promo(['scope_type' => 'marca', 'scope_values' => ['overshark'], 'discount_value' => 10]);
         $this->assertSame(90.0, Promotions::priceFor($this->polo->fresh()));
 
-        $this->promo(['scope_type' => 'categoria', 'scope_values' => [(string) $categoria->id], 'discount_value' => 40]);
+        // «CLASICO» es un polo de la línea hombre (categorías de la tienda: Admin → Contenido de la tienda).
+        $this->promo(['scope_type' => 'categoria', 'scope_values' => ['hombre:polos'], 'discount_value' => 40]);
         $this->assertSame(60.0, Promotions::priceFor($this->polo->fresh()));
 
         $this->promo(['discount_value' => 20]); // por prenda

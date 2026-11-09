@@ -135,7 +135,7 @@
                 @foreach ($c['datos'] as $dato)
                     <li @class(['flex flex-col gap-1.5', 'border-l border-[var(--shop-line)] pl-5 sm:pl-8' => $loop->index % 2 === 1, 'lg:border-l lg:border-[var(--shop-line)] lg:pl-8' => $loop->index === 2])>
                         <span class="{{ $display('text-[40px] leading-none text-[var(--hh-accent)] sm:text-[64px] sm:leading-[62px]', 'text-[30px] leading-none text-[var(--hh-accent)] sm:text-[44px]') }}">{{ $dato['value'] }}</span>
-                        <span class="text-[14px] font-bold sm:text-[15px]">{{ $dato['label'] }}</span>
+                        <span class="text-[14px] font-bold sm:text-[15px]">{{ \App\Support\SiteContent::t($dato['label']) }}</span>
                     </li>
                 @endforeach
             </ul>

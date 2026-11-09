@@ -122,6 +122,7 @@ Route::post('/carrito', function (Request $request) {
         )
         ->where('color', $validated['color'])
         ->where('talla', $validated['talla'])
+        ->inStore()
         ->where('price', '>', 0)
         ->where('stock', '>', 0)
         ->first();
@@ -182,6 +183,7 @@ Route::post('/carrito/look', function (Request $request) {
             ->when($producto->zazu_company_id !== null, fn ($query) => $query->where('zazu_company_id', $producto->zazu_company_id))
             ->where('color', $item['color'])
             ->where('talla', $item['talla'])
+            ->inStore()
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
             ->first()];
@@ -758,7 +760,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         'sizes' => $variants->pluck('talla')->filter()->unique()->values(),
         'mainImages' => $mainImages,
         'price' => (float) $variants->min('price') ?: (float) $producto->price,
-        'promo' => Promotions::best((string) $producto->name, $producto->marca, $producto->empresa_nombre, $producto->categoria_id, (float) $variants->min('price') ?: (float) $producto->price),
+        'promo' => Promotions::best((string) $producto->name, $producto->marca, $producto->empresa_nombre, (float) $variants->min('price') ?: (float) $producto->price),
         'paymentMethods' => MetodoPago::active(),
         'recommendedProducts' => $recommendedProducts,
     ]);

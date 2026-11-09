@@ -5,7 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Support\ImageOptimizer;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\BannerPortada;
+use App\Models\Admin\Combo;
+use App\Models\Admin\MetodoPago;
+use App\Models\Admin\ProductoColorImage;
 use App\Models\Brand;
+use App\Models\BrandSetting;
+use App\Support\AboutPage;
+use App\Support\OutfitFlyer;
+use App\Support\SiteContent;
+use Illuminate\Support\Arr;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -35,7 +43,91 @@ class BannerController extends Controller
             'selectedBrand' => $selectedBrand,
             'counts' => $counts,
             'banners' => $banners,
+            // Solo los banners de Overshark alimentan el carrusel de la portada de Hombre (routes/web.php).
+            'drivesHome' => $selectedBrand && mb_strtoupper(trim($selectedBrand->name)) === 'OVERSHARK',
+            'inventory' => $this->inventory(),
         ]);
+    }
+
+    /** Reemplaza o restaura una de las imágenes fijas de la tienda (App\Support\SiteContent::IMAGES). */
+    public function updateSiteImage(Request $request, string $key): RedirectResponse
+    {
+        abort_unless(array_key_exists($key, SiteContent::IMAGES), 404);
+
+        if ($request->boolean('restore')) {
+            SiteContent::restoreImage($key);
+
+            return back()->with('status', 'Se restauró la imagen original.');
+        }
+
+        $request->validate(['image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192']], [
+            'image.required' => 'Elige la imagen que quieres poner.',
+            'image.image' => 'La imagen debe ser PNG, JPG o WEBP.',
+            'image.max' => 'La imagen puede pesar como máximo 8 MB.',
+        ]);
+
+        SiteContent::replaceImage($key, $request->file('image'));
+
+        return back()->with('status', 'Imagen actualizada.');
+    }
+
+    /**
+     * Todo lo visual de la tienda: las imágenes fijas (que se reemplazan desde esta pantalla) y lo que ya se administra
+     * en otros módulos, con cuántos elementos hay y a dónde ir a cambiarlos.
+     */
+    private function inventory(): array
+    {
+        $saved = SiteContent::saved();
+
+        $fixed = collect(SiteContent::IMAGES)
+            ->map(fn (array $meta, string $key) => [
+                'key' => $key,
+                'label' => $meta[1],
+                'group' => $meta[2],
+                'url' => SiteContent::imageUrl($key),
+                'custom' => (bool) Arr::get($saved, "images.{$key}"),
+            ])
+            ->groupBy('group')
+            ->map(fn ($items, string $group) => ['title' => $group, 'where' => SiteContent::IMAGE_WHERE[$group] ?? '', 'items' => $items])
+            ->values();
+
+        $aboutImages = collect(array_keys(AboutPage::IMAGES))->map(fn (string $key) => AboutPage::imageUrl($key, AboutPage::content()))->filter();
+        $combos = Combo::query()->where(fn ($query) => $query->whereNull('modality')->orWhere('modality', '!=', 'Outfit'));
+        $brandSetting = BrandSetting::current();
+        $paymentImages = MetodoPago::query()->get()->flatMap(fn (MetodoPago $method) => [$method->imageUrl(), $method->qrImageUrl()])->filter();
+
+        $elsewhere = [
+            ['title' => 'Combos', 'where' => 'Sección y fichas de combos de la tienda.',
+                'count' => (clone $combos)->whereNotNull('imagen')->count().' de '.(clone $combos)->count().' con imagen propia',
+                'thumbs' => (clone $combos)->whereNotNull('imagen')->latest()->limit(4)->get()->map->imageUrl()->all(),
+                'url' => route('admin.combos.index'), 'cta' => 'Administrar combos'],
+            ['title' => 'Flyer de «Arma tu outfit»', 'where' => 'Página «¡Arma tu Outfit!».',
+                'count' => OutfitFlyer::isCustom() ? 'Imagen subida' : 'Imagen original',
+                'thumbs' => [OutfitFlyer::url()],
+                'url' => route('admin.outfits.index'), 'cta' => 'Cambiar el flyer'],
+            ['title' => 'Página Nosotros', 'where' => 'Portada, historia, proceso y marcas de /nosotros.',
+                'count' => $aboutImages->count().' de '.count(AboutPage::IMAGES).' fotos',
+                'thumbs' => $aboutImages->take(4)->values()->all(),
+                'url' => route('admin.about.edit'), 'cta' => 'Editar Nosotros'],
+            ['title' => 'Fotos de productos', 'where' => 'Fichas, tarjetas, buscador y carrito (foto general y fotos por color).',
+                'count' => ProductoColorImage::query()->count().' colores con fotos',
+                'thumbs' => ProductoColorImage::query()->latest('id')->limit(4)->get()->map(fn (ProductoColorImage $gallery) => $gallery->imageUrls()[0] ?? null)->filter()->values()->all(),
+                'url' => route('admin.productos.index'), 'cta' => 'Ir a Productos', 'extra' => ['Carga masiva de imágenes', route('admin.productos.images.bulk')]],
+            ['title' => 'Logos de las marcas', 'where' => 'Menú, pantalla de elección y páginas de marca.',
+                'count' => Brand::query()->whereNotNull('logo_path')->count().' de '.Brand::query()->count().' marcas con logo',
+                'thumbs' => Brand::query()->whereNotNull('logo_path')->limit(4)->get()->map->logoUrl()->all(),
+                'url' => route('admin.brands.index'), 'cta' => 'Administrar marcas'],
+            ['title' => 'Logo e ícono de la tienda', 'where' => 'Ícono de la pestaña del navegador (tienda y panel) y logo de la pantalla de elección Hombre/Mujer.',
+                'count' => collect([$brandSetting->logoUrl(), $brandSetting->iconUrl()])->filter()->count().' de 2 cargados',
+                'thumbs' => collect([$brandSetting->logoUrl(), $brandSetting->iconUrl()])->filter()->values()->all(),
+                'url' => route('admin.brand.edit'), 'cta' => 'Identidad visual'],
+            ['title' => 'Medios de pago', 'where' => 'Logos y códigos QR del checkout.',
+                'count' => $paymentImages->count().' imágenes',
+                'thumbs' => $paymentImages->take(4)->values()->all(),
+                'url' => route('admin.medios-pago.index'), 'cta' => 'Administrar medios de pago'],
+        ];
+
+        return ['fixed' => $fixed, 'elsewhere' => $elsewhere];
     }
 
     public function store(Request $request): RedirectResponse

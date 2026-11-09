@@ -1211,20 +1211,24 @@ if (bannerGrid) {
     });
 }
 
-const bodegaForm = document.querySelector('[data-bodega-form]');
+// Menú lateral del panel: se recuerda qué grupos dejó cerrados la administradora (el grupo de la sección actual siempre abre).
+document.querySelectorAll('[data-nav-group]').forEach((group) => {
+    const key = `admin.nav.${group.dataset.navGroup}`;
 
-document.querySelectorAll('[data-bodega-form-toggle]').forEach((button) => {
-    button.addEventListener('click', () => {
-        bodegaForm?.classList.toggle('hidden');
-        bodegaForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-});
+    try {
+        if (localStorage.getItem(key) === '0' && !group.hasAttribute('data-nav-active')) {
+            group.open = false;
+        }
+    } catch (error) {
+        // Sin almacenamiento (navegación privada): los grupos quedan abiertos.
+    }
 
-document.querySelectorAll('[data-bodega-edit-toggle]').forEach((button) => {
-    button.addEventListener('click', () => {
-        const form = document.getElementById(button.dataset.bodegaEditToggle);
-        form?.classList.toggle('hidden');
-        form?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    group.addEventListener('toggle', () => {
+        try {
+            localStorage.setItem(key, group.open ? '1' : '0');
+        } catch (error) {
+            // Sin almacenamiento: no se recuerda.
+        }
     });
 });
 

@@ -2,15 +2,17 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
-use App\Http\Controllers\Admin\BodegaController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\BrandSettingController;
 use App\Http\Controllers\Admin\CartSuggestionController;
+use App\Http\Controllers\Admin\ClienteController;
+use App\Http\Controllers\Admin\CourierController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PromocionController;
+use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\Admin\PasswordResetController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Admin\RoleController;
@@ -61,7 +63,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/pedidos/{order}/tareas/{task}/reintentar', [OrderController::class, 'retryTask'])->name('pedidos.tasks.retry');
     Route::get('/pedidos/{order}/correo', [OrderController::class, 'emailPreview'])->name('pedidos.email.preview');
     Route::post('/pedidos/{order}/correo/reenviar', [OrderController::class, 'resendEmail'])->name('pedidos.email.resend');
-    Route::view('/clientes', 'admin.clientes.index')->name('clientes.index');
+    Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
+    Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+    Route::get('/agencias-shalom', [CourierController::class, 'index'])->name('agencias.index');
     Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
     Route::get('/reclamos/exportar-csv', [LibroReclamacionController::class, 'exportCsv'])->name('reclamos.export');
     Route::get('/reclamos/{reclamo}', [LibroReclamacionController::class, 'show'])->name('reclamos.show');
@@ -79,13 +83,6 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
     Route::patch('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
     Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
-    Route::get('/bodegas', [BodegaController::class, 'index'])->name('bodegas.index');
-    Route::post('/bodegas', [BodegaController::class, 'store'])->name('bodegas.store');
-    Route::get('/bodegas/asignar', [BodegaController::class, 'assign'])->name('bodegas.assign');
-    Route::post('/bodegas/asignar', [BodegaController::class, 'assignStore'])->name('bodegas.assign.store');
-    Route::patch('/bodegas/{bodega}', [BodegaController::class, 'update'])->name('bodegas.update');
-    Route::patch('/bodegas/{bodega}/estado', [BodegaController::class, 'toggle'])->name('bodegas.toggle');
-    Route::delete('/bodegas/{bodega}', [BodegaController::class, 'destroy'])->name('bodegas.destroy');
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/exportar-csv', [ProductoController::class, 'exportCsv'])->name('productos.export');
     Route::get('/productos/carga-masiva-imagenes', [ProductoController::class, 'bulkImages'])->name('productos.images.bulk');
@@ -94,6 +91,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/productos/carga-masiva-imagenes/cancelar', [ProductoController::class, 'cancelBulkImages'])->name('productos.images.cancel');
     Route::get('/productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
     Route::patch('/productos/{producto}/marca', [ProductoController::class, 'updateBrand'])->name('productos.brand');
+    Route::patch('/productos/{producto}/visibilidad', [ProductoController::class, 'toggleVisibility'])->name('productos.visibility');
     Route::patch('/productos/{producto}/detalle', [ProductoController::class, 'updateDetails'])->name('productos.details');
     Route::post('/productos/{producto}/imagen', [ProductoController::class, 'updateProductImage'])->name('productos.image');
     Route::post('/productos/{producto}/guia-tallas', [ProductoController::class, 'updateSizeGuideImage'])->name('productos.size-guide');
@@ -106,6 +104,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/banners', [BannerController::class, 'index'])->name('banners.index');
     Route::post('/banners', [BannerController::class, 'store'])->name('banners.store');
     Route::post('/banners/reordenar', [BannerController::class, 'reorder'])->name('banners.reorder');
+    Route::post('/banners/imagenes/{key}', [BannerController::class, 'updateSiteImage'])->name('banners.images');
     Route::patch('/banners/{banner}', [BannerController::class, 'update'])->name('banners.update');
     Route::patch('/banners/{banner}/estado', [BannerController::class, 'toggle'])->name('banners.toggle');
     Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
@@ -125,6 +124,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::delete('/promociones/{promocion}', [PromocionController::class, 'destroy'])->name('promociones.destroy');
     Route::get('/arma-tu-outfit', [ComboController::class, 'outfits'])->name('outfits.index');
     Route::post('/arma-tu-outfit/flyer', [ComboController::class, 'updateFlyer'])->name('outfits.flyer');
+    Route::get('/contenido-tienda', [SiteContentController::class, 'edit'])->name('contenido.edit');
+    Route::put('/contenido-tienda', [SiteContentController::class, 'update'])->name('contenido.update');
+    Route::post('/contenido-tienda/restaurar', [SiteContentController::class, 'reset'])->name('contenido.reset');
     Route::post('/combos/importar-catalogo', [ComboController::class, 'importCatalog'])->name('combos.import');
     Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');
     Route::get('/combos/{combo}/editar', [ComboController::class, 'edit'])->name('combos.edit');

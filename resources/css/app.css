@@ -268,11 +268,70 @@
     .admin-sidebar {
         background: var(--color-admin-surface);
         border-right: 1px solid var(--color-admin-border);
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-admin-border) transparent;
+    }
+
+    .admin-nav-link:focus-visible,
+    .admin-nav-group-label:focus-visible {
+        outline: 2px solid var(--color-admin-accent);
+        outline-offset: -2px;
     }
 
     .admin-nav-group-label {
-        @apply pb-1.5 pl-3 text-[11px] font-extrabold uppercase tracking-[2px];
+        @apply flex cursor-pointer select-none items-center gap-2 rounded px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[2px];
         color: var(--color-admin-accent);
+        list-style: none;
+    }
+
+    .admin-nav-group-label::-webkit-details-marker {
+        display: none;
+    }
+
+    .admin-nav-group-label:hover {
+        background: var(--color-admin-subtle);
+    }
+
+    .admin-nav-chevron {
+        transition: transform 150ms;
+    }
+
+    .admin-nav-group:not([open]) .admin-nav-chevron {
+        transform: rotate(-90deg);
+    }
+
+    /* Punto de "hay pendientes" visible aunque el grupo esté cerrado. */
+    .admin-nav-group[open] .admin-nav-group-dot {
+        display: none;
+    }
+
+    .admin-nav-group-dot {
+        @apply size-1.5 rounded-full;
+        background: var(--color-admin-danger);
+    }
+
+    .admin-nav-badge {
+        @apply grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-extrabold leading-none;
+    }
+
+    .admin-nav-badge--warning {
+        background: var(--color-admin-warning-soft);
+        color: var(--color-admin-warning);
+    }
+
+    .admin-nav-badge--danger {
+        background: var(--color-admin-danger);
+        color: #ffffff;
+    }
+
+    .admin-nav-badge--info {
+        background: var(--color-admin-accent-soft);
+        color: var(--color-admin-accent);
+    }
+
+    .admin-nav-badge--success {
+        background: var(--color-admin-success-soft);
+        color: var(--color-admin-success);
     }
 
     .admin-shell ::selection {

@@ -11,4 +11,6 @@
     </section>
 @endforeach
 
-<p class="text-[12px] leading-[1.55] text-[#687080]">{{ \App\Support\LegalDocuments::DRAFT_NOTE }}</p>
+@if ($note = \App\Support\LegalDocuments::note())
+    <p class="text-[12px] leading-[1.55] text-[#687080]">{{ $note }}</p>
+@endif

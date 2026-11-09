@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Admin\Categoria;
 use App\Models\Admin\Producto;
+use App\Support\StorefrontCategories;
 use App\Models\Admin\Promocion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -75,7 +75,9 @@ class PromocionController extends Controller
             'brandNames' => (clone $sellable)->get(['marca', 'empresa_nombre'])
                 ->map(fn (Producto $product) => trim((string) ($product->marca ?: $product->empresa_nombre)))
                 ->filter()->unique()->sort()->values(),
-            'categorias' => Categoria::query()->orderBy('name')->get(['id', 'name']),
+            // Categorías de la tienda (Contenido de la tienda → Categorías), por línea: «hombre:polos» => «Hombre · Polos».
+            'categorias' => collect(['hombre' => 'Hombre', 'mujer' => 'Mujer'])->flatMap(fn (string $lineLabel, string $line) => collect(StorefrontCategories::all($line))
+                ->mapWithKeys(fn (array $category, string $slug) => ["{$line}:{$slug}" => $lineLabel.' · '.$category['label']]))->all(),
         ];
     }
 
@@ -92,7 +94,7 @@ class PromocionController extends Controller
             'scope_brands' => [Rule::requiredIf($scope === Promocion::SCOPE_BRAND), 'nullable', 'array'],
             'scope_brands.*' => ['string', 'max:255'],
             'scope_categories' => [Rule::requiredIf($scope === Promocion::SCOPE_CATEGORY), 'nullable', 'array'],
-            'scope_categories.*' => ['integer', 'exists:categorias,id'],
+            'scope_categories.*' => ['string', 'regex:/^(hombre|mujer):[a-z-]+$/'],
             'discount_type' => ['required', Rule::in([Promocion::DISCOUNT_PERCENT, Promocion::DISCOUNT_FIXED])],
             'discount_value' => ['required', 'numeric', 'gt:0', 'max:99999', Rule::when($request->input('discount_type') === Promocion::DISCOUNT_PERCENT, ['max:90'])],
             'starts_at' => ['required', 'date'],
@@ -111,7 +113,7 @@ class PromocionController extends Controller
         $values = match ($validated['scope_type']) {
             Promocion::SCOPE_PRODUCT => $validated['scope_products'],
             Promocion::SCOPE_BRAND => $validated['scope_brands'],
-            default => array_map('strval', $validated['scope_categories']),
+            default => $validated['scope_categories'],
         };
 
         return [

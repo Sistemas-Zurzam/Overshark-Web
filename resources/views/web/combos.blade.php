@@ -75,7 +75,7 @@
         {{-- Cómo funciona --}}
         <section class="border-b border-[var(--shop-line)] bg-[var(--hh-soft)]" aria-label="Cómo funciona">
             <ol class="os-hh-wrap grid gap-4 py-6 sm:grid-cols-3 sm:gap-8">
-                @foreach (['Elige tu combo' => 'Combina modelos o lleva tu favorito en varios colores.', 'Escoge talla y color' => 'De cada prenda, entre lo que hay en stock.', 'Recíbelo en casa' => 'Envío desde S/ 15 a todo el Perú. Pago contraentrega o Yape / Plin.'] as $step => $text)
+                @foreach (['Elige tu combo' => 'Combina modelos o lleva tu favorito en varios colores.', 'Escoge talla y color' => 'De cada prenda, entre lo que hay en stock.', 'Recíbelo en casa' => \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú. Pago contraentrega o Yape / Plin.')] as $step => $text)
                     <li class="flex items-start gap-3">
                         <span @class(['shrink-0 leading-none text-[var(--hh-accent)]', 'os-hh-display text-[36px]' => ! $girls && ! $bravos, 'os-josefin text-[28px]' => $girls, 'text-[28px] font-extrabold' => $bravos])>{{ sprintf('%02d', $loop->iteration) }}</span>
                         <span class="flex flex-col gap-0.5">

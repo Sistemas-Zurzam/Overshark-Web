@@ -91,10 +91,11 @@ class Combo extends Model
         return collect($this->items ?? []);
     }
 
-    public function quantityLabel(): string
+    /** Prendas que lleva el combo (las que elige la clienta o la suma de su composición). */
+    public function units(): int
     {
         if ($this->selection_mode === 'choice' && $this->selection_limit) {
-            return "Elige {$this->selection_limit} unidades";
+            return (int) $this->selection_limit;
         }
 
         // Las filas con la misma "prenda" (grupo) son alternativas: cuentan una sola vez.
@@ -102,11 +103,16 @@ class Combo extends Model
             ->groupBy(fn (array $item) => ! empty($item['grupo']) ? 'grupo:'.mb_strtoupper($item['grupo']) : 'item:'.spl_object_id((object) $item))
             ->sum(fn ($rows) => ! empty($rows->first()['grupo']) ? $rows->max('cantidad') : $rows->sum('cantidad'));
 
-        if ($quantity === 0 && $this->selection_limit) {
-            return "{$this->selection_limit} unidades";
+        return $quantity === 0 && $this->selection_limit ? (int) $this->selection_limit : (int) $quantity;
+    }
+
+    public function quantityLabel(): string
+    {
+        if ($this->selection_mode === 'choice' && $this->selection_limit) {
+            return "Elige {$this->selection_limit} unidades";
         }
 
-        return $quantity.' unidades';
+        return $this->units().' unidades';
     }
 
     public function productos()

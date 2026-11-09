@@ -130,8 +130,8 @@
                     </form>
 
                     <div class="flex flex-col gap-2 leading-[1.45]">
-                        <p class="text-[14px] font-bold">Envío a todo el Perú desde S/ 15</p>
-                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 14 · Almacén gratis</p>
+                        <p class="text-[14px] font-bold">{{ \App\Support\SiteContent::t('Envío a todo el Perú desde {desde}') }}</p>
+                        <p class="text-[13px] text-[#65717c]">{{ \App\Support\SiteContent::t('Lima: delivery {lima} · Agencia Shalom {agencia} · Almacén gratis') }}</p>
                         <p class="text-[14px] font-bold">Pago con {{ $payments->isNotEmpty() ? $payments->join(', ', ' y ') : 'Yape y Plin' }} · También contraentrega</p>
                     </div>
                 </div>

@@ -2,7 +2,9 @@
 
 namespace App\Models\Admin;
 
+use App\Support\GirlsHome;
 use App\Support\Promotions;
+use App\Support\StorefrontCategories;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -93,16 +95,25 @@ class Promocion extends Model
     }
 
     /** ¿La prenda entra en esta promoción? Marca como en Producto::scopeOfBrand (marca asignada o, si no, empresa). */
-    public function appliesTo(string $name, ?string $marca, ?string $empresa, ?int $categoriaId): bool
+    public function appliesTo(string $name, ?string $marca, ?string $empresa): bool
     {
         $values = collect($this->scope_values)->map(fn ($value) => mb_strtoupper(trim((string) $value)));
 
         return match ($this->scope_type) {
             self::SCOPE_PRODUCT => $values->contains(mb_strtoupper(trim($name))),
             self::SCOPE_BRAND => $values->contains(mb_strtoupper(trim((string) (filled($marca) ? $marca : $empresa)))),
-            self::SCOPE_CATEGORY => $categoriaId !== null && $values->contains((string) $categoriaId),
+            self::SCOPE_CATEGORY => $values->contains(mb_strtoupper(self::categoryKey($name, $marca))),
             default => false,
         };
+    }
+
+    /** Categoría de la tienda de una prenda como «línea:categoría» (p. ej. «hombre:polos»); vacío si no encaja en ninguna. */
+    public static function categoryKey(string $name, ?string $marca): string
+    {
+        $line = GirlsHome::isGirls($name, $marca) ? 'mujer' : 'hombre';
+        $slug = StorefrontCategories::slugFor($name, null, $line);
+
+        return $slug ? $line.':'.$slug : '';
     }
 
     /** Precio con la promoción sobre un precio regular. Nunca sube el precio ni baja de S/ 0.10. */

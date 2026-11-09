@@ -31,10 +31,11 @@ class ProductoController extends Controller
         'images.max' => 'Sube como máximo 5 imágenes por color.',
     ];
 
-    private const ESTADOS = ['publicado', 'sin_marca', 'precio_cero', 'sin_stock'];
+    private const ESTADOS = ['publicado', 'oculto', 'sin_marca', 'precio_cero', 'sin_stock'];
 
     private const ESTADO_LABELS = [
         'publicado' => 'Publicado',
+        'oculto' => 'Oculto de la tienda',
         'sin_marca' => 'Sin marca',
         'precio_cero' => 'Precio en 0',
         'sin_stock' => 'Sin stock',
@@ -153,12 +154,13 @@ class ProductoController extends Controller
             ->when($filters['marca'] !== '', fn ($query) => $query->where('marca', $filters['marca']));
 
         return $productosQuery
-            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen')
+            ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen, MAX(oculto) as oculto')
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('updated_at')
             ->get()
             ->each(function ($group): void {
                 $group->estado = match (true) {
+                    (bool) $group->oculto => 'oculto',
                     (float) $group->total_stock <= 0.0 => 'sin_stock',
                     (float) $group->min_price <= 0.0 => 'precio_cero',
                     trim((string) $group->marca) === '' => 'sin_marca',
@@ -641,6 +643,19 @@ class ProductoController extends Controller
         return back()->with('status', $marca
             ? "Marca {$marca} asignada al producto."
             : 'Marca retirada del producto.');
+    }
+
+    /** Oculta o vuelve a mostrar el producto en la tienda (todas sus variantes). Zazu no lo cambia al sincronizar. */
+    public function toggleVisibility(Producto $producto): RedirectResponse
+    {
+        $hidden = ! (bool) $producto->oculto;
+
+        $this->variantsFor($producto)->update(['oculto' => $hidden]);
+        Producto::refreshCacheVersion();
+
+        return back()->with('status', $hidden
+            ? 'Producto oculto: ya no se ve ni se puede comprar en la tienda.'
+            : 'Producto visible de nuevo en la tienda.');
     }
 
     public function updateSizeGuideImage(Request $request, Producto $producto): RedirectResponse

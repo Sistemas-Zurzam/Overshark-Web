@@ -3,8 +3,9 @@
 namespace App\Support;
 
 /**
- * Costo de envío según la entrega: S/ 15 a domicilio (solo Lima), S/ 14 en agencia Shalom y gratis en el
- * recojo en almacén (STOREFRONT_SHIPPING_HOME / STOREFRONT_SHIPPING_AGENCY). Es gratis desde
+ * Costo de envío según la entrega: a domicilio (solo Lima), en agencia Shalom y gratis en el recojo en almacén.
+ * Los importes se editan en Admin → Contenido de la tienda (SiteContent); sin editar valen
+ * STOREFRONT_SHIPPING_HOME (15) y STOREFRONT_SHIPPING_AGENCY (14). Es gratis desde
  * services.storefront.free_shipping_from (STOREFRONT_FREE_SHIPPING_FROM, en soles sobre el subtotal); con 0
  * no hay envío gratis.
  */
@@ -20,11 +21,20 @@ class Shipping
     /** Tarifa de cada entrega, sin aplicar el envío gratis. Sin entrega elegida se usa la de domicilio. */
     public static function rate(?string $delivery): float
     {
+        // Los importes se editan en Admin → Contenido de la tienda; el .env es el valor de partida.
         return match ($delivery) {
             self::PICKUP => 0.0,
-            'agencia' => (float) config('services.storefront.shipping_agency', 14),
-            default => (float) config('services.storefront.shipping_home', 15),
+            'agencia' => SiteContent::number('envio.agency'),
+            default => SiteContent::number('envio.home'),
         };
+    }
+
+    /** El envío pagado más barato (para «Envío desde S/ X a todo el Perú»); el almacén gratis no cuenta. */
+    public static function cheapest(): float
+    {
+        $paid = array_filter([self::rate('domicilio'), self::rate('agencia')], fn (float $rate) => $rate > 0);
+
+        return $paid === [] ? 0.0 : min($paid);
     }
 
     public static function costFor(float $subtotal, ?string $delivery = null): float

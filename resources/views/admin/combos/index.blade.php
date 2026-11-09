@@ -66,7 +66,7 @@
                     ['key' => 'activos', 'label' => 'Activos', 'count' => $counts['activos']],
                     ['key' => 'borradores', 'label' => 'Borradores', 'count' => $counts['borradores']],
                 ] as $t)
-                    <a href="{{ route('admin.combos.index', array_filter(['estado' => $t['key'] ?: null, 'marca' => $selectedBrandId, 'search' => $search ?: null])) }}"
+                    <a href="{{ route('admin.combos.index', array_filter(['estado' => $t['key'] ?: null, 'marca' => $selectedBrandId, 'search' => $search ?: null, 'orden' => $orden ?: null])) }}"
                        class="flex shrink-0 items-center gap-2 border-b-2 py-3.5 {{ $estado === $t['key'] ? 'border-admin-accent' : 'border-transparent' }}">
                         <span class="text-sm {{ $estado === $t['key'] ? 'font-bold text-admin-text' : 'font-medium text-admin-text-secondary' }}">{{ $t['label'] }}</span>
                         <span class="rounded-full bg-admin-hover px-2 py-0.5 text-xs font-bold text-admin-text-secondary">{{ $t['count'] }}</span>
@@ -90,6 +90,12 @@
                         <option value="{{ $brand->id }}" @selected((string) $selectedBrandId === (string) $brand->id)>{{ $brand->name }}</option>
                     @endforeach
                 </select>
+                <select name="orden" onchange="this.form.submit()" aria-label="Ordenar" class="h-10 w-full shrink-0 rounded-sm border border-admin-border-strong bg-admin-surface px-3 text-sm font-medium text-admin-text-muted outline-none lg:w-48">
+                    <option value="">Orden: más recientes</option>
+                    <option value="precio-asc" @selected($orden === 'precio-asc')>Precio: menor a mayor</option>
+                    <option value="precio-desc" @selected($orden === 'precio-desc')>Precio: mayor a menor</option>
+                    <option value="nombre" @selected($orden === 'nombre')>Nombre: A–Z</option>
+                </select>
             </form>
 
             @if ($combos->isEmpty())
@@ -98,43 +104,63 @@
                     <p class="text-[13px] text-admin-text-secondary">Usa "Nuevo combo" o "Cargar catálogo base" para crear promociones.</p>
                 </div>
             @else
-                <div class="flex flex-wrap gap-4 px-5 pb-5">
+                <div class="grid gap-4 px-5 pb-5 md:grid-cols-2 2xl:grid-cols-3">
                     @foreach ($combos as $combo)
-                        @php($compareAt = $combo->compareAtPriceToShow())
-                        <article class="flex w-128.5 gap-3.5 rounded-sm border border-admin-border bg-admin-surface p-4">
-                            <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" class="size-22 shrink-0 rounded-sm object-cover">
-                            <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="truncate text-[15px] font-bold text-admin-text">{{ $combo->name }}</p>
-                                    @if ($combo->is_draft)
-                                        <x-admin.badge tone="neutral" label="Borrador" />
-                                    @else
-                                        <x-admin.badge :tone="$combo->status ? 'success' : 'neutral'" :label="$combo->status ? 'Activo' : 'Inactivo'" />
-                                    @endif
+                        @php
+                            $compareAt = $combo->compareAtPriceToShow();
+                            $units = $combo->units();
+                            $composition = $combo->displayItems()->map(fn ($item) => $item['cantidad'].' × '.$item['zazu'].(! empty($item['grupo']) ? ' ('.$item['grupo'].' a elegir)' : ''))->implode(', ');
+                            // Lo que conviene revisar antes de que se vea en la tienda.
+                            $alerts = collect([
+                                ! $combo->imagen ? 'Sin imagen propia' : null,
+                                $combo->price === null ? 'Sin precio' : null,
+                                $composition === '' && ! $combo->selection_limit ? 'Composición pendiente' : null,
+                            ])->filter();
+                        @endphp
+                        <article class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
+                            <div class="flex gap-3.5 p-4">
+                                <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" loading="lazy" class="size-24 shrink-0 rounded-sm bg-admin-subtle object-cover">
+                                <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <p class="line-clamp-2 text-[15px] font-bold leading-5 text-admin-text">{{ $combo->name }}</p>
+                                        @if ($combo->is_draft)
+                                            <x-admin.badge tone="neutral" label="Borrador" />
+                                        @else
+                                            <x-admin.badge :tone="$combo->status ? 'success' : 'neutral'" :label="$combo->status ? 'Activo' : 'Inactivo'" />
+                                        @endif
+                                    </div>
+                                    <p class="text-xs font-bold uppercase tracking-[1px] text-admin-text-secondary">{{ $combo->brand ?: 'Overshark' }}@if ($units > 0) · {{ $combo->selection_mode === 'choice' ? 'Elige '.$units : $units }} prendas @endif</p>
+                                    <p class="line-clamp-2 text-[13px] text-admin-text-secondary" @if ($composition !== '') title="{{ $composition }}" @endif>{{ $composition !== '' ? $composition : 'Composición pendiente' }}</p>
+                                    <div class="flex flex-wrap items-baseline gap-x-2">
+                                        @if ($combo->price !== null)
+                                            <p class="text-base font-extrabold text-admin-text">S/ {{ number_format((float) $combo->price, 2) }}</p>
+                                        @endif
+                                        @if ($compareAt)
+                                            <p class="text-[13px] text-admin-text-muted line-through">S/ {{ number_format($compareAt, 2) }}</p>
+                                            <span class="text-xs font-extrabold text-admin-danger">-{{ (int) round((1 - (float) $combo->price / $compareAt) * 100) }}%</span>
+                                        @endif
+                                        @if ($combo->price !== null && $units > 0)
+                                            <p class="text-xs text-admin-text-muted">S/ {{ number_format((float) $combo->price / $units, 2) }} c/u</p>
+                                        @endif
+                                    </div>
                                 </div>
-                                <p class="truncate text-[13px] text-admin-text-secondary">
-                                    {{ $combo->brand ?: 'Overshark' }} ·
-                                    @forelse ($combo->displayItems() as $item)
-                                        {{ $loop->first ? '' : ', ' }}{{ $item['cantidad'] }} × {{ $item['zazu'] }}{{ ! empty($item['grupo']) ? ' ('.$item['grupo'].' a elegir)' : '' }}
-                                    @empty
-                                        Composición pendiente
-                                    @endforelse
-                                </p>
+                            </div>
+
+                            @if ($alerts->isNotEmpty())
+                                <div class="flex flex-wrap gap-2 px-4 pb-3">
+                                    @foreach ($alerts as $alert)
+                                        <span class="rounded-full bg-admin-warning-soft px-2.5 py-0.5 text-xs font-bold text-admin-warning">{{ $alert }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            <div class="mt-auto flex items-center justify-between gap-2 border-t border-admin-border bg-admin-subtle px-4 py-2.5">
                                 <div class="flex items-center gap-2">
-                                    @if ($combo->price !== null)
-                                        <p class="text-base font-extrabold text-admin-text">S/ {{ number_format((float) $combo->price, 2) }}</p>
-                                    @endif
-                                    @if ($compareAt)
-                                        <p class="text-[13px] text-admin-text-muted line-through">S/ {{ number_format($compareAt, 2) }}</p>
-                                    @endif
-                                </div>
-                                <div class="mt-1 flex flex-wrap gap-2">
-                                    <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" class="border border-admin-border-strong bg-admin-surface px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">Ver página</a>
-                                    <a href="{{ route('admin.combos.edit', $combo) }}" class="border border-admin-border-strong bg-admin-surface px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">Editar</a>
+                                    <a href="{{ route('admin.combos.edit', $combo) }}" class="bg-admin-navy px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-white">Editar</a>
                                     @if ($combo->is_draft)
                                         <form action="{{ route('admin.combos.publish', $combo) }}" method="POST">
                                             @csrf @method('PATCH')
-                                            <button type="submit" class="bg-admin-navy px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-white">Publicar</button>
+                                            <button type="submit" class="border border-admin-border-strong bg-admin-surface px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">Publicar</button>
                                         </form>
                                     @else
                                         <form action="{{ route('admin.combos.toggle', $combo) }}" method="POST">
@@ -142,15 +168,23 @@
                                             <button type="submit" class="border border-admin-border-strong bg-admin-surface px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">{{ $combo->status ? 'Ocultar' : 'Activar' }}</button>
                                         </form>
                                     @endif
-                                    <form action="{{ route('admin.combos.destroy', $combo) }}" method="POST" data-combo-delete-form data-combo-name="{{ $combo->name }}">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="border border-admin-danger px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-danger">Eliminar</button>
-                                    </form>
+                                    <a href="{{ $combo->url ?: route('web.combos.show', $combo) }}" target="_blank" rel="noopener" class="px-1 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent hover:underline">Ver página</a>
                                 </div>
+                                <form action="{{ route('admin.combos.destroy', $combo) }}" method="POST" data-combo-delete-form data-combo-name="{{ $combo->name }}">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="px-1 py-1.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-danger hover:underline">Eliminar</button>
+                                </form>
                             </div>
                         </article>
                     @endforeach
                 </div>
+
+                @if ($combos->hasPages())
+                    <div class="flex flex-col items-center justify-between gap-3 border-t border-admin-border px-5 py-4 sm:flex-row">
+                        <p class="text-xs text-admin-text-secondary">Mostrando {{ $combos->firstItem() }}–{{ $combos->lastItem() }} de {{ $combos->total() }} combos</p>
+                        {{ $combos->links() }}
+                    </div>
+                @endif
             @endif
         </div>
     </div>

@@ -6,8 +6,8 @@
 --}}
 @php
     $girls = ($line ?? 'hombre') === 'mujer';
-    $shared = fn (string $file) => asset('images/home-hombre/'.$file);
-    $img = fn (string $file) => asset('images/'.($girls ? 'home-mujer' : 'home-hombre').'/'.$file);
+    $shared = fn (string $file) => \App\Support\SiteContent::asset('images/home-hombre/'.$file);
+    $img = fn (string $file) => \App\Support\SiteContent::asset('images/'.($girls ? 'home-mujer' : 'home-hombre').'/'.$file);
     $search = fn (array $query) => route('web.products.search', $query);
     $categories = $girls
         ? [
@@ -22,20 +22,21 @@
             ['label' => 'Poleras', 'image' => 'categoria-poleras.webp', 'url' => $search(['categoria' => 'poleras'])],
             ['label' => 'Joggers', 'image' => 'categoria-joggers.webp', 'url' => $search(['categoria' => 'pantalones'])],
         ];
+    $home = fn (string $path) => \App\Support\SiteContent::text($path);
     $qualities = [
-        ['icon' => 'icon-no-destine.svg', 'title' => 'No destiñe', 'text' => 'Mantiene su color lavado tras lavado.'],
-        ['icon' => 'icon-no-encoge.svg', 'title' => 'No encoge', 'text' => 'Conserva su forma original siempre.'],
-        ['icon' => 'icon-no-bolitas.svg', 'title' => 'No hace bolitas', 'text' => 'Mayor durabilidad en el uso diario.'],
+        ['icon' => 'icon-no-destine.svg', 'title' => $home('home.qualities.0.title'), 'text' => $home('home.qualities.0.text')],
+        ['icon' => 'icon-no-encoge.svg', 'title' => $home('home.qualities.1.title'), 'text' => $home('home.qualities.1.text')],
+        ['icon' => 'icon-no-bolitas.svg', 'title' => $home('home.qualities.2.title'), 'text' => $home('home.qualities.2.text')],
     ];
     $fabrics = [
-        ['name' => 'Pique', 'image' => 'tela-pique.webp', 'text' => 'Textura de nido de abeja, transpirable'],
-        ['name' => 'Waffle', 'image' => 'tela-waffle.webp', 'text' => 'Relieve en cuadros que mantiene la forma'],
-        ['name' => 'Jersey', 'image' => 'tela-jersey.webp', 'text' => 'Suave, ligero y con caída natural'],
+        ['name' => $home('home.fabrics.0.name'), 'image' => 'tela-pique.webp', 'text' => $home('home.fabrics.0.text')],
+        ['name' => $home('home.fabrics.1.name'), 'image' => 'tela-waffle.webp', 'text' => $home('home.fabrics.1.text')],
+        ['name' => $home('home.fabrics.2.name'), 'image' => 'tela-jersey.webp', 'text' => $home('home.fabrics.2.text')],
     ];
     $benefits = [
-        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => 'Envíos a todo el Perú', 'text' => 'Lima: delivery S/ 15. Agencia Shalom S/ 14 a todo el Perú. Recojo en almacén gratis.', 'cta' => 'Ver políticas de envío', 'url' => route('web.contact')],
-        ['image' => 'confianza-pago.webp', 'icon' => 'icon-pago.svg', 'title' => 'Pago contraentrega', 'text' => 'Paga al recibir o con Yape, Plin y cualquier billetera que lea QR.', 'cta' => 'Ver métodos de pago', 'url' => route('web.contact')],
-        ['image' => 'confianza-atencion.webp', 'icon' => 'icon-atencion.svg', 'title' => 'Atención al cliente', 'text' => 'Te ayudamos antes, durante y después de tu compra.', 'cta' => 'Escríbenos por WhatsApp', 'url' => \App\Models\BrandSetting::current()->whatsappUrl() ?: config('services.storefront.chat_url') ?: route('web.contact')],
+        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => $home('home.benefits.0.title'), 'text' => $home('home.benefits.0.text'), 'cta' => $home('home.benefits.0.cta'), 'url' => route('web.contact')],
+        ['image' => 'confianza-pago.webp', 'icon' => 'icon-pago.svg', 'title' => $home('home.benefits.1.title'), 'text' => $home('home.benefits.1.text'), 'cta' => $home('home.benefits.1.cta'), 'url' => route('web.contact')],
+        ['image' => 'confianza-atencion.webp', 'icon' => 'icon-atencion.svg', 'title' => $home('home.benefits.2.title'), 'text' => $home('home.benefits.2.text'), 'cta' => $home('home.benefits.2.cta'), 'url' => \App\Models\BrandSetting::current()->whatsappUrl() ?: config('services.storefront.chat_url') ?: route('web.contact')],
     ];
     $stores = [
         ['logo' => 'logo-overshark.png', 'logoClass' => 'h-[32px]', 'name' => 'Hombre', 'text' => 'Polos, camisas, joggers y básicos', 'cta' => 'Ver tienda hombre', 'url' => route('web.home', ['linea' => 'hombre'])],

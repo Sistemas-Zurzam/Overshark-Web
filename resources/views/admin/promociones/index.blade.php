@@ -5,7 +5,6 @@
 @php
     $tone = ['activa' => 'success', 'programada' => 'info', 'finalizada' => 'neutral', 'inactiva' => 'warning'];
     $scopeLabel = ['producto' => 'Prendas', 'marca' => 'Marcas', 'categoria' => 'Categorías'];
-    $categoryNames = \App\Models\Admin\Categoria::query()->pluck('name', 'id');
 @endphp
 
 @section('content')
@@ -42,7 +41,15 @@
             @forelse ($promos as $promo)
                 @php
                     $status = $promo->status();
-                    $targets = collect($promo->scope_values)->map(fn ($value) => $promo->scope_type === 'categoria' ? ($categoryNames[(int) $value] ?? '#'.$value) : $value);
+                    $targets = collect($promo->scope_values)->map(function ($value) use ($promo) {
+                        if ($promo->scope_type !== 'categoria') {
+                            return $value;
+                        }
+
+                        [$line, $slug] = array_pad(explode(':', (string) $value, 2), 2, '');
+
+                        return ucfirst($line).' · '.\App\Support\StorefrontCategories::label($slug, $line);
+                    });
                 @endphp
                 <article class="flex flex-col gap-3 border-b border-admin-border px-5 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between">
                     <div class="min-w-0">

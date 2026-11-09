@@ -12,7 +12,7 @@
 
 @php
     $shop = fn (array $params = []) => route('web.products.search', ['marca' => $brandPage->name] + $params);
-    $img = fn (string $file) => asset('images/bravos/'.$file);
+    $img = fn (string $file) => \App\Support\SiteContent::asset('images/bravos/'.$file);
     $btn = 'os-focus inline-flex items-center justify-center p-[18px] text-[13px] font-bold uppercase leading-[1.3] transition';
 @endphp
 
@@ -34,7 +34,7 @@
                     <p class="text-[26px] font-extrabold leading-[1.1] sm:text-[30px] lg:absolute lg:left-[71.8%] lg:top-[59%]">NERU +<br>COMFORT PANT</p>
                     <a href="#favoritos" class="{{ $btn }} h-[54px] w-full max-w-[290px] bg-[#ffdb00] font-extrabold text-[#050505] hover:bg-white lg:absolute lg:left-[71.8%] lg:top-[74.3%] lg:w-[20.1%]">EXPLORAR BRAVOS →</a>
                 </div>
-                <p class="relative z-20 mt-8 flex h-10 w-full max-w-[334px] items-center justify-center bg-[#ffdb00] text-[13px] font-extrabold text-[#050505] lg:absolute lg:left-[6.67%] lg:top-[86.2%] lg:mt-0">ENVÍO DESDE S/ 15 A TODO EL PERÚ</p>
+                <p class="relative z-20 mt-8 flex h-10 w-full max-w-[334px] items-center justify-center bg-[#ffdb00] text-[13px] font-extrabold text-[#050505] lg:absolute lg:left-[6.67%] lg:top-[86.2%] lg:mt-0">{{ mb_strtoupper(\App\Support\SiteContent::t('Envío desde {desde} a todo el Perú')) }}</p>
             </div>
         </section>
 
@@ -112,7 +112,7 @@
             <h2 id="bravos-trust" class="text-[28px] font-extrabold leading-[1.3] text-[#0a0a0a] sm:text-[36px]">TU LOOK. SIN COMPLICACIONES.</h2>
             <ul class="mt-8 grid gap-8 lg:grid-cols-3">
                 @foreach (array_filter([
-                    ['ENVÍOS A TODO EL PERÚ', 'Lima: delivery S/ 15. Agencia Shalom S/ 14. Recojo en almacén gratis.'],
+                    ['ENVÍOS A TODO EL PERÚ', \App\Support\SiteContent::t('Lima: delivery {lima}. Agencia Shalom {agencia}. Recojo en almacén gratis.')],
                     ['PAGA A TU MANERA', 'Yape, Plin, transferencia bancaria o pago contraentrega.'],
                     $modelCount > 0 ? ['ELIGE TU COMBINACIÓN', ($modelCount === 1 ? 'Un modelo' : $modelCount.' modelos').($colorCount > 1 ? ' y una paleta de '.$colorCount.' colores' : '').' para tu estilo.'] : null,
                 ]) as [$perkTitle, $perkText])

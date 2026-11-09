@@ -12,7 +12,6 @@ class Producto extends Model
 
     protected $fillable = [
         'categoria_id',
-        'bodega_id',
         'default_code',
         'name',
         'color',
@@ -42,12 +41,21 @@ class Producto extends Model
      * empresas (BOX PRIME) quedaron guardados de sincronizaciones anteriores y no deben verse en el admin. Un
      * producto sin empresa se mantiene; sin lista configurada no se filtra nada.
      */
+    /** Productos que el admin no ocultó de la tienda (Admin → Productos → «Ocultar de la tienda»). */
+    public function scopeInStore(Builder $query): Builder
+    {
+        return $query->where('productos.oculto', false);
+    }
+
     /**
-     * Solo variantes cuyo color ya tiene imágenes subidas (galería por color del admin). Un color sin fotos no se
-     * muestra en la tienda hasta que se suban: sin esto aparecería con la foto genérica del producto.
+     * Lo que la tienda puede mostrar: productos no ocultos y, de ellos, solo variantes cuyo color ya tiene imágenes
+     * subidas (galería por color del admin). Un color sin fotos no se muestra hasta que se suban: sin esto aparecería
+     * con la foto genérica del producto.
      */
     public function scopeWithColorPhoto(Builder $query): Builder
     {
+        $query->inStore();
+
         // Sin color no hay galería a la que apuntar: esas variantes se siguen mostrando como antes.
         return $query->where(fn (Builder $query) => $query
             ->whereNull('productos.color')
@@ -117,11 +125,6 @@ class Producto extends Model
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);
-    }
-
-    public function bodega()
-    {
-        return $this->belongsTo(Bodega::class);
     }
 
     public function variantes()

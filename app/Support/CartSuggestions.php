@@ -80,7 +80,7 @@ class CartSuggestions
             $fill = collect();
 
             foreach ($brands as $brand) {
-                $fill = $fill->merge(Producto::query()->ofBrand($brand)
+                $fill = $fill->merge(Producto::query()->ofBrand($brand)->inStore()
                     ->whereNotNull('color')->whereNotNull('talla')->where('price', '>', 0)->where('stock', '>', 0)
                     ->orderByDesc('id')->limit(60)->pluck('name'));
             }
@@ -117,6 +117,7 @@ class CartSuggestions
 
         $byName = Producto::query()
             ->whereIn('name', $names)
+            ->inStore()
             ->whereNotNull('color')->whereNotNull('talla')
             ->where('price', '>', 0)->where('stock', '>', 0)
             ->get()

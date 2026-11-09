@@ -15,18 +15,19 @@
     'CATÁLOGO' => [
         ['admin.productos.index', 'Productos', 'package'],
         ['admin.combos.index', 'Combos', 'gift'],
-        ['admin.promociones.index', 'Promociones', 'tag'],
-        ['admin.sugerencias.index', 'Sugerencias', 'tag'],
+        ['admin.promociones.index', 'Promociones', 'percent'],
+        ['admin.sugerencias.index', 'Sugerencias', 'lightbulb'],
         ['admin.outfits.index', 'Arma tu outfit', 'shirt'],
-        ['admin.bodegas.index', 'Bodegas', 'warehouse'],
     ],
     'CONTENIDO' => [
         ['admin.banners.index', 'Banners', 'image'],
-        ['admin.about.edit', 'Página Nosotros', 'file'],
+        ['admin.contenido.edit', 'Contenido de la tienda', 'file'],
+        ['admin.about.edit', 'Página Nosotros', 'info'],
     ],
     'CONFIGURACIÓN' => [
         ['admin.brands.index', 'Marcas', 'tag'],
         ['admin.medios-pago.index', 'Medios de pago', 'card'],
+        ['admin.agencias.index', 'Agencias Shalom', 'truck'],
         ['admin.brand.edit', 'Identidad visual', 'palette'],
         ['admin.usuarios.index', 'Usuarios y roles', 'user'],
     ],
@@ -87,22 +88,35 @@
 
     <div data-sidebar-overlay class="fixed inset-0 z-40 hidden bg-slate-950/60 backdrop-blur-sm md:hidden"></div>
     <aside data-sidebar class="admin-sidebar fixed bottom-0 left-0 top-16 z-50 w-66 -translate-x-full overflow-y-auto px-4 py-5 transition-transform md:translate-x-0">
-        <nav class="flex flex-col gap-5">
+        @php($navBadges = \App\Support\AdminNav::badges())
+        <nav class="flex flex-col gap-3" aria-label="Menú del panel">
             @foreach ($navGroups as $groupLabel => $items)
-                <div class="flex flex-col gap-0.5">
-                    @if ($groupLabel)
-                        <p class="admin-nav-group-label">{{ $groupLabel }}</p>
-                    @endif
-                    @foreach ($items as [$routeName, $label, $icon])
-                        <a href="{{ route($routeName) }}" @class([
-                            'admin-nav-link',
-                            'is-active' => request()->routeIs($routeName),
-                        ]) @if (request()->routeIs($routeName)) aria-current="page" @endif>
-                            <x-admin.nav-icon :name="$icon" />
-                            <span class="flex-1">{{ $label }}</span>
-                        </a>
-                    @endforeach
-                </div>
+                @php($groupActive = collect($items)->contains(fn ($item) => \App\Support\AdminNav::isActive($item[0])))
+                @if ($groupLabel)
+                    {{-- Cada grupo se pliega (se recuerda en el navegador); el que contiene la sección actual siempre queda abierto. --}}
+                    <details class="admin-nav-group" data-nav-group="{{ $groupLabel }}" @if ($groupActive) data-nav-active @endif open>
+                        <summary class="admin-nav-group-label">
+                            <span class="flex-1">{{ $groupLabel }}</span>
+                            {{-- Con el grupo cerrado, lo pendiente de adentro se sigue viendo. --}}
+                            @php($groupPending = collect($items)->sum(fn ($item) => ($navBadges[$item[0]]['tone'] ?? '') === 'success' ? 0 : ($navBadges[$item[0]]['count'] ?? 0)))
+                            @if ($groupPending > 0)
+                                <span class="admin-nav-group-dot" aria-hidden="true"></span>
+                            @endif
+                            <svg class="admin-nav-chevron size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+                        </summary>
+                        <div class="flex flex-col gap-0.5">
+                            @foreach ($items as [$routeName, $label, $icon])
+                                @include('layouts.partials.admin-nav-link')
+                            @endforeach
+                        </div>
+                    </details>
+                @else
+                    <div class="flex flex-col gap-0.5">
+                        @foreach ($items as [$routeName, $label, $icon])
+                            @include('layouts.partials.admin-nav-link')
+                        @endforeach
+                    </div>
+                @endif
             @endforeach
         </nav>
     </aside>

@@ -29,8 +29,8 @@
         $search !== '' => 'Resultados para "'.$search.'".',
         $marca !== '' => 'Productos de la marca '.$marca.'.',
         $orden === 'novedades' && $categoria === '' => 'Los últimos modelos incorporados al catálogo.',
-        $girls => 'Baby tees, tops, poleras y joggers para todos los días. Mézclalos en combos 3 × S/ 50.',
-        default => 'Polos, camisas, poleras y joggers para todos los días. Mézclalos en combos 3 × S/ 50.',
+        $girls => \App\Support\SiteContent::t('Baby tees, tops, poleras y joggers para todos los días. Mézclalos en combos {combo}.'),
+        default => \App\Support\SiteContent::t('Polos, camisas, poleras y joggers para todos los días. Mézclalos en combos {combo}.'),
     };
 
     // Filtros activos, cada uno con el enlace que lo quita.
@@ -48,10 +48,10 @@
     $display = $girls ? 'os-josefin' : 'os-hh-display';
     $sorts = ['' => 'Más vendidos', 'novedades' => 'Novedades', 'precio-asc' => 'Precio: menor a mayor', 'precio-desc' => 'Precio: mayor a menor'];
     $perks = [
-        ['title' => 'Envío desde S/ 15 a todo el Perú', 'text' => 'Delivery en Lima o agencia Shalom'],
+        ['title' => \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú'), 'text' => 'Delivery en Lima o agencia Shalom'],
         ['title' => 'Pago contraentrega', 'text' => 'Yape, Plin o efectivo'],
         ['title' => 'Cambios y devoluciones', 'text' => 'Te ayudamos por WhatsApp'],
-        ['title' => 'Combos 3 × S/ 50', 'text' => 'Mezcla tus favoritos'],
+        ['title' => \App\Support\SiteContent::t('Combos {combo}'), 'text' => 'Mezcla tus favoritos'],
     ];
 @endphp
 
@@ -156,7 +156,7 @@
 
                 <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="os-focus group flex flex-col items-start gap-2.5 bg-[var(--shop-deep)] px-5 py-[22px]">
                     <span class="text-[12px] font-extrabold uppercase tracking-[2px] text-[var(--hh-bright)]">Combo</span>
-                    <span @class([$display, 'text-white', 'text-[52px] leading-[50px]' => ! $girls, 'text-[36px] leading-[39px]' => $girls])>3 × S/ 50</span>
+                    <span @class([$display, 'text-white', 'text-[52px] leading-[50px]' => ! $girls, 'text-[36px] leading-[39px]' => $girls])>{{ \App\Support\SiteContent::t('{combo}') }}</span>
                     <span class="max-w-[220px] text-[13px] font-medium leading-[19px] text-[var(--shop-deep-muted)]">Mezcla cualquier básico de la tienda.</span>
                     <span class="text-[13px] font-extrabold uppercase text-[var(--hh-bright)] group-hover:underline">Armar combo →</span>
                 </a>

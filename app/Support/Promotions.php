@@ -45,7 +45,7 @@ class Promotions
      *
      * @return array{promo: Promocion, price: float, regular: float, percent: int, ends_at: \Illuminate\Support\Carbon, label: ?string}|null
      */
-    public static function best(string $name, ?string $marca, ?string $empresa, ?int $categoriaId, float $regular): ?array
+    public static function best(string $name, ?string $marca, ?string $empresa, float $regular): ?array
     {
         if ($regular <= 0) {
             return null;
@@ -54,7 +54,7 @@ class Promotions
         $best = null;
 
         foreach (self::live() as $promo) {
-            if (! $promo->appliesTo($name, $marca, $empresa, $categoriaId)) {
+            if (! $promo->appliesTo($name, $marca, $empresa)) {
                 continue;
             }
 
@@ -78,7 +78,7 @@ class Promotions
     /** Promoción de una variante (a su precio) o null. */
     public static function forVariant(Producto $variant): ?array
     {
-        return self::best($variant->name, $variant->marca, $variant->empresa_nombre, $variant->categoria_id, (float) $variant->price);
+        return self::best($variant->name, $variant->marca, $variant->empresa_nombre, (float) $variant->price);
     }
 
     /** Lo que se cobra por esta variante ahora mismo. */
@@ -103,19 +103,11 @@ class Promotions
             return $products;
         }
 
-        // Las tarjetas no siempre traen categoria_id: solo se busca si alguna promoción vigente es por categoría.
-        $categories = $live->contains('scope_type', Promocion::SCOPE_CATEGORY)
-            ? Producto::query()->whereIn('name', $products->pluck('name')->unique())->whereNotNull('categoria_id')->pluck('categoria_id', 'name')
-            : collect();
-
-        $products->each(function (Producto $product) use ($categories): void {
-            $categoria = $product->categoria_id ?? $categories->get($product->name);
-
+        $products->each(function (Producto $product): void {
             $product->setAttribute('promo', self::best(
                 (string) $product->name,
                 $product->marca,
                 $product->empresa_nombre,
-                $categoria !== null ? (int) $categoria : null,
                 (float) ($product->min_price ?? $product->price ?? 0),
             ));
         });
@@ -138,7 +130,16 @@ class Promotions
 
                 match ($promo->scope_type) {
                     Promocion::SCOPE_PRODUCT => $inner->orWhereIn('name', $values->all()),
-                    Promocion::SCOPE_CATEGORY => $inner->orWhereIn('categoria_id', $values->all()),
+                    Promocion::SCOPE_CATEGORY => $values->each(function ($key) use ($inner): void {
+                        [$line, $slug] = array_pad(explode(':', (string) $key, 2), 2, '');
+
+                        if (StorefrontCategories::find($slug, $line)) {
+                            $inner->orWhere(function (Builder $one) use ($line, $slug): void {
+                                StorefrontCategories::apply($one, $slug, $line);
+                                $line === 'mujer' ? GirlsHome::onlyGirls($one) : GirlsHome::exceptGirls($one);
+                            });
+                        }
+                    }),
                     Promocion::SCOPE_BRAND => $values->each(fn ($brand) => $inner->orWhere(fn (Builder $one) => $one->ofBrand((string) $brand))),
                     default => null,
                 };

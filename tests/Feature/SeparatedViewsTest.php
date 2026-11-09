@@ -24,7 +24,6 @@ class SeparatedViewsTest extends TestCase
             '/admin/pedidos',
             '/admin/clientes',
             '/admin/usuarios',
-            '/admin/bodegas',
             '/admin/productos',
             '/admin/medios-pago',
             '/admin/banners',

@@ -34,6 +34,7 @@ class ComboCatalog
 
         $available = Producto::query()
             ->whereIn(DB::raw('UPPER(TRIM(name))'), $names)
+            ->inStore()
             ->where('price', '>', 0)
             ->where('stock', '>', 0)
             ->whereNotNull('talla')

@@ -5,10 +5,10 @@
 @php
     $hero = [
         'hombre' => [
-            'eyebrow' => 'Colección hombre',
-            'title' => 'Nacido del océano',
-            'accent' => 'Hecho para dominar',
-            'copy' => 'Prendas esenciales con carácter, precisión y fuerza.',
+            'eyebrow' => \App\Support\SiteContent::get('hero.hombre.eyebrow'),
+            'title' => \App\Support\SiteContent::get('hero.hombre.title'),
+            'accent' => \App\Support\SiteContent::get('hero.hombre.accent'),
+            'copy' => \App\Support\SiteContent::get('hero.hombre.copy'),
             'image' => 'images/home/hero-model-hombre.webp',
             'width' => 300,
             'height' => 510,
@@ -98,7 +98,7 @@
                                 @endforeach
                             @else
                                 <img
-                                    src="{{ asset($hero['image']) }}"
+                                    src="{{ \App\Support\SiteContent::asset($hero['image']) }}"
                                     width="{{ $hero['width'] }}"
                                     height="{{ $hero['height'] }}"
                                     class="relative block {{ $hero['imageClass'] }}"

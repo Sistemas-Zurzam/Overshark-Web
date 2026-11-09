@@ -10,12 +10,17 @@ use App\Models\Brand;
 use App\Services\ComboCatalogImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ComboController extends Controller
 {
+    private const PER_PAGE = 24;
+
+    private const SORTS = ['precio-asc', 'precio-desc', 'nombre'];
+
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
@@ -48,8 +53,24 @@ class ComboController extends Controller
             default => $base,
         };
 
+        $orden = in_array($request->query('orden'), self::SORTS, true) ? $request->query('orden') : '';
+        $combos = match ($orden) {
+            'precio-asc' => $combos->sortBy(fn (Combo $combo) => $combo->price === null ? PHP_INT_MAX : (float) $combo->price),
+            'precio-desc' => $combos->sortByDesc(fn (Combo $combo) => (float) $combo->price),
+            'nombre' => $combos->sortBy(fn (Combo $combo) => mb_strtolower($combo->name)),
+            default => $combos,
+        };
+
+        // 69 combos en una sola pantalla son demasiados: se muestran de a 24.
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $combos = new LengthAwarePaginator($combos->values()->forPage($page, self::PER_PAGE)->values(), $combos->count(), self::PER_PAGE, $page, [
+            'path' => route('admin.combos.index'),
+            'query' => $request->query(),
+        ]);
+
         return view('admin.combos.index', [
             'combos' => $combos,
+            'orden' => $orden,
             'search' => $search,
             'estado' => $estado,
             'selectedBrandId' => $brandId,
