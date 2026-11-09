@@ -72,7 +72,7 @@
             {{-- En el carrito aún no se eligió la entrega: sin fila de envío y el total es el subtotal. --}}
             @component('web.checkout.partials.summary', ['items' => $items, 'count' => $count, 'subtotal' => $subtotal, 'shipping' => null, 'total' => $subtotal, 'priceChanges' => $priceChanges])
                 <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
-                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 15 a domicilio en Lima, S/ 30 en agencia Shalom o gratis si recoges en almacén.</p>
+                <p class="text-[12px] leading-[1.45] text-[#65717c]">El envío se suma al elegir la entrega: S/ 15 a domicilio en Lima, S/ 15 en agencia Shalom o gratis si recoges en almacén.</p>
             @endcomponent
         </div>
 

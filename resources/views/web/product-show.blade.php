@@ -120,7 +120,7 @@
 
                     <div class="flex flex-col gap-2 leading-[1.45]">
                         <p class="text-[14px] font-bold">Envío a todo el Perú desde S/ 15</p>
-                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 30 · Almacén gratis</p>
+                        <p class="text-[13px] text-[#65717c]">Lima: delivery S/ 15 · Agencia Shalom S/ 15 · Almacén gratis</p>
                         <p class="text-[14px] font-bold">Pago con {{ $payments->isNotEmpty() ? $payments->join(', ', ' y ') : 'Yape y Plin' }} · También contraentrega</p>
                     </div>
                 </div>

@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * Costo de envío según la entrega: S/ 15 a domicilio (solo Lima), S/ 30 en agencia Shalom y gratis en el
+ * Costo de envío según la entrega: S/ 15 a domicilio (solo Lima), S/ 15 en agencia Shalom y gratis en el
  * recojo en almacén (STOREFRONT_SHIPPING_HOME / STOREFRONT_SHIPPING_AGENCY). Es gratis desde
  * services.storefront.free_shipping_from (STOREFRONT_FREE_SHIPPING_FROM, en soles sobre el subtotal); con 0
  * no hay envío gratis.
@@ -22,7 +22,7 @@ class Shipping
     {
         return match ($delivery) {
             self::PICKUP => 0.0,
-            'agencia' => (float) config('services.storefront.shipping_agency', 30),
+            'agencia' => (float) config('services.storefront.shipping_agency', 15),
             default => (float) config('services.storefront.shipping_home', 15),
         };
     }

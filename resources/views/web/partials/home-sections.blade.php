@@ -33,7 +33,7 @@
         ['name' => 'Jersey', 'image' => 'tela-jersey.webp', 'text' => 'Suave, ligero y con caída natural'],
     ];
     $benefits = [
-        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => 'Envíos a todo el Perú', 'text' => 'Lima: delivery S/ 15. Agencia Shalom S/ 30 a todo el Perú. Recojo en almacén gratis.', 'cta' => 'Ver políticas de envío', 'url' => route('web.contact')],
+        ['image' => 'confianza-envios.webp', 'icon' => 'icon-envio.svg', 'title' => 'Envíos a todo el Perú', 'text' => 'Lima: delivery S/ 15. Agencia Shalom S/ 15 a todo el Perú. Recojo en almacén gratis.', 'cta' => 'Ver políticas de envío', 'url' => route('web.contact')],
         ['image' => 'confianza-pago.webp', 'icon' => 'icon-pago.svg', 'title' => 'Pago contraentrega', 'text' => 'Paga al recibir o con Yape, Plin y cualquier billetera que lea QR.', 'cta' => 'Ver métodos de pago', 'url' => route('web.contact')],
         ['image' => 'confianza-atencion.webp', 'icon' => 'icon-atencion.svg', 'title' => 'Atención al cliente', 'text' => 'Te ayudamos antes, durante y después de tu compra.', 'cta' => 'Escríbenos por WhatsApp', 'url' => \App\Models\BrandSetting::current()->whatsappUrl() ?: config('services.storefront.chat_url') ?: route('web.contact')],
     ];

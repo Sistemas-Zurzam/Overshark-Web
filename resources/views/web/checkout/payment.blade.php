@@ -4,7 +4,7 @@
     C3 · Pago: resumen de envío (Enviar a / Método de envío / Comprobante, con "Editar") y métodos de pago en
     tarjetas que se despliegan (Checkout::paymentMethods): tarjeta de crédito o débito con Culqi (formulario en
     la página; checkout.js crea el token directo en Culqi), Yape con QR de Ligo Pay (pendiente de su API), los
-    medios activos del admin con captura, y contraentrega, cuyo separo (S/ 15 domicilio, S/ 30 agencia;
+    medios activos del admin con captura, y contraentrega, cuyo separo (S/ 15 domicilio, S/ 15 agencia;
     Checkout::depositFor) se paga aquí mismo con tarjeta o Yape. Lo no configurado se ve con un aviso.
     El pedido se crea en web.checkout.place (token contra doble envío y total confirmado).
 --}}
@@ -137,6 +137,7 @@
                                 <hr class="border-[#0b1015]">
                                 <p class="text-[13px] font-extrabold uppercase tracking-[.5px]">Separa tu pedido con {{ $money($deposit) }}</p>
                                 <dl class="flex flex-col gap-2 text-[14px] leading-[1.45]">
+                                    <div class="flex justify-between gap-4"><dt>Total del pedido (incluye envío {{ $money($shipping ?? 0) }})</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($total) }}</dd></div>
                                     <div class="flex justify-between gap-4"><dt>Separo: lo pagas ahora</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($deposit) }}</dd></div>
                                     <div class="flex justify-between gap-4"><dt>Saldo: lo pagas al recibir tu pedido</dt><dd class="shrink-0 whitespace-nowrap font-bold">{{ $money($total - $deposit) }}</dd></div>
                                 </dl>

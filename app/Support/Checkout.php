@@ -199,14 +199,14 @@ class Checkout
     }
 
     /**
-     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 30 en agencia (configurables).
+     * Separo de un pedido contraentrega según la entrega: S/ 15 a domicilio y S/ 15 en agencia (configurables).
      * Se paga en el mismo checkout con tarjeta o Yape/Plin; el saldo se paga al recibir. Almacén: sin separo.
      */
     public static function depositFor(?string $delivery): float
     {
         return match ($delivery) {
             'domicilio' => (float) config('services.storefront.cod_deposit_home', 15),
-            'agencia' => (float) config('services.storefront.cod_deposit_agency', 30),
+            'agencia' => (float) config('services.storefront.cod_deposit_agency', 15),
             default => 0.0,
         };
     }

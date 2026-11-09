@@ -241,18 +241,18 @@ class CheckoutTest extends TestCase
         $this->get(route('web.checkout.done', $order))->assertNotFound();
     }
 
-    public function test_cash_on_delivery_to_an_agency_pays_a_30_soles_deposit_with_a_yape_capture(): void
+    public function test_cash_on_delivery_to_an_agency_pays_a_15_soles_deposit_with_a_yape_capture(): void
     {
         Storage::fake('public');
         $yape = MetodoPago::query()->create(['name' => 'Yape', 'numero' => '999888777', 'titular' => 'Overshark', 'status' => true]);
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer(['distrito_id' => $this->wanchaq->id, 'delivery' => 'agencia', 'agency' => $this->shalomWanchaq]));
         $this->get(route('web.checkout.payment'))->assertOk()
-            ->assertSee('Separo S/ 30.00')
-            ->assertSee('Paga el importe exacto de tu separo: <strong>S/ 30.00</strong>', false)
+            ->assertSee('Separo S/ 15.00')
+            ->assertSee('Paga el importe exacto de tu separo: <strong>S/ 15.00</strong>', false)
             ->assertSee('Shalom WANCHAQ - AV. SOL — AV. SOL 100, WANCHAQ')
             ->assertSee('Wanchaq, Cusco, Cusco');
-        $base = ['method' => Checkout::CASH_ON_DELIVERY, 'token' => session('checkout.token'), 'expected_total' => '110.00'];
+        $base = ['method' => Checkout::CASH_ON_DELIVERY, 'token' => session('checkout.token'), 'expected_total' => '95.00'];
 
         // Sin aceptar los términos, sin elegir cómo pagar el separo o sin la captura, no se crea el pedido.
         $this->post(route('web.checkout.place'), $base + ['deposit_method' => (string) $yape->id])->assertSessionHasErrors('terms');
@@ -265,9 +265,9 @@ class CheckoutTest extends TestCase
         $this->post(route('web.checkout.place'), $base + ['terms' => 1, 'deposit_method' => (string) $yape->id]);
 
         $order = Order::query()->sole();
-        $this->assertSame('30.00', (string) $order->envio); // recojo en agencia Shalom: S/ 30
-        $this->assertSame('30.00', (string) $order->separo);
-        $this->assertSame('30.00', (string) $order->pago_monto);
+        $this->assertSame('15.00', (string) $order->envio); // recojo en agencia Shalom: S/ 15
+        $this->assertSame('15.00', (string) $order->separo);
+        $this->assertSame('15.00', (string) $order->pago_monto);
         $this->assertNotNull($order->comprobante_pago);
         $this->assertSame(Checkout::STATUS_PENDING, $order->statusOrder->name);
         $this->assertSame('Pago contraentrega · separo con Yape', $order->metodo_pago_nombre);

@@ -405,7 +405,7 @@
             <section class="flex flex-col items-start gap-3">
                 <h2 class="text-[16px] font-medium">Envíos a todo el Perú</h2>
                 <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Lima: delivery S/ 15</p>
-                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Agencia Shalom: S/ 30</p>
+                <p class="text-[14px] leading-6 text-[var(--ft-muted)]">Agencia Shalom: S/ 15</p>
                 <p class="rounded-[6px] bg-[#e9f7f9] px-2.5 py-1 text-[14px] font-medium leading-[18px] text-[#1c7696]">Recojo en almacén gratis</p>
                 <a href="{{ route('web.claims.create') }}" class="os-focus mt-2 block transition hover:opacity-80" aria-label="Libro de Reclamaciones">
                     <img src="{{ asset('images/iconos/libro_reclamaciones.svg') }}" alt="" class="h-[83px] w-[121px] object-contain">
