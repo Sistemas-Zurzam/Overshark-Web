@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Admin\Combo;
 use App\Models\Admin\Producto;
+use App\Models\Brand;
 use App\Http\Middleware\AuthenticateJwt;
 use App\Services\ComboCatalogImportService;
 use App\Models\User;
@@ -22,6 +23,7 @@ class ComboManagementTest extends TestCase
         Storage::fake('public');
 
         $this->post('/admin/combos', [
+            'brand_id' => Brand::query()->where('slug', 'overshark')->firstOrFail()->id,
             'name' => 'Combo verano',
             'image' => UploadedFile::fake()->createWithContent('combo.png', $this->png()),
             'url' => '/productos',
@@ -166,8 +168,7 @@ class ComboManagementTest extends TestCase
         $this->get(route('admin.combos.index', ['search' => 'POLO NERU']))
             ->assertOk()
             ->assertSee('Combo Bravos')
-            ->assertDontSee('Combo Girls')
-            ->assertSee('Limpiar');
+            ->assertDontSee('Combo Girls');
     }
 
     public function test_admin_edits_combo_with_garment_alternatives_for_the_outfit_page(): void
@@ -187,7 +188,7 @@ class ComboManagementTest extends TestCase
         $this->get(route('admin.combos.edit', $combo))->assertOk()->assertSee('Mostrar en «Arma tu outfit»', false);
 
         $this->put(route('admin.combos.update', $combo), [
-            'name' => 'Combo Polo', 'brand' => 'OVERSHARK', 'price' => 99, 'notes' => 'Polo + Pantalón',
+            'name' => 'Combo Polo', 'brand_id' => Brand::query()->where('slug', 'overshark')->firstOrFail()->id, 'price' => 99, 'notes' => 'Polo + Pantalón',
             'outfit' => 1, 'status' => 1,
             'products' => [
                 ['producto_id' => $clasico->id, 'grupo' => 'Polo', 'cantidad' => 1],

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Admin\BannerPortada;
+use App\Models\Brand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +18,10 @@ class BannerManagementTest extends TestCase
         $this->withoutMiddleware();
         Storage::fake('public');
 
+        $brand = Brand::query()->where('slug', 'overshark')->firstOrFail();
+
         $this->post('/admin/banners', [
+            'brand_id' => $brand->id,
             'name' => 'Banner de prueba',
             'image' => UploadedFile::fake()->createWithContent('banner.png', $this->png()),
             'time' => 8,

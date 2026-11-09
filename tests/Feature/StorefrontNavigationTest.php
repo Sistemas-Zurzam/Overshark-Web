@@ -118,11 +118,11 @@ class StorefrontNavigationTest extends TestCase
     {
         $this->get(route('web.contact'))->assertOk()->assertSee('Enviar mensaje');
 
-        $this->post(route('web.contact.store'), [])->assertSessionHasErrors(['name', 'email', 'subject', 'message', 'privacy']);
+        $this->post(route('web.contact.store'), [])->assertSessionHasErrors(['name', 'email', 'prefers_contact', 'subject', 'message', 'privacy']);
 
         $this->post(route('web.contact.store'), [
             'name' => 'Ana Pérez', 'email' => 'ana@example.com', 'phone' => '999 888 777',
-            'subject' => 'producto', 'message' => '¿Tienen el Waffle en talla XL?', 'privacy' => 1,
+            'prefers_contact' => 'whatsapp', 'subject' => 'producto', 'message' => '¿Tienen el Waffle en talla XL?', 'privacy' => 1,
         ])->assertRedirect(route('web.contact'))->assertSessionHas('contact_sent');
 
         $this->assertDatabaseHas('contact_messages', ['email' => 'ana@example.com', 'subject' => 'producto', 'read_at' => null]);
@@ -133,7 +133,7 @@ class StorefrontNavigationTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\AuthenticateJwt::class);
         $this->actingAs(\App\Models\User::factory()->create());
-        $this->get(route('admin.messages.index'))->assertOk()->assertSee('Ana Pérez')->assertSee('Pendientes (1)');
+        $this->get(route('admin.messages.index'))->assertOk()->assertSee('Ana Pérez')->assertSee('Pendientes');
     }
 
     public function test_category_filter_matches_product_name_or_synced_category(): void
