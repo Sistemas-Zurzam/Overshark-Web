@@ -45,7 +45,8 @@ class AdminSidebarTest extends TestCase
         $pending = StatusOrder::query()->firstOrCreate(['name' => Checkout::STATUS_PENDING]);
         $paid = StatusOrder::query()->firstOrCreate(['name' => Checkout::STATUS_PAID]);
         $cliente = Cliente::query()->create(['name' => 'Ana']);
-        foreach ([[$pending, 'OS-1'], [$pending, 'OS-2'], [$paid, 'OS-3']] as [$status, $number]) {
+        $cod = StatusOrder::query()->firstOrCreate(['name' => Checkout::STATUS_COD]);
+        foreach ([[$pending, 'OS-1'], [$pending, 'OS-2'], [$paid, 'OS-3'], [$cod, 'OS-4']] as [$status, $number]) {
             Order::query()->create(['number_zazu' => $number, 'precio_total' => 50, 'cliente_id' => $cliente->id, 'cliente_name' => 'Ana', 'status_order_id' => $status->id]);
         }
         $this->claim();
@@ -54,13 +55,14 @@ class AdminSidebarTest extends TestCase
         Promocion::query()->create(['name' => 'Ahora', 'scope_type' => 'marca', 'scope_values' => ['OVERSHARK'], 'discount_type' => 'porcentaje', 'discount_value' => 10, 'starts_at' => now()->subHour(), 'ends_at' => now()->addHour(), 'active' => true]);
 
         $badges = AdminNav::badges();
-        $this->assertSame(2, $badges['admin.pedidos.index']['count'], 'solo los pedidos por confirmar el pago');
+        $this->assertSame(2, $badges['admin.pedidos.index']['count'], 'solo los pedidos por preparar y enviar (los sin pagar no cuentan)');
+        $this->assertSame('info', $badges['admin.pedidos.index']['tone']);
         $this->assertSame(1, $badges['admin.reclamos.index']['count']);
         $this->assertSame(1, $badges['admin.messages.index']['count'], 'solo los no leídos');
         $this->assertSame(1, $badges['admin.promociones.index']['count']);
 
         $this->admin()->get(route('admin.dashboard'))->assertOk()
-            ->assertSee('2 pedidos por confirmar el pago')->assertSee('1 reclamos sin responder')
+            ->assertSee('2 pedidos por preparar y enviar')->assertSee('1 reclamos sin responder')
             ->assertSee('1 mensajes sin leer')->assertSee('1 promociones activas ahora');
     }
 

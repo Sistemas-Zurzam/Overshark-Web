@@ -65,6 +65,17 @@ class OrderPayments
         return $expired->count();
     }
 
+    /** Contraentrega sin cobro en línea: el pedido pasa directo a preparación (no hay pago que confirmar) y se envía al CRM. */
+    public static function markCashOnDelivery(Order $order): void
+    {
+        $order->update([
+            'status_order_id' => self::status(Checkout::STATUS_COD),
+            'fecha_envio' => $order->fecha_envio ?? Checkout::shippingDate($order->entrega),
+        ]);
+
+        OrderFulfillment::start($order);
+    }
+
     private static function status(string $name): int
     {
         return StatusOrder::query()->firstOrCreate(['name' => $name])->id;

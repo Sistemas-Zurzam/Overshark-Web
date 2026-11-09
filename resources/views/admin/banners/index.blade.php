@@ -136,7 +136,12 @@
                     <a href="{{ route('admin.banners.index', ['marca' => $brand->id]) }}"
                        class="flex shrink-0 items-center gap-2 border-b-2 py-3.5 {{ $selectedBrand?->id === $brand->id ? 'border-admin-accent' : 'border-transparent' }}">
                         <span class="text-sm {{ $selectedBrand?->id === $brand->id ? 'font-bold text-admin-text' : 'font-medium text-admin-text-secondary' }}">{{ $brand->name }}</span>
-                        <span class="rounded-full px-2 py-0.5 text-xs font-bold {{ $counts[$brand->id] === 0 ? 'bg-admin-warning-soft text-admin-warning' : 'bg-admin-hover text-admin-text-secondary' }}">{{ $counts[$brand->id] }}</span>
+                        {{-- El número cuenta los banners subidos; sin ninguno la tienda usa la portada predeterminada (no es un error). --}}
+                        @if ($counts[$brand->id] === 0)
+                            <span class="rounded-full bg-admin-hover px-2 py-0.5 text-xs font-bold text-admin-text-muted" title="Sin banners subidos: la tienda usa su portada predeterminada">Predeterminada</span>
+                        @else
+                            <span class="rounded-full bg-admin-accent-soft px-2 py-0.5 text-xs font-bold text-admin-accent" title="{{ $counts[$brand->id] }} {{ $counts[$brand->id] === 1 ? 'banner subido' : 'banners subidos' }}">{{ $counts[$brand->id] }}</span>
+                        @endif
                     </a>
                 @endforeach
             </div>
@@ -145,20 +150,18 @@
                 Tamaño recomendado: 1920 × 640 px (escritorio) y 800 × 1000 px (móvil). Máximo {{ \App\Models\Admin\BannerPortada::MAX_ACTIVE_PER_BRAND }} banners activos por marca.
             </p>
 
-            @if ($drivesHome)
-                @if (! $banners->contains(fn ($banner) => $banner->scheduleState() === 'activo'))
-                    <div class="mx-5 mt-4 flex flex-col gap-4 rounded-sm border border-admin-warning bg-admin-warning-soft p-4 sm:flex-row sm:items-center">
-                        <img src="{{ \App\Support\SiteContent::imageUrl('hero_hombre') }}" alt="" class="h-24 w-auto rounded-sm bg-[#071226] object-contain">
-                        <div>
-                            <p class="text-sm font-bold text-admin-text">Ahora la portada de Hombre muestra la imagen predeterminada</p>
-                            <p class="mt-1 text-[13px] text-admin-text-secondary">No hay banners activos, así que la tienda usa el modelo de siempre sobre el fondo del mar. Agrega un banner para reemplazarla; o cambia ese modelo en «Imágenes fijas», más abajo.</p>
-                        </div>
+            @if ($defaultHero && ! $banners->contains(fn ($banner) => $banner->scheduleState() === 'activo'))
+                <div class="mx-5 mt-4 flex flex-col gap-4 rounded-sm border border-admin-warning bg-admin-warning-soft p-4 sm:flex-row sm:items-center">
+                    <img src="{{ \App\Support\SiteContent::imageUrl($defaultHero) }}" alt="" class="h-24 w-auto rounded-sm bg-[#071226] object-contain">
+                    <div>
+                        <p class="text-sm font-bold text-admin-text">Ahora la portada de {{ $selectedBrand->name }} muestra la imagen predeterminada</p>
+                        <p class="mt-1 text-[13px] text-admin-text-secondary">No hay banners activos, así que la tienda usa su portada de siempre. Agrega un banner para reemplazarla, o cambia la imagen predeterminada en «Imágenes fijas», más abajo.</p>
                     </div>
-                @endif
-            @else
+                </div>
+            @elseif (! $defaultHero)
                 <div class="mx-5 mt-4 rounded-sm border border-admin-border bg-admin-subtle p-4 text-[13px] text-admin-text-secondary">
-                    <p class="font-bold text-admin-text">Estos banners todavía no se muestran en la tienda de {{ $selectedBrand?->name }}</p>
-                    <p class="mt-1">El carrusel de portada solo funciona en el inicio de Overshark Hombre. La portada de {{ $selectedBrand?->name }} es una imagen fija: puedes reemplazarla en «Imágenes fijas», más abajo.</p>
+                    <p class="font-bold text-admin-text">Esta marca no tiene portada con carrusel</p>
+                    <p class="mt-1">El carrusel funciona en el inicio de Overshark, Overshark Girls y Bravos. Los banners de otras marcas no se muestran en la tienda.</p>
                 </div>
             @endif
 
@@ -293,6 +296,6 @@
             </div>
         </div>
 
-        @include('admin.banners._inventory', ['inventory' => $inventory])
+        @include('admin.banners._inventory', ['inventory' => $inventory, 'selectedBrand' => $selectedBrand])
     </div>
 @endsection

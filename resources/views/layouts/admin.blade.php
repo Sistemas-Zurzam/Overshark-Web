@@ -28,7 +28,6 @@
         ['admin.brands.index', 'Marcas', 'tag'],
         ['admin.medios-pago.index', 'Medios de pago', 'card'],
         ['admin.agencias.index', 'Agencias Shalom', 'truck'],
-        ['admin.brand.edit', 'Identidad visual', 'palette'],
         ['admin.usuarios.index', 'Usuarios y roles', 'user'],
     ],
 ])

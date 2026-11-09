@@ -57,6 +57,7 @@ class SiteContentController extends Controller
             foreach ($group['fields'] as [$path, , $type, $max]) {
                 $rules['c.'.$path] = match ($type) {
                     'number' => ['nullable', 'numeric', 'min:0', 'max:999'],
+                    'phone' => ['nullable', 'string', 'max:'.$max, 'regex:/^[+\d\s()-]*$/'],
                     'email' => ['nullable', 'email', 'max:'.$max],
                     default => ['nullable', 'string', 'max:'.$max],
                 };
@@ -79,6 +80,7 @@ class SiteContentController extends Controller
             'c.contacto.faq.*.q.required_with' => 'Escribe también la pregunta.',
             'c.contacto.faq.*.a.required_with' => 'Escribe también la respuesta.',
             'c.*.email' => 'Escribe un correo válido.',
+            'c.contacto.whatsapp.regex' => 'Escribe solo números (puedes incluir +51, espacios o guiones).',
         ]);
 
         $input = $validated['c'] ?? [];

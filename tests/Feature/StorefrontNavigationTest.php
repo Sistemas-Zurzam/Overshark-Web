@@ -47,7 +47,7 @@ class StorefrontNavigationTest extends TestCase
         $this->withoutMiddleware(\App\Http\Middleware\AuthenticateJwt::class);
         $this->actingAs(\App\Models\User::factory()->create());
 
-        $this->put(route('admin.brand.whatsapp'), ['whatsapp_number' => '999 888 777', 'whatsapp_message' => 'Hola, quiero un combo'])
+        $this->put(route('admin.contenido.update'), ['c' => ['contacto' => ['whatsapp' => '999 888 777', 'whatsapp_message' => 'Hola, quiero un combo']]])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -55,7 +55,7 @@ class StorefrontNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('https://wa.me/51999888777?text=Hola%2C%20quiero%20un%20combo', false);
 
-        $this->put(route('admin.brand.whatsapp'), ['whatsapp_number' => 'abc'])->assertSessionHasErrors('whatsapp_number');
+        $this->put(route('admin.contenido.update'), ['c' => ['contacto' => ['whatsapp' => 'abc']]])->assertSessionHasErrors('c.contacto.whatsapp');
     }
 
     public function test_about_page_tells_the_manufacturing_story_and_is_linked_from_the_menu(): void

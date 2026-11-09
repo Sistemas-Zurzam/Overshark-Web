@@ -9,6 +9,9 @@
 @section('title', 'Overshark Girls | Colección mujer')
 
 @section('content')
+    @if (($banners ?? collect())->isNotEmpty())
+        @include('web.partials.banner-carousel', ['banners' => $banners, 'label' => 'Overshark Girls'])
+    @else
     <section class="relative isolate flex min-h-[520px] flex-col justify-end overflow-hidden bg-[#1a0611] text-white sm:min-h-0 sm:aspect-[1440/482] sm:justify-center" aria-labelledby="home-hero-title">
         <img src="{{ \App\Support\SiteContent::imageUrl('hero_mujer') ?? asset('images/home-mujer/hero.webp') }}" alt="" width="1920" height="640" class="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_center]" fetchpriority="high">
         {{-- Solo en celular: la foto se recorta en vertical y el texto va abajo, sobre un velo para leerse. --}}
@@ -27,6 +30,7 @@
             </a>
         </div>
     </section>
+    @endif
 
     @include('web.partials.home-sections', ['line' => 'mujer'])
 @endsection

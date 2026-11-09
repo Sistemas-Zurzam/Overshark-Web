@@ -20,6 +20,10 @@
         <form method="POST" action="{{ route('admin.pedidos.status', $order) }}" class="flex gap-2">
             @csrf @method('PATCH')
             <select name="status" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                {{-- Los estados de pago los pone el sistema: si el pedido está en uno, se muestra sin poder elegirlo. --}}
+                @if (! in_array($order->statusOrder?->name, $statuses, true))
+                    <option value="" selected disabled>{{ $order->statusOrder?->name }} (automático)</option>
+                @endif
                 @foreach ($statuses as $statusName)
                     <option value="{{ $statusName }}" @selected($order->statusOrder?->name === $statusName)>{{ $statusName }}</option>
                 @endforeach

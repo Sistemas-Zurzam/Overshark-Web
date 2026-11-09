@@ -9,7 +9,6 @@ use App\Models\Admin\Combo;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Brand;
-use App\Models\BrandSetting;
 use App\Support\AboutPage;
 use App\Support\OutfitFlyer;
 use App\Support\SiteContent;
@@ -23,6 +22,9 @@ use Illuminate\View\View;
 
 class BannerController extends Controller
 {
+    /** Marcas con portada de carrusel y su imagen predeterminada (portada de Hombre, de Mujer y de Bravos). */
+    private const DEFAULT_HEROES = ['overshark' => 'hero_hombre', 'overshark-girls' => 'hero_mujer', 'bravos' => 'bravos_hero'];
+
     public function index(Request $request): View
     {
         $brands = Brand::query()->active()->orderBy('sort_order')->orderBy('name')->get();
@@ -43,9 +45,9 @@ class BannerController extends Controller
             'selectedBrand' => $selectedBrand,
             'counts' => $counts,
             'banners' => $banners,
-            // Solo los banners de Overshark alimentan el carrusel de la portada de Hombre (routes/web.php).
-            'drivesHome' => $selectedBrand && mb_strtoupper(trim($selectedBrand->name)) === 'OVERSHARK',
-            'inventory' => $this->inventory(),
+            // Imagen predeterminada que se ve mientras la marca no tenga banners activos (clave de SiteContent::IMAGES).
+            'defaultHero' => $selectedBrand ? (self::DEFAULT_HEROES[$selectedBrand->slug] ?? null) : null,
+            'inventory' => $this->inventory($selectedBrand),
         ]);
     }
 
@@ -60,10 +62,17 @@ class BannerController extends Controller
             return back()->with('status', 'Se restauró la imagen original.');
         }
 
-        $request->validate(['image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192']], [
+        // El ícono y el logo del sitio también pueden ser SVG o ICO (la regla "image" no los acepta).
+        $isBrandMark = in_array($key, ['site_icon', 'site_logo'], true);
+
+        $request->validate(['image' => $isBrandMark
+            ? ['required', 'file', 'mimes:png,jpg,jpeg,webp,svg,ico', 'max:4096']
+            : ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+        ], [
             'image.required' => 'Elige la imagen que quieres poner.',
             'image.image' => 'La imagen debe ser PNG, JPG o WEBP.',
-            'image.max' => 'La imagen puede pesar como máximo 8 MB.',
+            'image.mimes' => $isBrandMark ? 'Usa un PNG, JPG, WEBP, SVG o ICO.' : 'La imagen debe ser PNG, JPG o WEBP.',
+            'image.max' => $isBrandMark ? 'El archivo puede pesar como máximo 4 MB.' : 'La imagen puede pesar como máximo 8 MB.',
         ]);
 
         SiteContent::replaceImage($key, $request->file('image'));
@@ -75,11 +84,13 @@ class BannerController extends Controller
      * Todo lo visual de la tienda: las imágenes fijas (que se reemplazan desde esta pantalla) y lo que ya se administra
      * en otros módulos, con cuántos elementos hay y a dónde ir a cambiarlos.
      */
-    private function inventory(): array
+    private function inventory(?Brand $brand): array
     {
         $saved = SiteContent::saved();
 
-        $fixed = collect(SiteContent::IMAGES)
+        // Cada imagen pertenece a una marca (o a toda la tienda): la pantalla muestra las de la pestaña elegida y, aparte, las compartidas.
+        $groupsFor = fn (?string $slug) => collect(SiteContent::IMAGES)
+            ->filter(fn (array $meta) => ($meta[3] ?? null) === $slug)
             ->map(fn (array $meta, string $key) => [
                 'key' => $key,
                 'label' => $meta[1],
@@ -93,7 +104,6 @@ class BannerController extends Controller
 
         $aboutImages = collect(array_keys(AboutPage::IMAGES))->map(fn (string $key) => AboutPage::imageUrl($key, AboutPage::content()))->filter();
         $combos = Combo::query()->where(fn ($query) => $query->whereNull('modality')->orWhere('modality', '!=', 'Outfit'));
-        $brandSetting = BrandSetting::current();
         $paymentImages = MetodoPago::query()->get()->flatMap(fn (MetodoPago $method) => [$method->imageUrl(), $method->qrImageUrl()])->filter();
 
         $elsewhere = [
@@ -117,17 +127,13 @@ class BannerController extends Controller
                 'count' => Brand::query()->whereNotNull('logo_path')->count().' de '.Brand::query()->count().' marcas con logo',
                 'thumbs' => Brand::query()->whereNotNull('logo_path')->limit(4)->get()->map->logoUrl()->all(),
                 'url' => route('admin.brands.index'), 'cta' => 'Administrar marcas'],
-            ['title' => 'Logo e ícono de la tienda', 'where' => 'Ícono de la pestaña del navegador (tienda y panel) y logo de la pantalla de elección Hombre/Mujer.',
-                'count' => collect([$brandSetting->logoUrl(), $brandSetting->iconUrl()])->filter()->count().' de 2 cargados',
-                'thumbs' => collect([$brandSetting->logoUrl(), $brandSetting->iconUrl()])->filter()->values()->all(),
-                'url' => route('admin.brand.edit'), 'cta' => 'Identidad visual'],
             ['title' => 'Medios de pago', 'where' => 'Logos y códigos QR del checkout.',
                 'count' => $paymentImages->count().' imágenes',
                 'thumbs' => $paymentImages->take(4)->values()->all(),
                 'url' => route('admin.medios-pago.index'), 'cta' => 'Administrar medios de pago'],
         ];
 
-        return ['fixed' => $fixed, 'elsewhere' => $elsewhere];
+        return ['fixed' => $brand ? $groupsFor($brand->slug) : collect(), 'shared' => $groupsFor(null), 'elsewhere' => $elsewhere];
     }
 
     public function store(Request $request): RedirectResponse
@@ -205,6 +211,8 @@ class BannerController extends Controller
         foreach (array_values($validated['ids']) as $index => $id) {
             BannerPortada::query()->where('id', $id)->update(['sort_order' => $index + 1]);
         }
+
+        BannerPortada::flushActiveCache();
 
         return back()->with('status', 'Orden actualizado.');
     }

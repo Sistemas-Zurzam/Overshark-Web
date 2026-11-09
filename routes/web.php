@@ -469,10 +469,11 @@ Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi)
             // Yape: se genera el QR y el pedido espera el pago (la página del pedido muestra el QR).
             OrderPayments::startQr($order, app(YapeQr::class));
         } elseif (! $payWith) {
-            // Contraentrega sin nada que pagar en línea (recojo en almacén): se procesa ya; se cobra al entregar.
-            OrderFulfillment::start($order);
+            // Contraentrega sin nada que pagar en línea (recojo en almacén): pasa directo a preparación; se cobra al entregar.
+            OrderPayments::markCashOnDelivery($order);
         }
-        // Captura de Yape/Plin del admin: queda pendiente hasta que el equipo confirme el pago en el admin.
+        // Captura de Yape/Plin del admin: el panel ya no confirma pagos a mano (Culqi y Ligo Pay los confirman solos),
+        // así que ese pedido queda pendiente de pago hasta que su medio tenga confirmación automática.
     }
 
     session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
@@ -660,6 +661,7 @@ Route::get('/marcas/{brand:slug}', function (Brand $brand) {
 
         return view('web.bravos', [
             'brandPage' => $brand,
+            'banners' => BannerPortada::activeForHome($brand->id),
             'favorites' => $products->take(4),
             'modelCount' => (clone $range)->distinct()->count('name'),
             'colorCount' => (clone $range)->whereNotNull('color')->distinct()->count('color'),
@@ -930,7 +932,14 @@ Route::get('/', function (Request $request) {
     $bravosBrand = \App\Models\Brand::query()->active()->whereRaw('UPPER(name) LIKE ?', ['%BRAVO%'])->first();
 
     if ($storeLine === 'mujer') {
-        return view('web.home-mujer', compact('bestSellers', 'bravosBrand'));
+        // Overshark Girls: sus banners activos reemplazan la portada fija; sin banners se ve la de siempre.
+        $girlsBrand = \App\Models\Brand::query()->where('slug', 'overshark-girls')->first();
+
+        return view('web.home-mujer', [
+            'bestSellers' => $bestSellers,
+            'bravosBrand' => $bravosBrand,
+            'banners' => $girlsBrand ? BannerPortada::activeForHome($girlsBrand->id) : collect(),
+        ]);
     }
 
     $overshark = \App\Models\Brand::query()->active()->whereRaw('UPPER(name) = ?', ['OVERSHARK'])->first();

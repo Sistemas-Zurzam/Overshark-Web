@@ -168,9 +168,9 @@
                                 <div class="flex shrink-0 items-center gap-3">
                                     <span @class([
                                         'rounded-full px-2 py-0.5 text-[11px] font-bold',
-                                        'bg-emerald-50 text-emerald-700' => in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID], true),
+                                        'bg-emerald-50 text-emerald-700' => in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_COD], true),
                                         'bg-admin-warning-soft text-admin-warning' => in_array($status, [\App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
-                                        'bg-admin-subtle text-admin-text-secondary' => ! in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
+                                        'bg-admin-subtle text-admin-text-secondary' => ! in_array($status, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_COD, \App\Support\Checkout::STATUS_PENDING, \App\Support\Checkout::STATUS_AWAITING_QR], true),
                                     ])>{{ $status }}</span>
                                     <span class="text-sm font-extrabold text-admin-text">S/ {{ number_format((float) $order->precio_total, 2) }}</span>
                                 </div>

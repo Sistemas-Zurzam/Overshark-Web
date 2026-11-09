@@ -18,8 +18,8 @@ class BannerPortada extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::ACTIVE_CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::ACTIVE_CACHE_KEY));
+        static::saved(fn () => self::flushActiveCache());
+        static::deleted(fn () => self::flushActiveCache());
     }
 
     protected function casts(): array
@@ -36,6 +36,20 @@ class BannerPortada extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    /**
+     * Borra los banners activos guardados en memoria, de todas las marcas. Antes solo se borraba una clave que nadie
+     * usaba, así que un banner nuevo o cambiado tardaba hasta 30 minutos en verse en la portada.
+     */
+    public static function flushActiveCache(): void
+    {
+        Cache::forget(self::ACTIVE_CACHE_KEY);
+        Cache::forget(self::ACTIVE_CACHE_KEY.'.all');
+
+        foreach (\App\Models\Brand::query()->pluck('id') as $brandId) {
+            Cache::forget(self::ACTIVE_CACHE_KEY.'.'.$brandId);
+        }
     }
 
     public static function activeForHome(?int $brandId = null)

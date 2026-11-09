@@ -3,7 +3,7 @@
 {{--
     Contacto (diseño Figma "05 · Contacto · Overshark"): cabecera, canales (WhatsApp, correo, horario
     y envíos), formulario (se guarda en contact_messages y se revisa en Admin → Mensajes), ayuda rápida
-    y preguntas frecuentes. El WhatsApp sale de Admin → Identidad visual; sin número no se muestra.
+    y preguntas frecuentes. El WhatsApp sale de Admin → Contenido de la tienda → Contacto; sin número no se muestra.
 --}}
 
 @section('title', 'Contacto | Overshark')

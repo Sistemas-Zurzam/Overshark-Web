@@ -228,7 +228,7 @@ class CrmSaleTest extends TestCase
         $this->assertSame([], $this->crmRequests()); // la captura espera la validación del equipo
 
         $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
-        $this->patch(route('admin.pedidos.status', $order), ['status' => Checkout::STATUS_PAID]);
+        \App\Services\Orders\OrderPayments::confirm($order); // lo confirma el sistema de pago, no el panel
 
         [$request] = $this->crmRequests();
         $this->assertEquals([['method' => 'Plin', 'amount' => 55, 'reference' => "Web {$order->number_zazu}", 'paid_at' => now()->toDateString()]], $request['payments']);

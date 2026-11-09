@@ -54,7 +54,7 @@
                                     @if ($type === 'textarea')
                                         <textarea name="{{ $name($path) }}" rows="2" maxlength="{{ $max }}" class="{{ $field }} py-2">{{ $current($path) }}</textarea>
                                     @else
-                                        <input type="{{ $type }}" name="{{ $name($path) }}" value="{{ $current($path) }}" @if ($type === 'number') step="0.01" min="0" @else maxlength="{{ $max }}" @endif class="{{ $field }} h-10">
+                                        <input type="{{ $type === 'phone' ? 'tel' : $type }}" name="{{ $name($path) }}" value="{{ $current($path) }}" @if ($type === 'number') step="0.01" min="0" @else maxlength="{{ $max }}" @endif class="{{ $field }} h-10">
                                     @endif
                                     @if ($help) <span class="mt-1 block text-xs text-admin-text-muted">{{ $help }}</span> @endif
                                 </label>

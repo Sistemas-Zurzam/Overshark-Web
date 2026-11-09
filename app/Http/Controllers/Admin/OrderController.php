@@ -20,26 +20,35 @@ use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
- * Pedidos de la tienda web (creados en el checkout, App\Support\Checkout). El equipo revisa la captura del
- * pago y cambia el estado; con "Pago confirmado" la clienta ve "¡Tu pedido está confirmado!".
+ * Pedidos de la tienda web (creados en el checkout, App\Support\Checkout). El pago lo confirman solos Culqi y
+ * Ligo Pay (App\Services\Orders\OrderPayments) y la venta viaja a Livex y de ahí al ERP: aquí el equipo prepara,
+ * envía, entrega o anula. Un pedido que aún no se pagó se ve como "Pendiente de pago" y no se confirma desde el panel.
  */
 class OrderController extends Controller
 {
-    public const STATUSES = [Checkout::STATUS_PENDING, Checkout::STATUS_AWAITING_QR, Checkout::STATUS_PAID, Checkout::STATUS_DEPOSIT_PAID, 'Enviado', 'Entregado', Checkout::STATUS_CANCELLED];
+    /** Estados que el equipo puede poner a mano. Los de pago los pone el sistema, nunca el panel. */
+    public const STATUSES = ['Enviado', 'Entregado', Checkout::STATUS_CANCELLED];
 
     /** Agrupa los estados internos del checkout en las columnas de estado que ve el equipo. */
     private const STATUS_GROUPS = [
-        'por_confirmar' => ['statuses' => [Checkout::STATUS_PENDING, Checkout::STATUS_AWAITING_QR], 'label' => 'Por confirmar pago', 'tone' => 'warning'],
-        'preparacion' => ['statuses' => [Checkout::STATUS_PAID, Checkout::STATUS_DEPOSIT_PAID], 'label' => 'En preparación', 'tone' => 'info'],
+        // Sin pestaña propia: no hay nada que hacer con ellos desde el panel (se ven en "Todos").
+        'pendiente' => ['statuses' => [Checkout::STATUS_PENDING, Checkout::STATUS_AWAITING_QR], 'label' => 'Pendiente de pago', 'tone' => 'warning', 'tab' => false],
+        'preparacion' => ['statuses' => Checkout::PREPARATION_STATUSES, 'label' => 'En preparación', 'tone' => 'info'],
         'enviado' => ['statuses' => ['Enviado'], 'label' => 'Enviado', 'tone' => 'info'],
         'entregado' => ['statuses' => ['Entregado'], 'label' => 'Entregado', 'tone' => 'success'],
         'anulado' => ['statuses' => [Checkout::STATUS_CANCELLED], 'label' => 'Anulado', 'tone' => 'neutral'],
     ];
 
+    /** Grupos con pestaña propia en el listado. */
+    private static function tabGroups(): array
+    {
+        return array_filter(self::STATUS_GROUPS, fn (array $group) => $group['tab'] ?? true);
+    }
+
     public function index(Request $request): View
     {
         $filters = $this->filtersFrom($request);
-        $tab = array_key_exists((string) $request->query('tab'), self::STATUS_GROUPS) ? $request->query('tab') : '';
+        $tab = array_key_exists((string) $request->query('tab'), self::tabGroups()) ? $request->query('tab') : '';
 
         $afterFilters = $this->filteredOrders($filters);
 
@@ -74,7 +83,7 @@ class OrderController extends Controller
     public function exportCsv(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $filters = $this->filtersFrom($request);
-        $tab = array_key_exists((string) $request->query('tab'), self::STATUS_GROUPS) ? $request->query('tab') : '';
+        $tab = array_key_exists((string) $request->query('tab'), self::tabGroups()) ? $request->query('tab') : '';
 
         $orders = $this->filteredOrders($filters);
         if ($tab !== '') {
@@ -115,14 +124,6 @@ class OrderController extends Controller
         $validated = $request->validate(['status' => ['required', 'in:'.implode(',', self::STATUSES)]]);
 
         $order->update(['status_order_id' => StatusOrder::query()->firstOrCreate(['name' => $validated['status']])->id]);
-
-        // Pago validado a mano (captura de Yape/Plin): arranca la nota de venta, el ERP, la boleta y el correo.
-        if (in_array($validated['status'], OrderPayments::PAID_STATUSES, true)) {
-            if (! $order->fecha_envio) {
-                $order->update(['fecha_envio' => Checkout::shippingDate($order->entrega)]);
-            }
-            OrderFulfillment::start($order);
-        }
 
         return back()->with('status', "Pedido {$order->number_zazu}: {$validated['status']}.");
     }

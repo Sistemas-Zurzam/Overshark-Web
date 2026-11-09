@@ -24,9 +24,10 @@ class AdminNav
         $overdue = $claims->filter(fn (LibroReclamacion $claim) => $claim->isOverdue())->count();
 
         $all = [
+            // Pedidos pagados (o por cobrar al entregar) que el equipo todavía tiene que preparar y enviar.
             'admin.pedidos.index' => [
-                'count' => Order::query()->whereHas('statusOrder', fn ($query) => $query->whereIn('name', [Checkout::STATUS_PENDING, Checkout::STATUS_AWAITING_QR]))->count(),
-                'tone' => 'warning', 'title' => 'pedidos por confirmar el pago',
+                'count' => Order::query()->whereHas('statusOrder', fn ($query) => $query->whereIn('name', Checkout::PREPARATION_STATUSES))->count(),
+                'tone' => 'info', 'title' => 'pedidos por preparar y enviar',
             ],
             'admin.reclamos.index' => [
                 'count' => $claims->count(),

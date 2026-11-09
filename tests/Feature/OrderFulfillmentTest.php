@@ -155,14 +155,13 @@ class OrderFulfillmentTest extends TestCase
 
         $this->post(route('web.checkout.simulate-qr', $order))->assertNotFound();
 
-        // El equipo valida la captura en el admin: arranca la venta en el CRM, aún sin configurar.
-        $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
-        $this->patch(route('admin.pedidos.status', $order), ['status' => Checkout::STATUS_PAID])->assertRedirect();
+        // Al confirmarse el pago (lo hace el sistema de pago, no el panel) arranca la venta en el CRM, aún sin configurar.
+        \App\Services\Orders\OrderPayments::confirm($order);
         $this->assertSame(['correo' => OrderTask::DONE, 'crm_venta' => OrderTask::SKIPPED], $this->tasks($order));
         $this->assertStringContainsString('CRM_SEND_SALES', $order->tasks()->where('task', 'crm_venta')->value('message'));
 
         // Volver a confirmar no duplica las tareas.
-        $this->patch(route('admin.pedidos.status', $order), ['status' => Checkout::STATUS_PAID]);
+        \App\Services\Orders\OrderPayments::confirm($order->refresh());
         $this->assertSame(2, $order->tasks()->count());
     }
 

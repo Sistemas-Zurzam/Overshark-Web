@@ -1,7 +1,6 @@
 @php
     $brand = \App\Models\BrandSetting::current();
     $brandPageContext = $brandPage ?? null;
-    $publicBrandLogo = $brandPageContext?->logoUrl() ?: $brand->logoUrl();
     $combosUrl = $brandPageContext ? route('web.combos.index', ['marca' => $brandPageContext->name]) : route('web.combos.index');
     $menuBrands = \App\Models\Brand::query()
         ->active()
@@ -429,7 +428,7 @@
         </div>
     </footer>
     @endif
-    {{-- Botón flotante de WhatsApp (número y mensaje en Admin → Identidad visual). --}}
+    {{-- Botón flotante de WhatsApp (número y mensaje en Admin → Contenido de la tienda → Contacto). --}}
     @if ($whatsappUrl = $brand->whatsappUrl())
         <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="os-wa os-focus" aria-label="Escríbenos por WhatsApp">
             <svg viewBox="0 0 32 32" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M16.04 3C8.85 3 3 8.82 3 15.98c0 2.29.6 4.52 1.75 6.49L3 29l6.7-1.75a13.1 13.1 0 0 0 6.34 1.62h.01c7.19 0 13.04-5.82 13.04-12.98C29.09 8.82 23.24 3 16.04 3Zm0 23.68h-.01a10.9 10.9 0 0 1-5.53-1.51l-.4-.24-3.98 1.04 1.06-3.86-.26-.4a10.7 10.7 0 0 1-1.66-5.73c0-5.95 4.87-10.79 10.79-10.79 5.93 0 10.77 4.84 10.77 10.79 0 5.95-4.84 10.7-10.78 10.7Zm5.91-8.05c-.32-.16-1.92-.94-2.21-1.05-.3-.11-.51-.16-.73.16-.21.32-.83 1.05-1.02 1.27-.19.21-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.6-.96-.85-1.6-1.9-1.79-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.56.16-.19.21-.32.32-.54.11-.21.05-.4-.03-.56-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.54-.73-.55h-.62c-.21 0-.56.08-.86.4-.3.32-1.13 1.1-1.13 2.69 0 1.58 1.16 3.11 1.32 3.33.16.21 2.28 3.47 5.52 4.87.77.33 1.37.53 1.84.68.77.24 1.48.21 2.03.13.62-.09 1.92-.78 2.19-1.54.27-.75.27-1.4.19-1.54-.08-.13-.29-.21-.62-.37Z"/></svg>

@@ -2,41 +2,35 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
+use App\Support\SiteContent;
 
-class BrandSetting extends Model
+/**
+ * Marca del sitio: ícono de la pestaña, logo de la pantalla de elección y WhatsApp. Ya no es una tabla propia: los
+ * valores se editan en Admin → Contenido de la tienda (WhatsApp) y Admin → Banners (ícono y logo) y viven en
+ * App\Support\SiteContent. La clase conserva los métodos que usan las vistas.
+ */
+class BrandSetting
 {
-    private const CACHE_KEY = 'brand_setting.current';
-
-    protected $fillable = [
-        'logo_path',
-        'icon_path',
-        'whatsapp_number',
-        'whatsapp_message',
-    ];
-
     public const WHATSAPP_DEFAULT_MESSAGE = 'Hola Overshark, quiero información sobre sus productos.';
-
-    protected static function booted(): void
-    {
-        static::saved(fn () => Cache::forget(self::CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::CACHE_KEY));
-    }
 
     public static function current(): self
     {
-        return Cache::rememberForever(self::CACHE_KEY, fn () => static::query()->firstOrCreate([]));
+        return new self;
     }
 
     public function logoUrl(): ?string
     {
-        return $this->publicUrl($this->logo_path);
+        return SiteContent::imageUrl('site_logo');
     }
 
     public function iconUrl(): ?string
     {
-        return $this->publicUrl($this->icon_path);
+        return SiteContent::imageUrl('site_icon');
+    }
+
+    private function number(): string
+    {
+        return (string) SiteContent::get('contacto.whatsapp', '');
     }
 
     /**
@@ -45,7 +39,7 @@ class BrandSetting extends Model
      */
     public function whatsappUrl(): ?string
     {
-        $digits = preg_replace('/\D+/', '', (string) $this->whatsapp_number);
+        $digits = preg_replace('/\D+/', '', $this->number());
 
         if (strlen($digits) === 9 && str_starts_with($digits, '9')) {
             $digits = '51'.$digits;
@@ -55,7 +49,7 @@ class BrandSetting extends Model
             return null;
         }
 
-        return 'https://wa.me/'.$digits.'?text='.rawurlencode($this->whatsapp_message ?: self::WHATSAPP_DEFAULT_MESSAGE);
+        return 'https://wa.me/'.$digits.'?text='.rawurlencode(SiteContent::get('contacto.whatsapp_message') ?: self::WHATSAPP_DEFAULT_MESSAGE);
     }
 
     /** Número para mostrar («+51 957 249 042»); null si no hay un número válido. */
@@ -65,7 +59,7 @@ class BrandSetting extends Model
             return null;
         }
 
-        $digits = preg_replace('/\D+/', '', (string) $this->whatsapp_number);
+        $digits = preg_replace('/\D+/', '', $this->number());
 
         if (strlen($digits) === 9) {
             $digits = '51'.$digits;
@@ -74,10 +68,5 @@ class BrandSetting extends Model
         return str_starts_with($digits, '51') && strlen($digits) === 11
             ? '+51 '.implode(' ', str_split(substr($digits, 2), 3))
             : '+'.$digits;
-    }
-
-    private function publicUrl(?string $path): ?string
-    {
-        return $path ? '/storage/'.ltrim($path, '/') : null;
     }
 }

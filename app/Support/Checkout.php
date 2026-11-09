@@ -66,6 +66,12 @@ class Checkout
     // Yape: el QR está generado y se espera la confirmación del pago (vence a los PAYMENTS_QR_MINUTES).
     public const STATUS_AWAITING_QR = 'Esperando pago';
 
+    // Contraentrega sin nada que cobrar en línea (recojo en almacén): el pedido ya está confirmado y se cobra al entregar.
+    public const STATUS_COD = 'Contraentrega';
+
+    // Pedidos que el equipo debe preparar y enviar: el pago ya está resuelto (en línea) o se cobra al entregar.
+    public const PREPARATION_STATUSES = [self::STATUS_PAID, self::STATUS_DEPOSIT_PAID, self::STATUS_COD];
+
     public const STATUS_CANCELLED = 'Cancelado';
 
     public const CASH_ON_DELIVERY = 'contraentrega';

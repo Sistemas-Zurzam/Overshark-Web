@@ -1,60 +1,34 @@
-{{-- Inventario visual de la tienda (Admin → Banners): las imágenes fijas, que se reemplazan aquí, y lo que se administra en otros módulos.
-     $inventory = ['fixed' => grupos de App\Support\SiteContent::IMAGES, 'elsewhere' => fuentes de otros módulos]. --}}
+{{-- Inventario visual de la tienda (Admin → Banners). Sigue a la pestaña de marca elegida:
+     $inventory = ['fixed' => imágenes de esa marca, 'shared' => imágenes de toda la tienda, 'elsewhere' => fuentes de otros módulos]. --}}
 <section class="flex flex-col rounded-sm border border-admin-border bg-admin-surface" id="imagenes-fijas">
     <div class="border-b border-admin-border px-5 py-4">
-        <h2 class="font-admin-display text-xl font-black uppercase leading-none text-admin-text">Imágenes fijas de la tienda</h2>
+        <h2 class="font-admin-display text-xl font-black uppercase leading-none text-admin-text">Imágenes fijas · {{ $selectedBrand?->name ?? 'Marca' }}</h2>
         <p class="mt-1.5 max-w-3xl text-sm text-admin-text-secondary">
-            Las fotos que la tienda trae de fábrica: portadas, promos, categorías, telas y más. Reemplaza cualquiera y se cambia en todas
+            Las fotos que la tienda trae de fábrica para esta marca: portada, promos, categorías, telas y más. Reemplaza cualquiera y se cambia en todas
             las páginas donde aparece; con «Restaurar» vuelve la original. PNG, JPG o WEBP de hasta 8 MB (se optimizan solas).
         </p>
     </div>
 
     <div class="flex flex-col gap-6 p-5">
-        @foreach ($inventory['fixed'] as $group)
-            <div class="flex flex-col gap-3">
-                <div>
-                    <h3 class="text-sm font-extrabold uppercase tracking-[1px] text-admin-text">{{ $group['title'] }}</h3>
-                    @if ($group['where']) <p class="text-xs text-admin-text-secondary">{{ $group['where'] }}</p> @endif
-                </div>
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                    @foreach ($group['items'] as $image)
-                        <div class="flex flex-col overflow-hidden rounded-sm border border-admin-border">
-                            <div class="grid h-36 place-items-center bg-admin-subtle">
-                                @if ($image['url'])
-                                    <img src="{{ $image['url'] }}" alt="" loading="lazy" class="size-full object-cover">
-                                @else
-                                    <span class="text-xs text-admin-text-muted">Sin imagen</span>
-                                @endif
-                            </div>
-                            <div class="flex flex-1 flex-col gap-2 p-3">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="text-[13px] font-bold leading-4 text-admin-text">{{ $image['label'] }}</p>
-                                    <x-admin.badge :tone="$image['custom'] ? 'info' : 'neutral'" :label="$image['custom'] ? 'Reemplazada' : 'Original'" />
-                                </div>
-                                <div class="mt-auto flex items-center gap-2">
-                                    <form action="{{ route('admin.banners.images', $image['key']) }}" method="POST" enctype="multipart/form-data" class="flex-1">
-                                        @csrf
-                                        <label class="block cursor-pointer border border-admin-border-strong bg-admin-surface px-3 py-2 text-center text-xs font-extrabold uppercase tracking-[1px] text-admin-text hover:bg-admin-hover">
-                                            Reemplazar
-                                            <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" class="sr-only" onchange="this.form.submit()">
-                                        </label>
-                                    </form>
-                                    @if ($image['custom'])
-                                        <form action="{{ route('admin.banners.images', $image['key']) }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="restore" value="1">
-                                            <button type="submit" class="px-2 py-2 text-xs font-extrabold uppercase tracking-[1px] text-admin-danger hover:underline">Restaurar</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endforeach
+        @forelse ($inventory['fixed'] as $group)
+            @include('admin.banners._image-groups', ['groups' => [$group]])
+        @empty
+            <p class="text-sm text-admin-text-secondary">Esta marca no tiene imágenes fijas propias. Las de toda la tienda están más abajo.</p>
+        @endforelse
     </div>
 </section>
+
+@if ($inventory['shared']->isNotEmpty())
+    <section class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
+        <div class="border-b border-admin-border px-5 py-4">
+            <h2 class="font-admin-display text-xl font-black uppercase leading-none text-admin-text">Compartido por toda la tienda</h2>
+            <p class="mt-1.5 max-w-3xl text-sm text-admin-text-secondary">Estas imágenes no pertenecen a una sola marca: se ven igual en Overshark, Overshark Girls y Bravos.</p>
+        </div>
+        <div class="flex flex-col gap-6 p-5">
+            @include('admin.banners._image-groups', ['groups' => $inventory['shared']])
+        </div>
+    </section>
+@endif
 
 <section class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
     <div class="border-b border-admin-border px-5 py-4">

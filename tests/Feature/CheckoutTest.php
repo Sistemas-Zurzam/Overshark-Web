@@ -168,10 +168,10 @@ class CheckoutTest extends TestCase
 
         $this->get(route('web.checkout.done', $order))->assertOk()->assertSee('ESTAMOS CONFIRMANDO TU PAGO')->assertSee($order->number_zazu);
 
-        // El admin confirma el pago y la clienta ve el pedido confirmado.
+        // El panel no confirma pagos: lo hace el sistema de pago (aquí, la confirmación automática) y la clienta ve el pedido confirmado.
         $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
         $this->get(route('admin.pedidos.index'))->assertOk()->assertSee($order->number_zazu);
-        $this->patch(route('admin.pedidos.status', $order), ['status' => Checkout::STATUS_PAID])->assertRedirect();
+        \App\Services\Orders\OrderPayments::confirm($order);
         $this->get(route('web.checkout.done', $order))->assertOk()->assertSee('¡TU PEDIDO ESTÁ CONFIRMADO!');
     }
 

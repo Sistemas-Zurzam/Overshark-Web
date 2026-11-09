@@ -34,7 +34,7 @@
             <div class="flex items-center gap-6 overflow-x-auto border-b border-admin-border px-5">
                 @foreach ([
                     ['key' => '', 'label' => 'Todos', 'count' => $counts['all'], 'pill' => 'bg-admin-hover text-admin-text-secondary'],
-                ] + collect($statusGroups)->mapWithKeys(fn ($g, $key) => [$key => ['key' => $key, 'label' => $g['label'], 'count' => $counts[$key], 'pill' => match ($g['tone']) {
+                ] + collect($statusGroups)->filter(fn ($g) => $g['tab'] ?? true)->mapWithKeys(fn ($g, $key) => [$key => ['key' => $key, 'label' => $g['label'], 'count' => $counts[$key], 'pill' => match ($g['tone']) {
                     'warning' => 'bg-admin-warning-soft text-admin-warning',
                     'success' => 'bg-admin-success-soft text-admin-success',
                     'info' => 'bg-admin-accent-soft text-admin-accent',
@@ -109,16 +109,7 @@
                         <div class="w-45 pl-6"><x-admin.badge :tone="$group['tone'] ?? 'neutral'" :label="$group['label'] ?? $order->statusOrder?->name" /></div>
                         <div class="w-27.5 text-[13px] text-admin-text-secondary">{{ $order->created_at?->format('d/m/Y') }}</div>
                         <div class="flex w-31.5 justify-end">
-                            @if ($order->status_group === 'por_confirmar')
-                                <form action="{{ route('admin.pedidos.status', $order) }}" method="POST">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="{{ \App\Support\Checkout::STATUS_PAID }}">
-                                    <button type="submit" class="border border-admin-border-strong bg-admin-surface px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-text">Confirmar</button>
-                                </form>
-                            @else
-                                <a href="{{ route('admin.pedidos.show', $order) }}" class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">Ver</a>
-                            @endif
+                            <a href="{{ route('admin.pedidos.show', $order) }}" class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">Ver</a>
                         </div>
                     </div>
                 @empty

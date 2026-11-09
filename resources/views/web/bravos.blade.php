@@ -18,6 +18,9 @@
 
 @section('content')
     <div class="os-hh os-bravos">
+        @if (($banners ?? collect())->isNotEmpty())
+            @include('web.partials.banner-carousel', ['banners' => $banners, 'label' => 'Bravos', 'catalogUrl' => $shop(['orden' => 'populares'])])
+        @else
         {{-- Hero · tipografía monumental --}}
         <section class="relative isolate overflow-hidden bg-[#050505] text-white" aria-labelledby="bravos-title">
             <img src="{{ $img('hero.webp') }}" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover" fetchpriority="high">
@@ -37,6 +40,7 @@
                 <p class="relative z-20 mt-8 flex h-10 w-full max-w-[334px] items-center justify-center bg-[#ffdb00] text-[13px] font-extrabold text-[#050505] lg:absolute lg:left-[6.67%] lg:top-[86.2%] lg:mt-0">{{ mb_strtoupper(\App\Support\SiteContent::t('Envío desde {desde} a todo el Perú')) }}</p>
             </div>
         </section>
+        @endif
 
         {{-- Banda de marca --}}
         <div class="overflow-hidden bg-[#050505] p-6 text-white" aria-hidden="true">

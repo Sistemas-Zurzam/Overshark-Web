@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BrandController;
-use App\Http\Controllers\Admin\BrandSettingController;
 use App\Http\Controllers\Admin\CartSuggestionController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\CourierController;
@@ -138,12 +137,11 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/marcas', [BrandController::class, 'store'])->name('brands.store');
     Route::patch('/marcas/{brand}', [BrandController::class, 'update'])->name('brands.update');
     Route::patch('/marcas/{brand}/estado', [BrandController::class, 'toggle'])->name('brands.toggle');
-    Route::get('/identidad-visual', [BrandSettingController::class, 'edit'])->name('brand.edit');
+    // «Identidad visual» ya no existe: el WhatsApp está en Contenido de la tienda y el logo y el ícono en Banners.
+    Route::redirect('/identidad-visual', '/admin/contenido-tienda');
     Route::get('/pagina-nosotros', [\App\Http\Controllers\Admin\AboutPageController::class, 'edit'])->name('about.edit');
     Route::put('/pagina-nosotros', [\App\Http\Controllers\Admin\AboutPageController::class, 'update'])->name('about.update');
     Route::post('/pagina-nosotros/restaurar', [\App\Http\Controllers\Admin\AboutPageController::class, 'reset'])->name('about.reset');
-    Route::put('/identidad-visual', [BrandSettingController::class, 'update'])->name('brand.update');
-    Route::put('/identidad-visual/whatsapp', [BrandSettingController::class, 'updateWhatsapp'])->name('brand.whatsapp');
 
     Route::post('/refresh-token', [AuthController::class, 'refresh'])->name('token.refresh');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');

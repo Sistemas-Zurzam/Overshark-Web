@@ -2,7 +2,7 @@
 @php
     $name = $order->statusOrder?->name ?? 'Recibido';
     $tone = match (true) {
-        in_array($name, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, 'Enviado', 'Entregado'], true) => 'bg-[#e3f4ec] text-[#147d5b]',
+        in_array($name, [\App\Support\Checkout::STATUS_PAID, \App\Support\Checkout::STATUS_DEPOSIT_PAID, \App\Support\Checkout::STATUS_COD, 'Enviado', 'Entregado'], true) => 'bg-[#e3f4ec] text-[#147d5b]',
         $name === \App\Support\Checkout::STATUS_CANCELLED => 'bg-[#fdecec] text-[#a3261c]',
         default => 'bg-[#e6eefc] text-[#2467cf]',
     };
