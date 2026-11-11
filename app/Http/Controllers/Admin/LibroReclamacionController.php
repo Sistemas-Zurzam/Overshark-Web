@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LibroReclamacion;
 use Illuminate\Http\RedirectResponse;
+use App\Support\CsvSafe;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
@@ -93,9 +94,9 @@ class LibroReclamacionController extends Controller
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Código', 'Consumidor', 'Documento', 'Email', 'Teléfono', 'Tipo', 'Pedido', 'Motivo', 'Estado', 'Plazo legal', 'Respondido', 'Registrado']);
+            CsvSafe::put($handle, ['Código', 'Consumidor', 'Documento', 'Email', 'Teléfono', 'Tipo', 'Pedido', 'Motivo', 'Estado', 'Plazo legal', 'Respondido', 'Registrado']);
             foreach ($rows as $reclamo) {
-                fputcsv($handle, [
+                CsvSafe::put($handle, [
                     '#'.str_pad((string) $reclamo->id, 6, '0', STR_PAD_LEFT),
                     $reclamo->consumer_name,
                     $reclamo->document_type.' '.$reclamo->document_number,

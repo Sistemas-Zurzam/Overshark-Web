@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => AuthenticateJwt::class,
         ]);
 
+        // Encabezados de seguridad en toda la web, el panel incluido.
+        $middleware->web(append: [\App\Http\Middleware\SecurityHeaders::class]);
+
         // Compradores ya conectados que abren /iniciar-sesion o /registro van a su cuenta.
         $middleware->redirectUsersTo(fn () => route('customer.account'));
     })

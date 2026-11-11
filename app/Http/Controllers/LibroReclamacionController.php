@@ -30,6 +30,11 @@ class LibroReclamacionController extends Controller
     /** Valida el formulario y muestra la hoja para revisarla antes de enviarla. */
     public function review(Request $request): RedirectResponse
     {
+        // Campo trampa: los bots lo llenan, las personas no lo ven. No se guarda nada.
+        if (filled($request->input('website'))) {
+            return redirect()->route('web.claims.create');
+        }
+
         $required = 'Completa este campo para continuar.';
 
         $data = $request->validate([

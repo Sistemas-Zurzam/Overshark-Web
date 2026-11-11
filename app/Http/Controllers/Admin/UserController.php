@@ -97,7 +97,8 @@ class UserController extends Controller
 
         $allBrands = $request->boolean('all_brands_access');
 
-        $user->update(['role_id' => $validated['role_id'], 'all_brands_access' => $allBrands]);
+        // Al cambiar el acceso se cierran sus sesiones abiertas (jwt_version): vuelve a entrar con los permisos nuevos.
+        $user->forceFill(['role_id' => $validated['role_id'], 'all_brands_access' => $allBrands, 'jwt_version' => $user->jwt_version + 1])->save();
         $user->brands()->sync($allBrands ? [] : ($validated['brand_ids'] ?? []));
 
         return back()->with('status', 'Acceso actualizado.');

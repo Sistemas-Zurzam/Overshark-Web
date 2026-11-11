@@ -39,7 +39,8 @@ class PasswordResetController extends Controller
         $status = Password::broker('users')->reset(
             ['email' => mb_strtolower(trim($data['email'])), 'password' => $data['password'], 'password_confirmation' => $data['password'], 'token' => $data['token']],
             function (User $user, string $password): void {
-                $user->forceFill(['password' => $password, 'invited_at' => null])->save();
+                // Subir jwt_version cierra las sesiones de administrador que hubieran quedado abiertas con la contraseña anterior.
+                $user->forceFill(['password' => $password, 'invited_at' => null, 'jwt_version' => $user->jwt_version + 1])->save();
                 event(new PasswordReset($user));
             },
         );

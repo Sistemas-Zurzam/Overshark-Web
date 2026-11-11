@@ -8,6 +8,7 @@ use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Brand;
 use Illuminate\Http\RedirectResponse;
+use App\Support\CsvSafe;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
@@ -111,9 +112,9 @@ class ProductoController extends Controller
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Producto', 'Variantes', 'Marca', 'Empresa', 'Precio min', 'Precio max', 'Stock', 'Estado', 'Actualizado']);
+            CsvSafe::put($handle, ['Producto', 'Variantes', 'Marca', 'Empresa', 'Precio min', 'Precio max', 'Stock', 'Estado', 'Actualizado']);
             foreach ($rows as $group) {
-                fputcsv($handle, [
+                CsvSafe::put($handle, [
                     $group->name,
                     $group->variant_count,
                     $group->marca ?: 'Sin asignar',

@@ -18,6 +18,10 @@
     <form method="POST" action="{{ route('web.claims.submit') }}" enctype="multipart/form-data" novalidate class="flex flex-col gap-7">
         @csrf
 
+        <div class="hidden" aria-hidden="true">
+            <label>No llenes este campo <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+
         <h2 class="text-[21px] font-extrabold leading-[1.55]">1. Datos del consumidor</h2>
 
         <x-claims.field name="consumer_name" label="Nombres y apellidos *" placeholder="Escribe tu nombre completo" autocomplete="name" />

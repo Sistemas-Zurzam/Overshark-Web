@@ -41,10 +41,15 @@ class Producto extends Model
      * empresas (BOX PRIME) quedaron guardados de sincronizaciones anteriores y no deben verse en el admin. Un
      * producto sin empresa se mantiene; sin lista configurada no se filtra nada.
      */
-    /** Productos que el admin no ocultó de la tienda (Admin → Productos → «Ocultar de la tienda»). */
+    /**
+     * Lo que la tienda pública puede vender: productos de las empresas de ZAZU_COMPANIES (Overshark y Bravos; nunca los de
+     * BOX PRIME u otras) y que el admin no ocultó (Admin → Productos → «Ocultar de la tienda»). Se aplica en cada consulta
+     * del catálogo y en el carrito, así que no depende de que la sincronización con Zazu ya haya puesto en 0 el stock de
+     * lo que no se vende.
+     */
     public function scopeInStore(Builder $query): Builder
     {
-        return $query->where('productos.oculto', false);
+        return $query->where('productos.oculto', false)->soldByStore();
     }
 
     /**
@@ -76,9 +81,9 @@ class Producto extends Model
         }
 
         return $query->where(function (Builder $query) use ($allowed): void {
-            $query->whereNull('empresa_nombre')->orWhere('empresa_nombre', '');
+            $query->whereNull('productos.empresa_nombre')->orWhere('productos.empresa_nombre', '');
             foreach ($allowed as $part) {
-                $query->orWhereRaw('UPPER(empresa_nombre) LIKE ?', ['%'.mb_strtoupper($part).'%']);
+                $query->orWhereRaw('UPPER(productos.empresa_nombre) LIKE ?', ['%'.mb_strtoupper($part).'%']);
             }
         });
     }

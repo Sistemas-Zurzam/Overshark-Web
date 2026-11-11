@@ -13,6 +13,9 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    /** Hash de relleno (bcrypt, costo 12) que no corresponde a ninguna contraseña real. */
+    private const DUMMY_HASH = '$2y$12$OgQtQc2UE25J7llDqiGbzupkGa3NbKLwckpP7Ixt4SrRfASc88bH.';
+
     public function create(): View
     {
         return view('admin.auth.login');
@@ -27,7 +30,10 @@ class AuthController extends Controller
 
         $user = User::query()->where('email', $credentials['email'])->first();
 
-        if (! $user || ! $user->isAdmin() || ! Hash::check($credentials['password'], $user->password)) {
+        // Siempre se compara una contraseña, exista o no el correo: así el tiempo de respuesta no delata qué correos son de administradores.
+        $passwordMatches = Hash::check($credentials['password'], $user?->password ?? self::DUMMY_HASH);
+
+        if (! $user || ! $user->isAdmin() || ! $passwordMatches) {
             throw ValidationException::withMessages([
                 'email' => 'Las credenciales no son validas.',
             ]);

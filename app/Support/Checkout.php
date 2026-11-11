@@ -180,8 +180,8 @@ class Checkout
 
                 $needed = collect($item['selections'] ?? [])->countBy('variant_id');
                 foreach ($needed as $variantId => $units) {
-                    $variant = Producto::query()->find($variantId);
-                    if (! $variant || $variant->oculto || (int) $variant->stock < $units * $qty) {
+                    $variant = Producto::query()->inStore()->find($variantId);
+                    if (! $variant || (int) $variant->stock < $units * $qty) {
                         return ['lines' => $lines, 'error' => 'Una prenda del combo "'.$combo->name.'" ya no tiene stock suficiente.'];
                     }
                     $demand[(int) $variantId] = ($demand[(int) $variantId] ?? 0) + $units * $qty;
@@ -192,8 +192,9 @@ class Checkout
                 continue;
             }
 
-            $variant = Producto::query()->find($item['variant_id'] ?? 0);
-            if (! $variant || $variant->oculto || (float) $variant->price <= 0 || (int) $variant->stock < $qty) {
+            // inStore(): un producto de otra empresa u oculto que ya estuviera en el carrito no se puede comprar.
+            $variant = Producto::query()->inStore()->find($item['variant_id'] ?? 0);
+            if (! $variant || (float) $variant->price <= 0 || (int) $variant->stock < $qty) {
                 $name = ProductName::title((string) ($item['producto'] ?? 'Una prenda'));
 
                 return ['lines' => $lines, 'error' => "{$name} ({$item['color']} · {$item['talla']}) ya no tiene stock suficiente. Ajusta la cantidad o quítala del carrito."];

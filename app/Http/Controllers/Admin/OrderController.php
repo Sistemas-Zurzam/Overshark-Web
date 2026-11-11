@@ -13,6 +13,7 @@ use App\Services\Orders\OrderFulfillment;
 use App\Services\Orders\OrderPayments;
 use App\Support\Checkout;
 use Illuminate\Http\RedirectResponse;
+use App\Support\CsvSafe;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -93,10 +94,10 @@ class OrderController extends Controller
         return response()->streamDownload(function () use ($orders): void {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Pedido', 'Cliente', 'Email', 'Marca', 'Medio de pago', 'Total', 'Estado', 'Fecha']);
+            CsvSafe::put($handle, ['Pedido', 'Cliente', 'Email', 'Marca', 'Medio de pago', 'Total', 'Estado', 'Fecha']);
             foreach ($orders as $order) {
                 $group = self::STATUS_GROUPS[$order->status_group] ?? null;
-                fputcsv($handle, [
+                CsvSafe::put($handle, [
                     $order->displayNumber(),
                     $order->cliente_name,
                     $order->email,

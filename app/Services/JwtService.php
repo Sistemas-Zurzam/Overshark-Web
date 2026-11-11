@@ -107,7 +107,17 @@ class JwtService
             throw new RuntimeException('JWT_SECRET must contain at least 32 characters.');
         }
 
+        // El valor de ejemplo de .env.example no es un secreto: con él cualquiera podría fabricar una sesión de administrador.
+        if (! app()->environment(['local', 'testing']) && $this->isWeak($secret)) {
+            throw new RuntimeException('JWT_SECRET sigue siendo el valor de ejemplo o es demasiado simple: genera uno propio (php -r "echo bin2hex(random_bytes(32));").');
+        }
+
         return $secret;
+    }
+
+    private function isWeak(string $secret): bool
+    {
+        return str_contains(strtolower($secret), 'change-me') || count(array_unique(str_split($secret))) < 12;
     }
 
     private function base64UrlEncode(string $value): string

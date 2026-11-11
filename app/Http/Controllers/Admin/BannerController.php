@@ -75,6 +75,12 @@ class BannerController extends Controller
             'image.max' => $isBrandMark ? 'El archivo puede pesar como máximo 4 MB.' : 'La imagen puede pesar como máximo 8 MB.',
         ]);
 
+        // Un SVG puede llevar scripts que se ejecutan al abrir su dirección: se rechazan los que traen código activo.
+        if ($isBrandMark && strtolower($request->file('image')->getClientOriginalExtension()) === 'svg'
+            && preg_match('/<\s*(script|iframe|object|embed|foreignObject)\b|\son\w+\s*=|javascript:/i', (string) file_get_contents($request->file('image')->getRealPath()))) {
+            return back()->withErrors(['image' => 'El SVG contiene código activo (script o eventos) y no se puede subir. Usa un PNG o un SVG limpio.']);
+        }
+
         SiteContent::replaceImage($key, $request->file('image'));
 
         return back()->with('status', 'Imagen actualizada.');
@@ -243,13 +249,16 @@ class BannerController extends Controller
             'buttons' => ['nullable', 'array', 'max:2'],
             'buttons.*.enabled' => ['nullable', 'boolean'],
             'buttons.*.text' => ['nullable', 'string', 'max:40'],
-            'buttons.*.url' => ['nullable', 'string', 'max:255'],
+            'buttons.*.url' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/|#)/i'],
             'buttons.*.bg_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'buttons.*.text_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'buttons.*.shape' => ['nullable', 'in:square,rounded,pill'],
             'buttons.*.x' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'buttons.*.y' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'buttons.*.size' => ['nullable', 'in:sm,md,lg,xl'],
+        ], [
+            // Sin esta regla un enlace "javascript:..." se ejecutaría al hacer clic en el botón de la portada.
+            'buttons.*.url.regex' => 'El enlace del botón debe empezar con https://, http://, / o #.',
         ]);
     }
 

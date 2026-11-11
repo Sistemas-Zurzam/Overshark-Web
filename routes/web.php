@@ -527,7 +527,7 @@ Route::post('/checkout/comprobante', function (Request $request) {
         'name' => $validated['payment_receipt']->getClientOriginalName(),
         'size' => $validated['payment_receipt']->getSize(),
     ]);
-})->name('web.checkout.receipt');
+})->middleware('throttle:6,1')->name('web.checkout.receipt');
 
 // Agencias Shalom (tabla courier) para "Recojo en agencia Shalom": las de la provincia elegida (o del
 // departamento si la provincia no tiene), primero las del distrito de la clienta. ?q= filtra por nombre,
@@ -612,10 +612,10 @@ Route::view('/terminos-y-condiciones', 'web.legal-page', ['document' => 'terms']
 Route::view('/politica-de-privacidad', 'web.legal-page', ['document' => 'privacy'])->name('web.privacy');
 
 Route::get('/libro-de-reclamaciones', [LibroReclamacionController::class, 'create'])->name('web.claims.create');
-Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'review'])->name('web.claims.submit');
+Route::post('/libro-de-reclamaciones', [LibroReclamacionController::class, 'review'])->middleware('throttle:10,1')->name('web.claims.submit');
 Route::get('/libro-de-reclamaciones/revisar', [LibroReclamacionController::class, 'showReview'])->name('web.claims.review');
 Route::get('/libro-de-reclamaciones/editar', [LibroReclamacionController::class, 'edit'])->name('web.claims.edit');
-Route::post('/libro-de-reclamaciones/confirmar', [LibroReclamacionController::class, 'store'])->name('web.claims.store');
+Route::post('/libro-de-reclamaciones/confirmar', [LibroReclamacionController::class, 'store'])->middleware('throttle:6,1')->name('web.claims.store');
 Route::get('/libro-de-reclamaciones/no-se-pudo-enviar', [LibroReclamacionController::class, 'error'])->name('web.claims.error');
 Route::get('/libro-de-reclamaciones/solicitud-registrada', [LibroReclamacionController::class, 'registered'])->name('web.claims.registered');
 Route::get('/libro-de-reclamaciones/constancia', [LibroReclamacionController::class, 'receipt'])->name('web.claims.receipt');

@@ -3,8 +3,9 @@
 namespace App\Services\Payments;
 
 /**
- * Modo simulación (PAYMENTS_SIMULATE=true, nunca en producción): permite recorrer el checkout completo sin
- * llaves ni dinero real.
+ * Modo simulación (PAYMENTS_SIMULATE=true): permite recorrer el checkout completo sin llaves ni dinero real.
+ * Solo funciona en los entornos "local" y "testing" (lista permitida): con cualquier otro valor de APP_ENV —production,
+ * staging, prod o uno mal escrito— queda apagado, porque encendido cualquiera podría "pagar" sus pedidos sin pagar.
  *  - Tarjeta: el navegador no llama a Culqi y manda un token de prueba. 4000 0000 0000 0002 se rechaza; el
  *    resto de tarjetas válidas se aprueba.
  *  - Yape: se muestra un QR de prueba y un botón "Simular pago" en la página del pedido.
@@ -18,7 +19,7 @@ class PaymentSimulator
 
     public static function enabled(): bool
     {
-        return (bool) config('services.payments.simulate') && ! app()->isProduction();
+        return (bool) config('services.payments.simulate') && app()->environment(['local', 'testing']);
     }
 
     public static function isSimulatedToken(string $token): bool
