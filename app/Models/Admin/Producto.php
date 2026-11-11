@@ -127,6 +127,21 @@ class Producto extends Model
                 ->whereRaw('UPPER(TRIM(empresa_nombre)) = ?', [$name])));
     }
 
+    /**
+     * Lo contrario de ofBrand(): productos que NO son de esa marca. Con marca y empresa vacías (datos antiguos) el producto
+     * se queda, a diferencia de un NOT sobre ofBrand(), que con valores nulos lo descartaría.
+     */
+    public function scopeExceptBrand(Builder $query, string $brand): Builder
+    {
+        $name = mb_strtoupper(trim($brand));
+
+        return $query
+            ->whereRaw("UPPER(TRIM(COALESCE(productos.marca, ''))) <> ?", [$name])
+            ->where(fn (Builder $inner) => $inner
+                ->whereRaw("TRIM(COALESCE(productos.marca, '')) <> ''")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(productos.empresa_nombre, ''))) <> ?", [$name]));
+    }
+
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);

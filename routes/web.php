@@ -717,7 +717,7 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         ->where('stock', '>', 0)->withColorPhoto()
         ->where('name', '!=', $producto->name)
         // Recomendaciones de la misma línea (Overshark Girls u Overshark hombre).
-        ->tap(fn ($query) => GirlsHome::isGirls($producto->name, $producto->marca) ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query));
+        ->tap(fn ($query) => GirlsHome::isGirls($producto->name, $producto->marca) ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query)->exceptBrand('BRAVOS'));
 
     if ($producto->categoria_id) {
         $recommendedProductsQuery->where('categoria_id', $producto->categoria_id);
@@ -789,7 +789,8 @@ Route::get('/buscar', function (Request $request) {
         ->where('stock', '>', 0)->withColorPhoto()
         ->when($marca !== '', fn ($query) => $query->ofBrand($marca))
         ->when($marca === '' && $line === 'mujer', fn ($query) => GirlsHome::onlyGirls($query))
-        ->when($marca === '' && $line === 'hombre' && $search === '', fn ($query) => GirlsHome::exceptGirls($query));
+        // La línea Hombre es Overshark: sin Girls ni Bravos, que tienen su propia tienda. Una búsqueda concreta sí los encuentra.
+        ->when($marca === '' && $line === 'hombre' && $search === '', fn ($query) => GirlsHome::exceptGirls($query)->exceptBrand('BRAVOS'));
 
     $sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
     $sizes = $available()->whereNotNull('talla')->distinct()->pluck('talla')
@@ -922,7 +923,7 @@ Route::get('/', function (Request $request) {
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)->withColorPhoto()
-            ->tap(fn ($query) => $storeLine === 'mujer' ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query))
+            ->tap(fn ($query) => $storeLine === 'mujer' ? GirlsHome::onlyGirls($query) : GirlsHome::exceptGirls($query)->exceptBrand('BRAVOS'))
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('total_stock')
             ->limit(15)
@@ -950,7 +951,7 @@ Route::get('/', function (Request $request) {
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, SUM(stock) as total_stock, MIN(price) as min_price, MAX(imagen) as imagen')
             ->where('price', '>', 0)
             ->where('stock', '>', 0)->withColorPhoto()
-            ->tap(fn ($query) => GirlsHome::exceptGirls($query))
+            ->tap(fn ($query) => GirlsHome::exceptGirls($query)->exceptBrand('BRAVOS'))
             ->groupBy('zazu_company_id', 'name')
             ->orderByDesc('total_stock')
             ->limit(8)
