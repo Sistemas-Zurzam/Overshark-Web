@@ -19,6 +19,32 @@ class ProductoController extends Controller
 {
     private const BULK_IMAGES_SESSION_KEY = 'admin.bulk_product_images.v2';
 
+    /**
+     * Palabra con la que un nombre de archivo puede cerrar el color para indicar la toma ("01-perla-frente.png"):
+     * no es parte del color y fija el orden de las fotos de ese color en la galería (frente primero).
+     */
+    private const PHOTO_VIEWS = [
+        'FRENTE' => 0, 'FRONT' => 0,
+        'LATERAL' => 1, 'PERFIL' => 1, 'COSTADO' => 1,
+        'ESPALDA' => 2, 'ATRAS' => 2, 'BACK' => 2, 'TRASERA' => 2,
+        'DETALLE' => 3, 'DETAIL' => 3, 'ZOOM' => 3,
+    ];
+
+    /** @return array{0: string, 1: ?string, 2: ?int} color sin la toma, la toma (o null) y su lugar en la galería */
+    private static function splitPhotoView(string $text): array
+    {
+        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $last = Str::upper(Str::ascii((string) end($words)));
+
+        if (count($words) > 1 && array_key_exists($last, self::PHOTO_VIEWS)) {
+            array_pop($words);
+
+            return [implode(' ', $words), mb_strtolower($last), self::PHOTO_VIEWS[$last]];
+        }
+
+        return [implode(' ', $words), null, null];
+    }
+
     /** Mensajes legibles para las subidas de imágenes (sin archivos de idioma se verían las claves). */
     private const UPLOAD_MESSAGES = [
         'uploaded' => 'Una imagen no se pudo subir: pesa más de lo que permite el servidor. Prueba con fotos más livianas o menos fotos a la vez.',
@@ -288,6 +314,7 @@ class ProductoController extends Controller
             'images' => ['required', 'array', 'min:1', 'max:20'],
             'images.*' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
             'product' => ['nullable', 'string', 'max:255'],
+            'append' => ['nullable', 'boolean'],
         ], [
             'images.required' => 'Selecciona al menos una imagen.',
             'images.max' => 'Puedes revisar hasta 20 imágenes por lote.',
@@ -308,11 +335,14 @@ class ProductoController extends Controller
             // "02 beige", "11-palo-rosa" (los guiones del color pasan a espacios).
             if ($forcedProduct !== '') {
                 $hasOrder = preg_match('/^(\d{1,3})[\s._-]+(.+)$/u', $stem, $match) === 1;
+                [$colorText, $view, $viewRank] = self::splitPhotoView(str_replace(['-', '_'], ' ', $hasOrder ? $match[2] : $stem));
 
                 return [
                     'product_name' => $forcedProduct,
-                    'color' => $normalize(str_replace(['-', '_'], ' ', $hasOrder ? $match[2] : $stem)),
+                    'color' => $normalize($colorText),
                     'order' => $hasOrder ? (int) $match[1] : null,
+                    'view' => $view,
+                    'view_rank' => $viewRank,
                     'invalid_parts' => false,
                 ];
             }
@@ -337,6 +367,9 @@ class ProductoController extends Controller
                 'product_name' => $productName,
                 'color' => $color,
                 'order' => $parsed['order'],
+                'view' => $parsed['view'] ?? null,
+                'view_rank' => $parsed['view_rank'] ?? null,
+                'existing' => 0,
                 'has_order' => $parsed['order'] !== null,
                 'matches' => 0,
                 'products' => [],
@@ -379,6 +412,12 @@ class ProductoController extends Controller
                 continue;
             }
 
+            // Fotos que ese color ya tiene en la galería: la revisión avisa cuántas se reemplazan (o a cuántas se suma).
+            if ($color !== null) {
+                $item['existing'] = count(ProductoColorImage::query()
+                    ->where('product_name', $products->first()->name)->where('color', $products->first()->color)->first()?->images ?? []);
+            }
+
             $safeExtension = $file->guessExtension() ?: 'img';
             $tempPath = $file->storeAs("bulk-product-images/{$token}", $index.'.'.$safeExtension, 'local');
             if (! $tempPath) {
@@ -408,12 +447,13 @@ class ProductoController extends Controller
         $colorGroups = collect($items)->filter(fn ($item) => $item['color'] !== null && empty($item['error']))
             ->groupBy(fn ($item) => $item['product_name'].'|'.$item['color']);
         foreach ($colorGroups as $group) {
-            $orders = $group->pluck('order');
+            // Una foto se distingue por su número y por su toma: "01-perla-frente" y "01-perla-espalda" son distintas.
+            $slots = $group->map(fn ($item) => ($item['view_rank'] ?? 'x').'|'.($item['order'] ?? 'x'));
             $groupError = $group->count() > 5
                 ? 'Máximo 5 imágenes por producto y color.'
-                : ($group->count() > 1 && $group->contains(fn ($item) => ! $item['has_order'])
-                    ? 'Numera cada imagen del color al subir varias, por ejemplo __01, __02.'
-                    : ($orders->count() !== $orders->unique()->count() ? 'Los números de imagen deben ser distintos.' : null));
+                : ($group->count() > 1 && $group->contains(fn ($item) => ! $item['has_order'] && empty($item['view']))
+                    ? 'Numera cada imagen del color al subir varias (por ejemplo 01-perla-frente, 01-perla-espalda) o indica la toma.'
+                    : ($slots->count() !== $slots->unique()->count() ? 'Dos fotos del mismo color tienen el mismo número y la misma toma.' : null));
             if ($groupError !== null) {
                 foreach ($group as $groupIndex => $groupItem) {
                     $items[$groupIndex]['error'] = $groupError;
@@ -425,7 +465,7 @@ class ProductoController extends Controller
             }
         }
 
-        $manifest = ['token' => $token, 'items' => $items];
+        $manifest = ['token' => $token, 'items' => $items, 'append' => $request->boolean('append')];
         session()->put(self::BULK_IMAGES_SESSION_KEY, $manifest);
 
         return redirect()->route('admin.productos.images.bulk')->with('preview_ready', true);
@@ -513,7 +553,8 @@ class ProductoController extends Controller
             $color = (string) $first['color'];
             $savedPaths = [];
             try {
-                $images = $images->sortBy(fn ($item) => $item['order'] ?? 0)->values();
+                // Galería del color: primero la toma (frente, lateral, espalda, detalle) y, dentro de ella, el número.
+                $images = $images->sortBy(fn ($item) => [$item['view_rank'] ?? 0, $item['order'] ?? 0])->values();
                 foreach ($images as $item) {
                     $savedPaths[] = ImageOptimizer::storeContents(Storage::disk('local')->get($item['temp_path']), 'productos/colores', pathinfo($item['temp_path'], PATHINFO_EXTENSION));
                 }
@@ -530,8 +571,19 @@ class ProductoController extends Controller
                     'product_name' => $catalogProduct->name,
                     'color' => $catalogProduct->color,
                 ]);
-                $oldPaths = $oldPaths->merge($record->images ?? []);
-                $record->images = $savedPaths;
+                if (! empty($manifest['append'])) {
+                    // Modo "agregar": las fotos de ahora se suman al final de las que ya tiene el color (máximo 5 en total).
+                    $current = array_values($record->images ?? []);
+
+                    if (count($current) + count($savedPaths) > 5) {
+                        throw new \RuntimeException('Con las fotos nuevas pasaría de 5 imágenes por color.');
+                    }
+
+                    $record->images = array_merge($current, $savedPaths);
+                } else {
+                    $oldPaths = $oldPaths->merge($record->images ?? []);
+                    $record->images = $savedPaths;
+                }
                 $record->save();
                 $updated++;
             } catch (\Throwable $exception) {

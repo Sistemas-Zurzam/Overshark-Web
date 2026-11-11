@@ -49,8 +49,12 @@
                         @foreach ($preview['items'] ?? [] as $item)
                             <tr class="align-top">
                                 <td class="px-6 py-4 font-semibold text-slate-800">{{ $item['filename'] }}</td>
-                                <td class="px-4 py-4"><span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{{ $item['product_name'] ?: '—' }}</span>@if (!empty($item['color']))<span class="mt-2 block text-xs font-bold text-blue-700">Color: {{ $item['color'] }}</span>@endif</td>
-                                <td class="px-4 py-4 text-xs font-semibold text-slate-600">{{ !empty($item['color']) ? 'Galería del color' : 'Imagen principal' }}</td>
+                                <td class="px-4 py-4"><span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{{ $item['product_name'] ?: '—' }}</span>@if (!empty($item['color']))<span class="mt-2 block text-xs font-bold text-blue-700">Color: {{ $item['color'] }}</span>@endif @if (!empty($item['view']))<span class="mt-1 block text-xs font-bold text-slate-500">Toma: {{ $item['view'] }}</span>@endif</td>
+                                <td class="px-4 py-4 text-xs font-semibold text-slate-600">{{ !empty($item['color']) ? 'Galería del color' : 'Imagen principal' }}
+                                    @if (!empty($item['color']) && ($item['existing'] ?? 0) > 0 && empty($item['error']))
+                                        <span class="mt-1 block font-bold {{ !empty($preview['append']) ? 'text-blue-700' : 'text-amber-700' }}">{{ !empty($preview['append']) ? 'Se suma a' : 'Reemplaza' }} {{ $item['existing'] }} {{ $item['existing'] === 1 ? 'foto actual' : 'fotos actuales' }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-4 text-slate-600">{{ $item['matches'] }}{{ $item['matches'] === 1 ? ' producto' : ' productos' }}
                                     @if (! empty($item['products']))<span class="mt-1 block max-w-md text-xs leading-5 text-slate-400">{{ implode(' · ', $item['products']) }}</span>@endif
                                 </td>
@@ -86,7 +90,11 @@
                             <option value="{{ $productName }}"></option>
                         @endforeach
                     </datalist>
-                    <p class="mb-4 text-xs leading-5 text-slate-500">Si lo eliges, los archivos solo llevan el orden y el color: <code>01-perla.png</code>, <code>02-beige.png</code>, <code>11-palo-rosa.png</code>. Si lo dejas vacío, cada nombre debe llevar el producto: <code>Camisero Pike__Perla__01.png</code>.</p>
+                    <p class="mb-4 text-xs leading-5 text-slate-500">Si lo eliges, los archivos solo llevan el orden y el color: <code>01-perla.png</code>, <code>02-beige.png</code>, <code>11-palo-rosa.png</code>. Puedes cerrar el nombre con la toma: <code>01-perla-frente.png</code>, <code>01-perla-espalda.png</code> (frente, lateral, espalda y detalle no son parte del color y fijan el orden de las fotos). Si lo dejas vacío, cada nombre debe llevar el producto: <code>Camisero Pike__Perla__01.png</code>.</p>
+                    <label class="mb-4 flex items-start gap-2 text-xs leading-5 text-slate-600">
+                        <input type="checkbox" name="append" value="1" class="mt-0.5 size-4 rounded border-slate-300">
+                        <span>Si un color ya tiene fotos, <strong>agregar</strong> las nuevas al final en vez de reemplazarlas (máximo 5 por color). Sin marcar, las fotos del color se reemplazan y las anteriores se borran del servidor.</span>
+                    </label>
                     <label for="product-images" class="group flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 px-5 text-center transition hover:border-blue-400 hover:bg-blue-50/40">
                         <span class="grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition group-hover:text-blue-700">
                             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
