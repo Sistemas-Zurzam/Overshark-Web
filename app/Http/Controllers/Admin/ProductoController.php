@@ -755,6 +755,36 @@ class ProductoController extends Controller
         return back()->with('status', 'Imagenes del color actualizadas.');
     }
 
+    /**
+     * Quita la galería de un color (fotos equivocadas y todavía sin las correctas). Sin galería el color deja de verse
+     * en la tienda hasta que se suban fotos nuevas. Los archivos se borran del servidor salvo que otro registro los use.
+     */
+    public function destroyColorImages(Request $request, Producto $producto): RedirectResponse
+    {
+        $validated = $request->validate(['color' => ['required', 'string', 'max:255']]);
+
+        $record = ProductoColorImage::query()->where(['product_name' => $producto->name, 'color' => $validated['color']])->first();
+
+        if (! $record) {
+            return back()->with('error', "El color {$validated['color']} no tiene galería que quitar.");
+        }
+
+        $paths = collect($record->images ?? []);
+        $record->delete();
+
+        $paths->filter()->unique()->each(function (string $path): void {
+            if (! Str::startsWith($path, ['http://', 'https://'])
+                && ! Producto::query()->where('imagen', $path)->exists()
+                && ! ProductoColorImage::query()->whereJsonContains('images', $path)->exists()) {
+                Storage::disk('public')->delete($path);
+            }
+        });
+
+        Producto::refreshCacheVersion();
+
+        return back()->with('status', "Galería de {$validated['color']} quitada: ese color no se verá en la tienda hasta que subas sus fotos.");
+    }
+
     private function variantsFor(Producto $producto)
     {
         return Producto::query()

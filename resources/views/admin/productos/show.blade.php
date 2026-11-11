@@ -197,7 +197,15 @@
                 <div class="mt-5 grid gap-4 lg:grid-cols-2">
                     @forelse ($colorImages as $color => $gallery)
                         <article class="rounded-2xl border border-slate-200 p-4">
-                            <h3 class="font-black text-slate-950">{{ $color }}</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="font-black text-slate-950">{{ $color }}</h3>
+                                <form action="{{ route('admin.productos.color-images.destroy', $producto) }}" method="POST" onsubmit="return confirm('¿Quitar las fotos de {{ $color }}? El color dejará de verse en la tienda hasta que subas otras.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="color" value="{{ $color }}">
+                                    <button type="submit" class="text-xs font-bold text-red-600 hover:underline">Quitar galería</button>
+                                </form>
+                            </div>
                             <div class="mt-3 grid grid-cols-5 gap-2">
                                 @foreach ($gallery->imageUrls() as $url)
                                     <img src="{{ $url }}" alt="{{ $producto->name }} {{ $color }}" class="aspect-[4/5] rounded-lg border border-slate-200 bg-slate-100 object-contain">
