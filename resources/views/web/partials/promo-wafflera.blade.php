@@ -5,8 +5,9 @@
 @php($imageOnly = (bool) \App\Support\SiteContent::get('promos.wafflera_image_only'))
 {{-- Todo el banner lleva a Combos. "Solo imagen" (panel): la imagen subida ya trae su texto y botón, así que no se encima nada. --}}
 @php($combosUrl = route('web.combos.index', $girls ? ['marca' => 'Girls'] : []))
-<div class="relative h-[340px] overflow-hidden bg-[var(--hh-dark)]">
-    <img src="{{ \App\Support\SiteContent::asset('images/'.($girls ? 'home-mujer' : 'home-hombre').'/promo.webp') }}" alt="" class="absolute inset-0 h-full w-full object-cover {{ $imageOnly ? 'object-center' : 'object-right' }}" loading="lazy">
+{{-- «Solo imagen»: el flyer se ve entero, con su proporción (sin altura fija ni recorte). Con texto encima: altura fija y foto recortada. --}}
+<div @class(['relative overflow-hidden bg-[var(--hh-dark)]', 'h-[340px]' => ! $imageOnly])>
+    <img src="{{ \App\Support\SiteContent::asset('images/'.($girls ? 'home-mujer' : 'home-hombre').'/promo.webp') }}" alt="" @class(['block w-full', 'h-auto' => $imageOnly, 'absolute inset-0 h-full object-cover object-right' => ! $imageOnly]) loading="lazy">
     @if ($imageOnly)
         <h2 id="hh-promo" class="sr-only">{{ \App\Support\SiteContent::text('promos.wafflera_title') }}</h2>
         <a href="{{ $combosUrl }}" class="os-focus absolute inset-0" aria-labelledby="hh-promo"></a>

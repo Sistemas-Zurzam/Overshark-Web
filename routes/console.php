@@ -19,6 +19,12 @@ Artisan::command('pedidos:vencer-qr', function () {
 
 Schedule::command('pedidos:vencer-qr')->everyMinute()->withoutOverlapping();
 
+// Borra de la base los productos de empresas que la tienda no vende (BOX PRIME). La sincronización con Zazu ya lo hace;
+// este comando sirve para limpiar de una vez sin esperar la sincronización (p. ej. al desplegar).
+Artisan::command('productos:quitar-empresas-ajenas', function () {
+    $this->info(\App\Models\Admin\Producto::removeForeignCompanies().' productos de otras empresas borrados.');
+})->purpose('Borra los productos de empresas fuera de ZAZU_COMPANIES (BOX PRIME)');
+
 // Archivos que se subieron pero no quedaron en ningún registro: borradores de reclamos (más de un día) y comprobantes
 // de pago de compras que no se terminaron (más de dos días).
 Artisan::command('limpieza:archivos-huerfanos', function () {

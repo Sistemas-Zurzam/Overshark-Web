@@ -47,7 +47,9 @@ class ZazuInventorySyncTest extends TestCase
         $this->assertDatabaseHas('productos', ['name' => 'CLASICO', 'stock' => 4]);
         $this->assertDatabaseHas('productos', ['name' => 'POLO BRAVOS', 'stock' => 4]);
         $this->assertDatabaseMissing('productos', ['name' => 'CASE LA']);
-        $this->assertDatabaseHas('productos', ['name' => 'AIRPODS PRO 2', 'stock' => 0]);
+        // Lo de otras empresas ya guardado (BOX PRIME) se borra, no queda con stock 0.
+        $this->assertDatabaseMissing('productos', ['name' => 'AIRPODS PRO 2']);
+        $this->assertSame(1, $result['foreign_removed']);
     }
 
     public function test_variant_without_its_own_price_uses_the_product_price(): void

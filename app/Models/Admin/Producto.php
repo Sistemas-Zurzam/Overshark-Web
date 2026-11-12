@@ -88,6 +88,41 @@ class Producto extends Model
         });
     }
 
+    /** Lo contrario de soldByStore(): productos de empresas que la tienda no vende (BOX PRIME u otras). Sin lista configurada, ninguno. */
+    public function scopeNotSoldByStore(Builder $query): Builder
+    {
+        $allowed = (array) config('services.zazu.companies', []);
+        if ($allowed === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereNotNull('productos.empresa_nombre')->where('productos.empresa_nombre', '<>', '')
+            ->where(function (Builder $query) use ($allowed): void {
+                foreach ($allowed as $part) {
+                    $query->whereRaw('UPPER(productos.empresa_nombre) NOT LIKE ?', ['%'.mb_strtoupper($part).'%']);
+                }
+            });
+    }
+
+    /**
+     * Borra del catálogo los productos de empresas que la tienda no vende (BOX PRIME), junto con sus combos vinculados
+     * y las galerías de color de nombres que ya no existen. Devuelve cuántos productos se borraron.
+     */
+    public static function removeForeignCompanies(): int
+    {
+        $names = static::query()->notSoldByStore()->distinct()->pluck('name');
+        $removed = static::query()->notSoldByStore()->delete();
+
+        if ($removed > 0) {
+            ProductoColorImage::query()->whereIn('product_name', $names)->get()
+                ->filter(fn (ProductoColorImage $gallery) => ! static::query()->where('name', $gallery->product_name)->exists())
+                ->each->delete();
+            static::refreshCacheVersion();
+        }
+
+        return $removed;
+    }
+
     protected function casts(): array
     {
         return [

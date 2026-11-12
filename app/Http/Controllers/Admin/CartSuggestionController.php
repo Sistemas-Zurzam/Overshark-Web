@@ -56,7 +56,7 @@ class CartSuggestionController extends Controller
     /** Prendas y marcas entre las que se elige en el formulario. */
     private function options(): array
     {
-        $sellable = Producto::query()->whereNotNull('color')->where('price', '>', 0);
+        $sellable = Producto::query()->soldByStore()->whereNotNull('color')->where('price', '>', 0);
 
         return [
             'productNames' => (clone $sellable)->orderBy('name')->pluck('name')->unique()->values(),

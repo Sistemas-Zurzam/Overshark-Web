@@ -23,10 +23,11 @@ class SyncZazuProducts extends Command
         }
 
         $this->info(sprintf(
-            'Zazu sincronizado: %d recibidos, %d actualizados, %d antiguos con stock cero.',
+            'Zazu sincronizado: %d recibidos, %d actualizados, %d antiguos con stock cero, %d de otras empresas borrados.',
             $result['received'],
             $result['synced'],
             $result['stale_zeroed'],
+            $result['foreign_removed'],
         ));
 
         return self::SUCCESS;

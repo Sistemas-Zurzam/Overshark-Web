@@ -25,8 +25,9 @@ class ZazuInventorySyncService
         $seenKeys = [];
         $synced = 0;
         $staleZeroed = 0;
+        $foreignRemoved = 0;
 
-        DB::transaction(function () use ($items, &$seenKeys, &$synced, &$staleZeroed): void {
+        DB::transaction(function () use ($items, &$seenKeys, &$synced, &$staleZeroed, &$foreignRemoved): void {
             foreach ($items as $item) {
                 $mapped = $this->mapItem($item);
                 if ($mapped === null) {
@@ -38,6 +39,8 @@ class ZazuInventorySyncService
                 $synced++;
             }
 
+            // Lo de otras empresas (BOX PRIME) no se vende ni se muestra: se borra en vez de dejarlo con stock 0.
+            $foreignRemoved = Producto::removeForeignCompanies();
             $staleZeroed = $this->zeroStaleProducts($seenKeys);
         });
 
@@ -45,6 +48,7 @@ class ZazuInventorySyncService
             'received' => count($items),
             'synced' => $synced,
             'stale_zeroed' => $staleZeroed,
+            'foreign_removed' => $foreignRemoved,
         ];
     }
 

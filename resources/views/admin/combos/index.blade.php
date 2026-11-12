@@ -119,7 +119,7 @@
                         @endphp
                         <article class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
                             <div class="flex gap-3.5 p-4">
-                                <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" loading="lazy" class="size-24 shrink-0 rounded-sm bg-admin-subtle object-cover">
+                                <img src="{{ $combo->imageUrl() }}" alt="{{ $combo->name }}" loading="lazy" class="h-24 w-32 shrink-0 rounded-sm bg-admin-subtle object-contain">
                                 <div class="flex min-w-0 flex-1 flex-col gap-1.5">
                                     <div class="flex items-start justify-between gap-2">
                                         <p class="line-clamp-2 text-[15px] font-bold leading-5 text-admin-text">{{ $combo->name }}</p>

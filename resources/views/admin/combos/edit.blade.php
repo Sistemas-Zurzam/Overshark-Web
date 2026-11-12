@@ -23,7 +23,7 @@
 
     <section data-combo-form class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
         <div class="mb-5 flex items-center gap-4">
-            <img src="{{ $combo->imageUrl() }}" alt="" class="h-20 w-20 rounded-xl object-cover">
+            <img src="{{ $combo->imageUrl() }}" alt="" class="h-24 w-32 rounded-xl bg-slate-100 object-contain">
             <p class="text-sm text-slate-500">Imagen actual del combo.</p>
         </div>
         <form action="{{ route('admin.combos.update', $combo) }}" method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>

@@ -152,9 +152,10 @@
 
                 {{-- Tu combo --}}
                 <aside class="flex flex-col gap-5 self-start lg:sticky lg:top-[calc(var(--header-h)+24px)]" aria-label="Tu combo">
-                    <div class="relative aspect-[4/3] overflow-hidden bg-[var(--hh-soft)]">
+                    {{-- El flyer propio del combo se muestra entero (con su proporción); el collage de prendas sí va recortado en 4:3. --}}
+                    <div @class(['relative overflow-hidden bg-[var(--hh-soft)]', 'aspect-[4/3]' => ! $ownImage])>
                         @if ($ownImage)
-                            <img src="{{ $ownImage }}" alt="{{ $combo->name }}" class="h-full w-full object-cover">
+                            <img src="{{ $ownImage }}" alt="{{ $combo->name }}" class="block h-auto w-full">
                         @elseif ($collage->isNotEmpty())
                             <div class="grid h-full gap-0.5" style="grid-template-columns: repeat({{ $collage->count() }}, minmax(0, 1fr))">
                                 @foreach ($collage as $image)

@@ -53,6 +53,39 @@ class StorefrontCompaniesTest extends TestCase
             ->assertDontSee('AIR PODS PRO MAX')->assertDontSee('BOX PRIME');
     }
 
+    public function test_the_cleanup_command_deletes_other_companies_with_their_galleries_and_keeps_the_rest(): void
+    {
+        $own = $this->product('CLASICO', 'OVERSHARK PERU S.A.C');
+        $bravos = $this->product('POLERA NERU', 'BRAVOS');
+        $legacy = $this->product('WAFFLE', null);
+        $boxPrime = $this->product('CASE LA BUBU', 'BOX PRIME');
+        \App\Models\Admin\ProductoColorImage::query()->create(['product_name' => 'CASE LA BUBU', 'color' => 'NEGRO', 'images' => ['productos/colores/case.webp']]);
+        \App\Models\Admin\ProductoColorImage::query()->create(['product_name' => 'CLASICO', 'color' => 'NEGRO', 'images' => ['productos/colores/clasico.webp']]);
+
+        $this->artisan('productos:quitar-empresas-ajenas')->expectsOutput('1 productos de otras empresas borrados.')->assertSuccessful();
+
+        $this->assertDatabaseMissing('productos', ['id' => $boxPrime->id]);
+        $this->assertDatabaseHas('productos', ['id' => $own->id]);
+        $this->assertDatabaseHas('productos', ['id' => $bravos->id]);
+        $this->assertDatabaseHas('productos', ['id' => $legacy->id]);
+        $this->assertDatabaseMissing('producto_color_images', ['product_name' => 'CASE LA BUBU']);
+        $this->assertDatabaseHas('producto_color_images', ['product_name' => 'CLASICO']);
+
+        // Sin nada que borrar, no hace nada.
+        $this->artisan('productos:quitar-empresas-ajenas')->expectsOutput('0 productos de otras empresas borrados.')->assertSuccessful();
+    }
+
+    public function test_the_admin_dropdowns_do_not_list_other_companies(): void
+    {
+        $this->product('CLASICO', 'OVERSHARK PERU S.A.C', ['marca' => 'OVERSHARK']);
+        $this->product('CASE LA BUBU', 'BOX PRIME', ['marca' => 'BOX PRIME']);
+
+        $this->withoutMiddleware(\App\Http\Middleware\AuthenticateJwt::class)->actingAs(\App\Models\User::factory()->create());
+
+        $this->get(route('admin.productos.index'))->assertOk()->assertDontSee('BOX PRIME')->assertDontSee('CASE LA BUBU');
+        $this->get(route('admin.sugerencias.index'))->assertOk()->assertDontSee('BOX PRIME')->assertDontSee('CASE LA BUBU');
+    }
+
     public function test_a_product_of_another_company_cannot_be_added_to_the_cart(): void
     {
         $boxPrime = $this->product('CASE LA', 'BOX PRIME', ['price' => 10]);

@@ -214,6 +214,7 @@ class ProductoController extends Controller
             ->orderBy('name')
             ->pluck('name')
             ->merge(Producto::query()
+                ->soldByStore()
                 ->whereNotNull('marca')
                 ->where('marca', '<>', '')
                 ->distinct()
