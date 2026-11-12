@@ -21,8 +21,8 @@ use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
- * Pedidos de la tienda web (creados en el checkout, App\Support\Checkout). El pago lo confirman solos Culqi y
- * Ligo Pay (App\Services\Orders\OrderPayments) y la venta viaja a Livex y de ahí al ERP: aquí el equipo prepara,
+ * Pedidos de la tienda web (creados en el checkout, App\Support\Checkout). El pago con tarjeta lo confirma solo Izipay
+ * (App\Services\Orders\OrderPayments) y la venta viaja a Livex y de ahí al ERP: aquí el equipo prepara,
  * envía, entrega o anula. Un pedido que aún no se pagó se ve como "Pendiente de pago" y no se confirma desde el panel.
  */
 class OrderController extends Controller

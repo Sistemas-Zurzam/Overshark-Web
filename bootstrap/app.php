@@ -25,6 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => AuthenticateJwt::class,
         ]);
 
+        // Resultado del pago de Izipay: lo envía su formulario (sin token CSRF) o su servidor; la ruta lo acepta solo
+        // con la firma kr-hash válida.
+        $middleware->validateCsrfTokens(except: ['checkout/pedido/*/pagado', 'webhooks/izipay']);
+
         // Encabezados de seguridad en toda la web, el panel incluido.
         $middleware->web(append: [\App\Http\Middleware\SecurityHeaders::class]);
 

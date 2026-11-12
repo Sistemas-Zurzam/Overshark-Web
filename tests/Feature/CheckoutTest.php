@@ -17,10 +17,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\PaysWithIzipay;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
 {
+    use PaysWithIzipay;
     use RefreshDatabase;
 
     private Producto $polo;
@@ -52,11 +54,9 @@ class CheckoutTest extends TestCase
             'ter_id' => '902', 'lugar_over' => 'WANCHAQ - AV. SOL', 'direccion' => 'AV. SOL 100, WANCHAQ', 'zona' => 'WANCHAQ', 'provincia' => 'CUSCO', 'departamento' => 'CUSCO',
         ]);
 
-        // Culqi con llaves de prueba y su API simulada: aprueba todo token salvo "tkn_test_declined".
-        config(['services.culqi.public_key' => 'pk_test_x', 'services.culqi.secret_key' => 'sk_test_x', 'services.culqi.base_url' => 'https://api.culqi.test/v2']);
-        Http::fake(['api.culqi.test/*' => fn ($request) => $request['source_id'] === 'tkn_test_declined'
-            ? Http::response(['object' => 'error', 'type' => 'card_error', 'user_message' => 'Tu tarjeta no tiene fondos suficientes.'], 402)
-            : Http::response(['object' => 'charge', 'id' => 'chr_test_'.$request['amount'], 'outcome' => ['type' => 'venta_exitosa', 'user_message' => 'Su compra ha sido exitosa.']], 201)]);
+        // Izipay con llaves de prueba y su API simulada: crear el pago devuelve un formToken.
+        $this->configureIzipay();
+        Http::fake(['api.izipay.test/*' => Http::response(['status' => 'SUCCESS', 'answer' => ['formToken' => 'FORMTOKEN_TEST']], 200)]);
     }
 
     private function addToCart(int $qty = 2): void
@@ -184,23 +184,27 @@ class CheckoutTest extends TestCase
 
         // El stock bajó mientras compraba: se vuelve al carrito sin perderlo.
         $this->polo->update(['stock' => 1]);
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => $token, 'terms' => 1, 'expected_total' => '135.00'])
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => $token, 'terms' => 1, 'expected_total' => '135.00'])
             ->assertRedirect(route('web.cart.index'))
             ->assertSessionHasErrors('cart');
         $this->assertNotEmpty(session('cart.items'));
         $this->assertSame(0, Order::query()->count());
 
         $this->polo->update(['stock' => 5]);
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => $token, 'terms' => 1, 'expected_total' => '135.00']);
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => $token, 'terms' => 1, 'expected_total' => '135.00']);
         $order = Order::query()->sole();
         $this->assertNull($order->comprobante_pago);
         // Contraentrega a domicilio: el separo de S/ 15 se cobra con tarjeta en el checkout; el saldo al recibir.
         $this->assertSame('15.00', (string) $order->separo);
         $this->assertSame('15.00', (string) $order->pago_monto);
-        $this->assertSame('chr_test_1500', $order->pago_referencia);
-        $this->assertSame(Checkout::STATUS_DEPOSIT_PAID, $order->statusOrder->name);
         $this->assertSame('Pago contraentrega · separo con Tarjeta de crédito o débito', $order->metodo_pago_nombre);
-        Http::assertSent(fn ($request) => $request['amount'] === 1500 && $request['source_id'] === 'tkn_test_ok' && $request['currency_code'] === 'PEN');
+
+        // El separo espera el pago con tarjeta; con la respuesta firmada de Izipay por S/ 15 queda pagado.
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->statusOrder->name);
+        $this->payWithIzipay($order)->assertRedirect(route('web.checkout.done', $order));
+        $order->refresh();
+        $this->assertSame(Checkout::STATUS_DEPOSIT_PAID, $order->statusOrder->name);
+        $this->assertSame('txn_'.$order->id.'_test', $order->pago_referencia);
         $this->get(route('web.checkout.done', $order))->assertOk()
             ->assertSee('¡RECIBIMOS TU PEDIDO!')
             ->assertSee('SEPARO PAGADO')
@@ -234,7 +238,7 @@ class CheckoutTest extends TestCase
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer());
         $this->get(route('web.checkout.payment'));
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
         $order = Order::query()->sole();
 
         $this->flushSession();
@@ -275,73 +279,173 @@ class CheckoutTest extends TestCase
         $this->get(route('web.checkout.done', $order))->assertSee('Estamos verificando la captura de tu separo');
     }
 
-    public function test_card_payment_charges_the_total_with_culqi_and_a_declined_card_can_retry(): void
+    public function test_card_payment_goes_to_the_izipay_form_and_only_a_signed_answer_confirms_it(): void
     {
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer());
         $this->get(route('web.checkout.payment'))->assertOk()
-            ->assertSeeInOrder(['Tarjeta de crédito o débito', 'Datos de la tarjeta', 'Número de tarjeta', 'CVV - Código de seguridad', 'Mes de vencimiento', 'Año de vencimiento', 'Nombre impreso en la tarjeta', 'Yape', 'El pago con Yape (Ligo Pay) aún no está activo', 'Tu QR aparecerá aquí', 'Pago contraentrega'])
-            ->assertSee('data-culqi-key="pk_test_x"', false)
-            ->assertSee('data-culqi-url="https://secure.culqi.com/v2"', false)
-            ->assertDontSee('El pago con tarjeta (Culqi) aún no está activo')
-            // Los campos de la tarjeta no tienen name: nunca se envían a nuestro servidor.
-            ->assertDontSee('name="card_number"', false)
-            ->assertDontSee('name="cvv"', false);
-        $base = ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'];
+            ->assertSeeInOrder(['Tarjeta de crédito o débito', 'formulario seguro de Izipay', 'Pago contraentrega'])
+            ->assertDontSee('El pago con tarjeta aún no está activo')
+            ->assertDontSee('Ligo')
+            // La tarjeta no se pide en esta página: nunca pasa por nuestro servidor.
+            ->assertDontSee('Número de tarjeta')
+            ->assertDontSee('name="card_number"', false);
 
-        // Sin token de Culqi no se cobra.
-        $this->post(route('web.checkout.place'), $base)->assertSessionHasErrors(['method' => 'Ingresa los datos de tu tarjeta para continuar.']);
-
-        // Tarjeta rechazada: no queda pedido y puede intentar con otra.
-        $this->post(route('web.checkout.place'), $base + ['culqi_token' => 'tkn_test_declined'])
-            ->assertRedirect(route('web.checkout.payment'))
-            ->assertSessionHasErrors(['method' => 'Tu tarjeta no tiene fondos suficientes.']);
-        $this->assertSame(0, Order::query()->count());
-        $this->assertNotEmpty(session('cart.items'));
-
-        $this->post(route('web.checkout.place'), $base + ['culqi_token' => 'tkn_test_ok']);
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
         $order = Order::query()->sole();
-        $this->assertSame(Checkout::STATUS_PAID, $order->statusOrder->name);
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->statusOrder->name);
         $this->assertSame('95.00', (string) $order->pago_monto);
-        $this->assertSame('chr_test_9500', $order->pago_referencia);
         $this->assertNull($order->separo);
+        $this->assertNotNull($order->pago_qr_expira);
+        $this->assertSame([], session('cart.items', []));
+
+        // Formulario de Izipay: el servidor crea el pago y la página recibe el formToken.
+        $this->get(route('web.checkout.pay', $order))->assertOk()
+            ->assertSee('kr-form-token="FORMTOKEN_TEST"', false)
+            ->assertSee('kr-public-key="12345678:test_public_key"', false)
+            ->assertSee('kr-post-url-success="'.route('web.checkout.paid', $order).'"', false);
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.izipay.test/api-payment/V4/Charge/CreatePayment'
+            && $request['amount'] === 9500 && $request['currency'] === 'PEN' && $request['orderId'] === $order->number_zazu
+            && $request['customer']['email'] === 'ana@example.com' && $request->hasHeader('Authorization'));
+
+        // Una respuesta sin firma válida, con otro importe, rechazada, en otra moneda o de otro pedido no confirma nada.
+        $forged = $this->izipayPayload($order);
+        $forged['kr-hash'] = str_repeat('a', 64);
+        foreach ([
+            $forged,
+            $this->izipayPayload($order, amount: 1.00),
+            $this->izipayPayload($order, status: 'UNPAID'),
+            $this->izipayPayload($order, currency: 'USD'),
+            $this->izipayPayload($order, orderId: 'OS-999999'),
+            ['kr-answer' => '{"orderStatus":"PAID"}'],
+        ] as $payload) {
+            $this->post(route('web.checkout.paid', $order), $payload)
+                ->assertRedirect(route('web.checkout.pay', $order))
+                ->assertSessionHasErrors('payment');
+            $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->fresh()->statusOrder->name);
+        }
+
+        // La respuesta firmada por el importe exacto confirma el pedido.
+        $this->payWithIzipay($order)->assertRedirect(route('web.checkout.done', $order));
+        $order->refresh();
+        $this->assertSame(Checkout::STATUS_PAID, $order->statusOrder->name);
+        $this->assertSame('txn_'.$order->id.'_test', $order->pago_referencia);
+        $this->assertNull($order->pago_qr_expira);
         $this->get(route('web.checkout.done', $order))->assertOk()->assertSee('¡TU PEDIDO ESTÁ CONFIRMADO!');
+
+        // Con el pedido ya pagado, el formulario no se vuelve a abrir.
+        $this->get(route('web.checkout.pay', $order))->assertRedirect(route('web.checkout.done', $order));
     }
 
-    public function test_yape_shows_the_ligo_pay_qr_design_but_cannot_pay_until_ligo_is_integrated(): void
+    public function test_a_pending_card_order_can_continue_to_pay_from_its_status_page(): void
     {
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer());
-        $this->get(route('web.checkout.payment'))->assertOk()
-            ->assertSee('generamos un QR por <strong>S/ 95.00</strong>', false)
-            ->assertSee('generamos un QR por <strong>S/ 15.00</strong>', false) // el separo de contraentrega con Yape
-            ->assertSee('Pago procesado por Ligo Pay.');
+        $this->get(route('web.checkout.payment'));
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+        $order = Order::query()->sole();
 
-        $base = ['token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'];
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::YAPE])->assertSessionHasErrors('method');
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::YAPE])->assertSessionHasErrors('deposit_method');
-        $this->assertSame(0, Order::query()->count());
-        Http::assertNothingSent();
+        $this->get(route('web.checkout.done', $order))->assertOk()
+            ->assertSee('FALTA TU PAGO')
+            ->assertSee(route('web.checkout.pay', $order), false);
+
+        // Solo quien hizo el pedido abre su formulario de pago.
+        $this->flushSession();
+        $this->get(route('web.checkout.pay', $order))->assertNotFound();
     }
 
-    public function test_without_culqi_keys_the_card_and_yape_forms_show_but_cannot_pay(): void
+    public function test_the_izipay_ipn_confirms_the_order_with_a_valid_signature_even_if_the_browser_never_returned(): void
     {
-        config(['services.culqi.public_key' => null, 'services.culqi.secret_key' => null]);
+        $this->addToCart();
+        $this->post(route('web.checkout.personal.store'), $this->customer());
+        $this->get(route('web.checkout.payment'));
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+        $order = Order::query()->sole();
+        $this->flushSession(); // sin sesión: la IPN la envía el servidor de Izipay, no el navegador
+
+        // Sin firma, con firma falsa o con una clave desconocida: 403 y el pedido sigue esperando.
+        $this->post(route('web.izipay.ipn'), [])->assertForbidden();
+        $forged = $this->izipayPayload($order, hashKey: 'password');
+        $forged['kr-hash'] = str_repeat('0', 64);
+        $this->post(route('web.izipay.ipn'), $forged)->assertForbidden();
+        $this->post(route('web.izipay.ipn'), ['kr-hash-key' => 'otra'] + $this->izipayPayload($order, hashKey: 'password'))->assertForbidden();
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->fresh()->statusOrder->name);
+
+        // Con la contraseña de la API como clave (así firma Izipay la IPN) el pedido queda pagado.
+        $this->post(route('web.izipay.ipn'), $this->izipayPayload($order, hashKey: 'password'))->assertOk()->assertSee('OK');
+        $this->assertSame(Checkout::STATUS_PAID, $order->fresh()->statusOrder->name);
+
+        // Reenvío de la misma IPN (Izipay reintenta): no vuelve a procesar el pedido; un pedido desconocido no falla.
+        $this->post(route('web.izipay.ipn'), $this->izipayPayload($order, hashKey: 'password'))->assertOk();
+        $this->post(route('web.izipay.ipn'), $this->izipayPayload($order, hashKey: 'password', orderId: 'OS-404404'))->assertOk();
+        $this->assertSame(1, Order::query()->count());
+    }
+
+    public function test_when_izipay_cannot_create_the_payment_the_customer_can_retry_and_nothing_is_charged(): void
+    {
+        $this->addToCart();
+        $this->post(route('web.checkout.personal.store'), $this->customer());
+        $this->get(route('web.checkout.payment'));
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+        $order = Order::query()->sole();
+
+        Http::swap(new \Illuminate\Http\Client\Factory); // descarta la respuesta de éxito de setUp
+        Http::fake(['api.izipay.test/*' => Http::response(['status' => 'ERROR', 'answer' => ['errorCode' => 'INT_009']], 500)]);
+        $this->get(route('web.checkout.pay', $order))->assertOk()
+            ->assertSee('No pudimos iniciar el pago con tarjeta')
+            ->assertSee('INTENTAR DE NUEVO')
+            ->assertDontSee('kr-form-token', false);
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->fresh()->statusOrder->name);
+    }
+
+    public function test_an_unpaid_card_order_is_cancelled_when_the_time_to_pay_runs_out(): void
+    {
+        $this->addToCart();
+        $this->post(route('web.checkout.personal.store'), $this->customer());
+        $this->get(route('web.checkout.payment'));
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+        $order = Order::query()->sole();
+
+        $this->artisan('pedidos:vencer-qr')->assertSuccessful();
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->fresh()->statusOrder->name);
+
+        $this->travel(31)->minutes();
+        $this->artisan('pedidos:vencer-qr')->assertSuccessful();
+        $this->assertSame(Checkout::STATUS_CANCELLED, $order->fresh()->statusOrder->name);
+
+        // Un pago tardío no revive un pedido cancelado.
+        $this->payWithIzipay($order)->assertRedirect(route('web.checkout.pay', $order));
+        $this->assertSame(Checkout::STATUS_CANCELLED, $order->fresh()->statusOrder->name);
+    }
+
+    public function test_without_izipay_keys_the_card_option_shows_but_cannot_pay(): void
+    {
+        config(['services.izipay.shop_id' => null, 'services.izipay.password' => null, 'services.izipay.public_key' => null, 'services.izipay.hmac_key' => null]);
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer());
 
-        // Los formularios se ven (para revisar el diseño) con un aviso; la contraentrega igual pide separo.
+        // La opción se ve (para revisar el diseño) con un aviso; la contraentrega igual pide separo.
         $this->get(route('web.checkout.payment'))->assertOk()
-            ->assertSeeInOrder(['Tarjeta de crédito o débito', 'El pago con tarjeta (Culqi) aún no está activo', 'Número de tarjeta', 'Yape', 'Tu QR aparecerá aquí', 'Pago contraentrega'])
-            ->assertSee('data-culqi-key=""', false)
+            ->assertSeeInOrder(['Tarjeta de crédito o débito', 'El pago con tarjeta aún no está activo', 'Pago contraentrega'])
             ->assertSee('Separo S/ 15.00');
 
         $base = ['token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'];
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok'])->assertSessionHasErrors('method');
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::YAPE, 'culqi_token' => 'ype_test_ok'])->assertSessionHasErrors('method');
+        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD])->assertSessionHasErrors('method');
         $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CASH_ON_DELIVERY])->assertSessionHasErrors('deposit_method');
         $this->assertSame(0, Order::query()->count());
         Http::assertNothingSent();
+    }
+
+    public function test_yape_with_ligo_pay_is_gone_and_cannot_be_chosen(): void
+    {
+        $this->addToCart();
+        $this->post(route('web.checkout.personal.store'), $this->customer());
+        $this->get(route('web.checkout.payment'))->assertOk()->assertDontSee('Ligo')->assertDontSee('generamos un QR');
+
+        $base = ['token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'];
+        $this->post(route('web.checkout.place'), $base + ['method' => 'yape'])->assertSessionHasErrors('method');
+        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => 'yape'])->assertSessionHasErrors('deposit_method');
+        $this->assertSame(0, Order::query()->count());
     }
 
     public function test_adding_a_size_that_just_sold_out_shows_a_message_instead_of_a_404(): void
@@ -384,14 +488,14 @@ class CheckoutTest extends TestCase
 
         // El precio sube mientras paga: no se crea el pedido por un importe que no vio.
         $this->polo->update(['price' => 45]);
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => $token, 'terms' => 1, 'expected_total' => '95.00'])
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => $token, 'terms' => 1, 'expected_total' => '95.00'])
             ->assertRedirect(route('web.checkout.payment'))
             ->assertSessionHasErrors(['method' => 'El precio de tu pedido cambió. El nuevo total es S/ 105.00. Revisa el resumen y confirma de nuevo.']);
         $this->assertSame(0, Order::query()->count());
 
         $this->get(route('web.checkout.payment'))->assertOk()->assertSee('S/ 105.00')->assertSee('value="105.00"', false);
 
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => $token, 'terms' => 1, 'expected_total' => '105.00']);
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => $token, 'terms' => 1, 'expected_total' => '105.00']);
         $order = Order::query()->sole();
         $this->assertSame('105.00', (string) $order->precio_total);
         $this->assertSame(45.0, (float) $order->productos_json[0]['precio']);
@@ -422,7 +526,7 @@ class CheckoutTest extends TestCase
         $this->get(route('web.checkout.payment'));
 
         // 2 sueltas + 2 en el combo = 4, pero solo hay 3.
-        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'culqi_token' => 'tkn_test_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '165.00'])
+        $this->post(route('web.checkout.place'), ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '165.00'])
             ->assertRedirect(route('web.cart.index'))
             ->assertSessionHasErrors(['cart' => 'Pediste 4 unidades de Clasico (NEGRO · M) entre prendas sueltas y combos, pero solo quedan 3. Ajusta tu carrito.']);
         $this->assertSame(0, Order::query()->count());

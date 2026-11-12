@@ -147,7 +147,7 @@ class CustomerCartAndCheckoutTest extends TestCase
         $this->post(route('web.checkout.personal.store'), $this->customerData());
         $total = $this->get(route('web.checkout.payment'))->viewData('total');
         $this->post(route('web.checkout.place'), [
-            'method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok', 'token' => session('checkout.token'), 'terms' => 1,
+            'method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1,
             'expected_total' => number_format($total, 2, '.', ''), 'customer_account_id' => $other->id, 'user_id' => $other->id,
         ])->assertSessionHasNoErrors();
 
@@ -172,7 +172,7 @@ class CustomerCartAndCheckoutTest extends TestCase
         $order = $this->buy();
 
         $this->post(route('web.checkout.place'), [
-            'method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok', 'token' => $order->checkout_token, 'terms' => 1, 'expected_total' => number_format((float) $order->precio_total, 2, '.', ''),
+            'method' => Checkout::CARD, 'token' => $order->checkout_token, 'terms' => 1, 'expected_total' => number_format((float) $order->precio_total, 2, '.', ''),
         ]);
 
         $this->assertSame(1, Order::query()->count());
@@ -270,7 +270,7 @@ class CustomerCartAndCheckoutTest extends TestCase
         $this->polo->update(['price' => 55]);
 
         $this->post(route('web.checkout.place'), [
-            'method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', ''),
+            'method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', ''),
         ])->assertSessionHasErrors('method');
 
         $this->assertSame(0, Order::query()->count());

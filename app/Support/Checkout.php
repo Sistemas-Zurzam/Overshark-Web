@@ -11,9 +11,8 @@ use App\Models\Admin\StatusOrder;
 use App\Models\Admin\TipoDocumento;
 use App\Models\Admin\TipoEnvio;
 use App\Models\Admin\TipoRegistro;
-use App\Services\Payments\CulqiGateway;
+use App\Services\Payments\IzipayGateway;
 use App\Services\Payments\PaymentSimulator;
-use App\Services\Payments\YapeQr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -79,8 +78,6 @@ class Checkout
     public const COD_NAME = 'Pago contraentrega';
 
     public const CARD = 'tarjeta';
-
-    public const YAPE = 'yape';
 
     /**
      * Resumen del carrito con los precios vigentes. Si alguno cambió desde que se agregó, se actualiza
@@ -239,22 +236,16 @@ class Checkout
 
     /**
      * Medios de pago, en este orden:
-     *  - Tarjeta de crédito o débito (Culqi).
-     *  - Yape con QR de Ligo Pay (App\Services\Payments\LigoPayGateway, pendiente de su API).
+     *  - Tarjeta de crédito o débito (Izipay, formulario incrustado).
      *  - Los medios activos del admin (Plin, transferencia…: número o QR) con captura del pago.
      *  - Pago contraentrega (el separo se paga con uno de los anteriores; ver onlineMethods()).
      */
     public static function paymentMethods(): Collection
     {
-        // Tarjeta (Culqi) y Yape (QR de Ligo Pay) se muestran siempre; sin configurar se ven con un aviso pero
-        // no se puede pagar (available false).
+        // La tarjeta (Izipay) se muestra siempre; sin configurar se ve con un aviso pero no se puede pagar (available false).
         $methods = collect([
             [
-                'id' => self::CARD, 'kind' => 'card', 'name' => 'Tarjeta de crédito o débito', 'available' => CulqiGateway::isConfigured() || PaymentSimulator::enabled(),
-                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
-            ],
-            [
-                'id' => self::YAPE, 'kind' => 'yape', 'name' => 'Yape', 'available' => YapeQr::isAvailable(),
+                'id' => self::CARD, 'kind' => 'card', 'name' => 'Tarjeta de crédito o débito', 'available' => IzipayGateway::isConfigured() || PaymentSimulator::enabled(),
                 'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
             ],
         ]);

@@ -15,11 +15,13 @@ use App\Support\Checkout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Tests\Concerns\PaysWithIzipay;
 use Tests\TestCase;
 
 /** Correo de confirmación del pedido (App\Mail\OrderPaidMail), enviado como tarea posterior al pago. */
 class OrderEmailTest extends TestCase
 {
+    use PaysWithIzipay;
     use RefreshDatabase;
 
     private Producto $polo;
@@ -50,11 +52,18 @@ class OrderEmailTest extends TestCase
         ], $customer));
         $total = $this->get(route('web.checkout.payment'))->viewData('total');
         $this->post(route('web.checkout.place'), array_merge(
-            ['method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
+            ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
             $place,
         ))->assertSessionHasNoErrors();
 
-        return Order::query()->latest('id')->first();
+        $order = Order::query()->latest('id')->first();
+
+        // Con tarjeta el pedido espera el pago: la clienta paga en el formulario de Izipay (resultado firmado).
+        if (($place['method'] ?? Checkout::CARD) === Checkout::CARD || ($place['deposit_method'] ?? null) === Checkout::CARD) {
+            $this->payWithIzipay($order);
+        }
+
+        return $order->fresh();
     }
 
     public function test_a_paid_order_sends_the_confirmation_email_with_its_sales_note_items_and_totals(): void

@@ -173,7 +173,7 @@ class CrmSales
         return [[
             'method' => self::METHODS[$name] ?? $name,
             'amount' => $amount,
-            // Nº de operación: el del cobro (Culqi, QR) o, en una captura validada a mano, el código del pedido.
+            // Nº de operación: el de la transacción de Izipay o, en una captura validada a mano, el código del pedido.
             'reference' => $order->pago_referencia ?: "Web {$order->number_zazu}",
             'paid_at' => $order->updated_at?->toDateString(),
         ]];

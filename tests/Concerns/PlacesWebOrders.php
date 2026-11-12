@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Mail;
 /** Catálogo mínimo y compra de punta a punta (simulada) para las pruebas de cuentas de clientes. */
 trait PlacesWebOrders
 {
+    use PaysWithIzipay;
+
     protected Producto $polo;
 
     protected Distrito $miraflores;
@@ -52,10 +54,17 @@ trait PlacesWebOrders
         $this->post(route('web.checkout.personal.store'), $this->customerData($customer))->assertSessionHasNoErrors();
         $total = $this->get(route('web.checkout.payment'))->viewData('total');
         $this->post(route('web.checkout.place'), array_merge(
-            ['method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
+            ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
             $place,
         ))->assertSessionHasNoErrors();
 
-        return Order::query()->latest('id')->first();
+        $order = Order::query()->latest('id')->first();
+
+        // Con tarjeta el pedido espera el pago: la clienta paga en el formulario de Izipay (resultado firmado).
+        if (($place['method'] ?? Checkout::CARD) === Checkout::CARD || ($place['deposit_method'] ?? null) === Checkout::CARD) {
+            $this->payWithIzipay($order);
+        }
+
+        return $order->fresh();
     }
 }

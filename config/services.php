@@ -39,30 +39,26 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
-    // Pagos con tarjeta (Culqi). El navegador crea el token en secure_url con la llave pública y el servidor
-    // cobra en base_url con la secreta. Sin las dos llaves el formulario se ve pero no cobra.
-    'culqi' => [
-        'public_key' => env('CULQI_PUBLIC_KEY'),
-        'secret_key' => env('CULQI_SECRET_KEY'),
-        'base_url' => env('CULQI_BASE_URL', 'https://api.culqi.com/v2'),
-        'secure_url' => env('CULQI_SECURE_URL', 'https://secure.culqi.com/v2'),
-        'timeout' => (int) env('CULQI_TIMEOUT', 30),
+    // Pagos con tarjeta (Izipay, formulario incrustado REST V4). Las llaves de TEST y las de PRODUCCIÓN salen del
+    // Back Office (Configuración > Tienda > Llaves de API REST): se cambian en el .env, las URLs son las mismas.
+    //  - shop_id: ID de tienda (8 dígitos) · password: contraseña de la API REST (TEST o PRODUCCIÓN)
+    //  - public_key: llave pública · hmac_key: clave HMAC-SHA-256 (valida la firma que vuelve al navegador)
+    'izipay' => [
+        'shop_id' => env('IZIPAY_SHOP_ID'),
+        'password' => env('IZIPAY_PASSWORD'),
+        'public_key' => env('IZIPAY_PUBLIC_KEY'),
+        'hmac_key' => env('IZIPAY_HMAC_KEY'),
+        'api_url' => env('IZIPAY_API_URL', 'https://api.micuentaweb.pe/api-payment/V4'),
+        'static_url' => env('IZIPAY_STATIC_URL', 'https://static.micuentaweb.pe/static'),
+        'timeout' => (int) env('IZIPAY_TIMEOUT', 30),
     ],
 
-    // Modo simulación (App\Services\Payments\PaymentSimulator): aprueba tarjetas y QR de prueba sin cobrar y,
+    // Modo simulación (App\Services\Payments\PaymentSimulator): aprueba o rechaza pagos de prueba sin cobrar y,
     // sin CRM configurado, simula la venta en el CRM. Nunca funciona con APP_ENV=production.
     'payments' => [
         'simulate' => (bool) env('PAYMENTS_SIMULATE', false),
-        // Minutos que dura un QR de Yape antes de que el pedido se cancele.
-        'qr_minutes' => (int) env('PAYMENTS_QR_MINUTES', 10),
-    ],
-
-    // Yape con QR de Ligo Pay: pendiente de su documentación de API (App\Services\Payments\LigoPayGateway).
-    'ligo' => [
-        'enabled' => (bool) env('LIGO_PAY_ENABLED', false),
-        'base_url' => env('LIGO_PAY_BASE_URL'),
-        'client_id' => env('LIGO_PAY_CLIENT_ID'),
-        'client_secret' => env('LIGO_PAY_CLIENT_SECRET'),
+        // Minutos que un pedido espera el pago con tarjeta antes de cancelarse.
+        'wait_minutes' => (int) env('PAYMENTS_WAIT_MINUTES', 30),
     ],
 
     'zazu' => [
@@ -99,7 +95,7 @@ return [
         'shipping_agency' => (float) env('STOREFRONT_SHIPPING_AGENCY', 14),
         // Dirección y horario del almacén para "Recojo en almacén" (sin costo). Vacío = se coordina por WhatsApp.
         'pickup_address' => env('STOREFRONT_PICKUP_ADDRESS'),
-        // Separo de los pedidos contraentrega (S/), pagado en el checkout con tarjeta o Yape (Culqi).
+        // Separo de los pedidos contraentrega (S/), pagado en el checkout con tarjeta (Izipay).
         // El recojo en almacén no lleva separo: se paga todo al recoger.
         'cod_deposit_home' => (float) env('STOREFRONT_COD_DEPOSIT_HOME', 15),
         'cod_deposit_agency' => (float) env('STOREFRONT_COD_DEPOSIT_AGENCY', 30),

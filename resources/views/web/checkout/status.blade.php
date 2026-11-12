@@ -3,10 +3,10 @@
 {{--
     Estado del pedido: C7 · Estamos confirmando tu pago (pendiente) o C6 · ¡Tu pedido está confirmado! (cuando el
     pedido pasa a "Pago confirmado"). Pendiente no es aprobado: solo el estado del servidor lo cambia.
-    Con Yape, mientras se espera el pago, muestra el QR (y en modo simulación, "Simular pago").
+    Con tarjeta, mientras se espera el pago, ofrece volver al formulario de pago.
 --}}
 
-@section('title', ($paid ? 'Pedido confirmado' : ($awaitingQr ? 'Paga con Yape' : 'Pedido recibido')).' | Overshark')
+@section('title', ($paid ? 'Pedido confirmado' : ($awaitingPayment ? 'Falta tu pago' : 'Pedido recibido')).' | Overshark')
 
 @php
     $title = fn ($text) => \App\Support\ProductName::title((string) $text);
@@ -16,29 +16,19 @@
 @endphp
 
 @section('checkout')
-    @if ($awaitingQr)
-        <h1 class="text-[28px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">PAGA CON YAPE</h1>
-        <section class="flex flex-col items-center gap-5 border-2 border-[#742384] p-6 text-center text-[#0b1015] sm:flex-row sm:items-center sm:gap-10 sm:p-10 sm:text-left" aria-label="QR de Yape">
-            <img src="{{ $order->pago_qr }}" alt="QR para pagar con Yape" width="220" height="220" class="h-[220px] w-[220px] shrink-0 bg-white">
-            <div class="flex flex-col gap-3">
-                <p class="text-[14px] font-extrabold text-[#742384]">ESCANEA CON YAPE</p>
-                <p class="text-[26px] font-extrabold leading-[1.2]">S/ {{ number_format((float) $order->pago_monto, 2) }}</p>
-                <p class="text-[15px] leading-[1.45]">Abre Yape, toca <strong>Escanear QR</strong> y confirma el pago. Tu pedido se confirma solo{{ $cashOnDelivery ? '; el saldo de '.$saldo.' lo pagas al recibir' : '' }}.</p>
-                <p class="text-[13px] text-[#65717c]">El QR vence a las {{ $order->pago_qr_expira?->format('H:i') }}. Si vence, el pedido se cancela y puedes volver a comprar.</p>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <a href="{{ route('web.checkout.done', $order) }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[240px]">YA PAGUÉ · ACTUALIZAR</a>
-                    @if ($simulating)
-                        <form method="POST" action="{{ route('web.checkout.simulate-qr', $order) }}">
-                            @csrf
-                            <button type="submit" class="os-checkout-btn os-focus w-full bg-[#742384] sm:w-[240px]">SIMULAR PAGO CON YAPE</button>
-                        </form>
-                    @endif
-                </div>
+    @if ($awaitingPayment)
+        <h1 class="text-[28px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">FALTA TU PAGO</h1>
+        <section class="flex flex-col gap-4 border-2 border-[#0b1015] p-6 text-[#0b1015] sm:p-10" aria-label="Pago pendiente">
+            <p class="text-[26px] font-extrabold leading-[1.2]">S/ {{ number_format((float) $order->pago_monto, 2) }}</p>
+            <p class="text-[15px] leading-[1.45]">Tu pedido #{{ $order->displayNumber() }} se reserva hasta las {{ $order->pago_qr_expira?->format('H:i') }}. Paga con tarjeta para confirmarlo{{ $cashOnDelivery ? '; el saldo de '.$saldo.' lo pagas al recibir' : '' }}. Si el tiempo termina sin pago, el pedido se cancela y puedes volver a comprar.</p>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <a href="{{ route('web.checkout.pay', $order) }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">CONTINUAR CON EL PAGO</a>
+                <a href="{{ route('web.checkout.done', $order) }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[240px]">YA PAGUÉ · ACTUALIZAR</a>
             </div>
         </section>
     @elseif ($cancelled)
         <h1 class="text-[28px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">PEDIDO CANCELADO</h1>
-        <p class="max-w-[900px] text-[18px] leading-[1.45]">El pedido #{{ $order->displayNumber() }} se canceló{{ $order->pago_qr_expira ? ' porque el QR de pago venció' : '' }}. No se hizo ningún cobro. Puedes volver a la tienda y comprar de nuevo.</p>
+        <p class="max-w-[900px] text-[18px] leading-[1.45]">El pedido #{{ $order->displayNumber() }} se canceló{{ $order->pago_qr_expira ? ' porque el tiempo para pagar terminó' : '' }}. Si ya te cobraron, escríbenos y lo resolvemos. Puedes volver a la tienda y comprar de nuevo.</p>
         <a href="{{ route('web.home') }}" class="os-checkout-btn os-focus w-full sm:w-[320px]">VOLVER A LA TIENDA</a>
     @else
     @php

@@ -20,11 +20,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Tests\Concerns\PaysWithIzipay;
 use Tests\TestCase;
 
 /** Modo simulación y lo que pasa después del pago (OrderPayments + OrderFulfillment). */
 class OrderFulfillmentTest extends TestCase
 {
+    use PaysWithIzipay;
     use RefreshDatabase;
 
     private Producto $polo;
@@ -40,7 +42,7 @@ class OrderFulfillmentTest extends TestCase
         ]);
         $lima = Provincia::query()->create(['departamento_id' => Departamento::query()->create(['name' => 'Lima'])->id, 'name' => 'Lima']);
         $this->miraflores = Distrito::query()->create(['provincia_id' => $lima->id, 'name' => 'Miraflores']);
-        config(['services.culqi.public_key' => null, 'services.culqi.secret_key' => null]);
+        $this->configureIzipay();
         Http::fake();
     }
 
@@ -78,15 +80,21 @@ class OrderFulfillmentTest extends TestCase
         config(['services.payments.simulate' => true]);
         $base = $this->checkout();
 
-        $this->get(route('web.checkout.payment'))->assertSee('MODO SIMULACIÓN')->assertSee('data-simulate="1"', false);
+        $this->get(route('web.checkout.payment'))->assertSee('MODO SIMULACIÓN');
 
-        // 4000 0000 0000 0002: rechazada, sin pedido y puede reintentar.
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_declined'])
-            ->assertSessionHasErrors('method');
-        $this->assertSame(0, Order::query()->count());
-
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD, 'culqi_token' => 'sim_tkn_ok']);
+        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD]);
         $order = Order::query()->sole();
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->statusName());
+        $this->assertSame([], $this->tasks($order)); // nada sigue hasta que se pague
+
+        // En lugar del formulario de Izipay: botones de prueba. Rechazado: sigue esperando y puede reintentar.
+        $this->get(route('web.checkout.pay', $order))->assertOk()->assertSee('PAGAR (APROBADO)')->assertSee('PAGAR (RECHAZADO)')->assertDontSee('kr-form-token', false);
+        $this->post(route('web.checkout.simulate-payment', $order), ['result' => 'declined'])
+            ->assertRedirect(route('web.checkout.pay', $order))->assertSessionHasErrors('payment');
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->refresh()->statusName());
+
+        $this->post(route('web.checkout.simulate-payment', $order), ['result' => 'approved'])->assertRedirect(route('web.checkout.done', $order));
+        $order->refresh();
         $this->assertSame(Checkout::STATUS_PAID, $order->statusName());
         $this->assertStringStartsWith('sim_chr_', $order->pago_referencia);
         Http::assertNothingSent();
@@ -101,44 +109,43 @@ class OrderFulfillmentTest extends TestCase
             ->assertSeeInOrder(['Después del pago', 'Venta en el CRM (nota de venta, Zazu, ERP y boleta)', '(simulación)']);
     }
 
-    public function test_simulated_yape_qr_waits_for_payment_then_confirms_the_deposit(): void
+    public function test_the_simulated_card_deposit_waits_for_payment_then_confirms_it(): void
     {
         config(['services.payments.simulate' => true]);
         $base = $this->checkout();
 
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::YAPE]);
+        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD]);
         $order = Order::query()->sole();
         $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->statusName());
-        $this->assertStringStartsWith('data:image/svg+xml;base64,', $order->pago_qr);
         $this->assertSame('15.00', (string) $order->pago_monto);
         $this->assertSame([], $this->tasks($order)); // nada sigue hasta que se pague
 
         $this->get(route('web.checkout.done', $order))->assertOk()
-            ->assertSee('PAGA CON YAPE')
+            ->assertSee('FALTA TU PAGO')
             ->assertSee('S/ 15.00')
-            ->assertSee('SIMULAR PAGO CON YAPE');
+            ->assertSee('CONTINUAR CON EL PAGO');
 
-        $this->post(route('web.checkout.simulate-qr', $order))->assertRedirect(route('web.checkout.done', $order));
+        $this->post(route('web.checkout.simulate-payment', $order), ['result' => 'approved'])->assertRedirect(route('web.checkout.done', $order));
         $order->refresh();
         $this->assertSame(Checkout::STATUS_DEPOSIT_PAID, $order->statusName());
-        $this->assertNull($order->pago_qr);
+        $this->assertNull($order->pago_qr_expira);
         $this->assertSame(OrderTask::DONE, $this->tasks($order)['crm_venta']);
         $this->get(route('web.checkout.done', $order))->assertSee('SEPARO PAGADO');
     }
 
-    public function test_an_unpaid_qr_expires_and_the_order_is_cancelled(): void
+    public function test_an_unpaid_card_order_expires_and_the_order_is_cancelled(): void
     {
         config(['services.payments.simulate' => true]);
         $base = $this->checkout();
-        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::YAPE]);
+        $this->post(route('web.checkout.place'), $base + ['method' => Checkout::CARD]);
         $order = Order::query()->sole();
 
-        $this->travel(11)->minutes();
+        $this->travel(31)->minutes();
         $this->artisan('pedidos:vencer-qr')->assertSuccessful();
 
         $this->assertSame(Checkout::STATUS_CANCELLED, $order->refresh()->statusName());
-        $this->get(route('web.checkout.done', $order))->assertSee('PEDIDO CANCELADO')->assertSee('el QR de pago venció');
-        $this->post(route('web.checkout.simulate-qr', $order));
+        $this->get(route('web.checkout.done', $order))->assertSee('PEDIDO CANCELADO')->assertSee('el tiempo para pagar terminó');
+        $this->post(route('web.checkout.simulate-payment', $order), ['result' => 'approved']);
         $this->assertSame(Checkout::STATUS_CANCELLED, $order->refresh()->statusName());
     }
 
@@ -153,7 +160,7 @@ class OrderFulfillmentTest extends TestCase
         $order = Order::query()->sole();
         $this->assertSame([], $this->tasks($order)); // captura: espera a que el equipo valide
 
-        $this->post(route('web.checkout.simulate-qr', $order))->assertNotFound();
+        $this->post(route('web.checkout.simulate-payment', $order), ['result' => 'approved'])->assertNotFound();
 
         // Al confirmarse el pago (lo hace el sistema de pago, no el panel) arranca la venta en el CRM, aún sin configurar.
         \App\Services\Orders\OrderPayments::confirm($order);

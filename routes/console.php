@@ -12,10 +12,10 @@ Schedule::command('zazu:sync-agencies')
     ->everySixHours()
     ->withoutOverlapping();
 
-// Pedidos pagados con Yape cuyo QR venció sin pagarse: se cancelan (App\Services\Orders\OrderPayments).
+// Pedidos que esperaban el pago con tarjeta y no se pagaron a tiempo: se cancelan (App\Services\Orders\OrderPayments).
 Artisan::command('pedidos:vencer-qr', function () {
-    $this->info(\App\Services\Orders\OrderPayments::expireQrs().' pedidos cancelados por QR vencido.');
-})->purpose('Cancela los pedidos con QR de Yape vencido');
+    $this->info(\App\Services\Orders\OrderPayments::expireQrs().' pedidos cancelados por pago vencido.');
+})->purpose('Cancela los pedidos con el pago con tarjeta vencido');
 
 Schedule::command('pedidos:vencer-qr')->everyMinute()->withoutOverlapping();
 

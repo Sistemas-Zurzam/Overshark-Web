@@ -2,10 +2,10 @@
 
 {{--
     C3 · Pago: resumen de envío (Enviar a / Método de envío / Comprobante, con "Editar") y métodos de pago en
-    tarjetas que se despliegan (Checkout::paymentMethods): tarjeta de crédito o débito con Culqi (formulario en
-    la página; checkout.js crea el token directo en Culqi), Yape con QR de Ligo Pay (pendiente de su API), los
-    medios activos del admin con captura, y contraentrega, cuyo separo (S/ 15 domicilio, S/ 30 agencia;
-    Checkout::depositFor) se paga aquí mismo con tarjeta o Yape. Lo no configurado se ve con un aviso.
+    tarjetas que se despliegan (Checkout::paymentMethods): tarjeta de crédito o débito con Izipay (al confirmar
+    se abre su formulario seguro, web/checkout/pay.blade.php), los medios activos del admin con captura, y
+    contraentrega, cuyo separo (S/ 15 domicilio, S/ 30 agencia; Checkout::depositFor) se paga con tarjeta. Lo no
+    configurado se ve con un aviso.
     El pedido se crea en web.checkout.place (token contra doble envío y total confirmado).
 --}}
 
@@ -28,8 +28,8 @@
     $pickupAddress = \App\Support\Shipping::pickupAddress();
     $money = fn ($amount) => 'S/ '.number_format((float) $amount, 2);
     $editUrl = route('web.checkout.personal');
-    // Aviso dentro de Tarjeta (sin llaves de Culqi) o Yape (Ligo Pay pendiente): se ve el diseño pero no se puede pagar.
-    $notActive = fn (array $method) => $method['available'] ? '' : '<p class="bg-[#fff6e0] px-4 py-3 text-[13px] font-bold leading-[1.45] text-[#8a5a00]" role="note">'.($method['kind'] === 'yape' ? 'El pago con Yape (Ligo Pay) aún no está activo en la tienda.' : 'El pago con tarjeta (Culqi) aún no está activo en la tienda.').' Por ahora elige otro medio de pago.</p>';
+    // Aviso dentro de Tarjeta (sin llaves de Izipay): se ve el diseño pero no se puede pagar.
+    $notActive = fn (array $method) => $method['available'] ? '' : '<p class="bg-[#fff6e0] px-4 py-3 text-[13px] font-bold leading-[1.45] text-[#8a5a00]" role="note">El pago con tarjeta aún no está activo en la tienda. Por ahora elige otro medio de pago.</p>';
 @endphp
 
 @section('checkout')
@@ -38,17 +38,16 @@
     <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
         <form method="POST" action="{{ route('web.checkout.place') }}" class="flex flex-col gap-10 text-[#0b1015]" novalidate
             data-checkout-payment data-receipt-url="{{ route('web.checkout.receipt') }}" data-has-receipt="{{ $receiptPath ? '1' : '0' }}"
-            data-culqi-key="{{ $culqiKey }}" data-simulate="{{ $simulating ? '1' : '0' }}" data-culqi-url="{{ $culqiSecureUrl }}" data-email="{{ $customer['email'] ?? '' }}"
+            data-email="{{ $customer['email'] ?? '' }}"
             data-total="{{ number_format($total, 2, '.', '') }}" data-deposit="{{ number_format($deposit, 2, '.', '') }}">
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
-            <input type="hidden" name="culqi_token" value="" data-ck-culqi-token>
             <input type="hidden" name="expected_total" value="{{ number_format($total, 2, '.', '') }}">
 
             @if ($simulating)
                 <div class="border-2 border-dashed border-[#742384] bg-[#faf6fb] px-4 py-3 text-[13px] leading-[1.5] text-[#3d0a49]" role="note">
                     <p class="font-extrabold">MODO SIMULACIÓN · no se cobra dinero real</p>
-                    <p>Tarjeta aprobada: <strong>4111 1111 1111 1111</strong> · rechazada: <strong>4000 0000 0000 0002</strong> · CVV 123 y cualquier fecha futura. Con Yape verás un QR de prueba y el botón "Simular pago".</p>
+                    <p>Con tarjeta, el paso siguiente muestra los botones "Pagar (aprobado)" y "Pagar (rechazado)" en lugar del formulario de Izipay.</p>
                 </div>
             @endif
 
@@ -125,10 +124,7 @@
                         <div @class(['flex flex-col gap-5 px-5 pb-6 sm:px-6', 'hidden' => $selected !== $method['id']]) data-ck-panel="{{ $method['id'] }}">
                             @if ($method['kind'] === 'card')
                                 {!! $notActive($method) !!}
-                                @include('web.checkout.partials.culqi-card-form', ['prefix' => 'card', 'customer' => $customer])
-                            @elseif ($method['kind'] === 'yape')
-                                {!! $notActive($method) !!}
-                                @include('web.checkout.partials.ligo-yape-qr', ['amount' => $total])
+                                @include('web.checkout.partials.izipay-card-note')
                             @elseif ($method['kind'] === 'wallet')
                                 <hr class="border-[#0b1015]">
                                 <p class="text-[13px] font-extrabold uppercase tracking-[.5px]">Paga {{ $money($total) }} con {{ $method['name'] }}</p>
@@ -161,9 +157,7 @@
                                     <div @class(['flex flex-col gap-3', 'hidden' => $selectedDeposit !== $option['id']]) data-ck-deposit-panel="{{ $option['id'] }}">
                                         {!! $notActive($option) !!}
                                         @if ($option['kind'] === 'card')
-                                            @include('web.checkout.partials.culqi-card-form', ['prefix' => 'deposit-card', 'customer' => $customer])
-                                        @elseif ($option['kind'] === 'yape')
-                                            @include('web.checkout.partials.ligo-yape-qr', ['amount' => $deposit])
+                                            @include('web.checkout.partials.izipay-card-note')
                                         @else
                                             @include('web.checkout.partials.wallet-pay', ['method' => $option, 'amount' => $deposit, 'concept' => 'tu separo'])
                                         @endif

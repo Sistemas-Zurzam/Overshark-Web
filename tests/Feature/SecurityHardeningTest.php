@@ -75,7 +75,7 @@ class SecurityHardeningTest extends TestCase
         // Con APP_ENV distinto de "testing" Laravel activa el CSRF; aquí interesa que la ruta esté cerrada, no el token.
         $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
             ->withSession(['checkout.orders' => [$order->id]])
-            ->post(route('web.checkout.simulate-qr', $order))->assertNotFound();
+            ->post(route('web.checkout.simulate-payment', $order), ['result' => 'approved'])->assertNotFound();
         $this->assertSame('Esperando pago', $order->fresh()->statusName());
     }
 

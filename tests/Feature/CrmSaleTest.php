@@ -21,11 +21,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Tests\Concerns\PaysWithIzipay;
 use Tests\TestCase;
 
 /** El pedido pagado se registra como venta en CRM-LIVEX-V2, que asigna la nota de venta (POST /api/v1/sales). */
 class CrmSaleTest extends TestCase
 {
+    use PaysWithIzipay;
     use RefreshDatabase;
 
     private Producto $polo;
@@ -53,8 +55,8 @@ class CrmSaleTest extends TestCase
         $this->miraflores = Distrito::query()->create(['provincia_id' => $lima->id, 'name' => 'Miraflores']);
         $this->wanchaq = Distrito::query()->create(['provincia_id' => $cusco->id, 'name' => 'Wanchaq']);
 
+        $this->configureIzipay();
         config([
-            'services.culqi.public_key' => 'pk_test_x', 'services.culqi.secret_key' => 'sk_test_x', 'services.culqi.base_url' => 'https://api.culqi.test/v2',
             'services.crm.base_url' => 'https://crm.test', 'services.crm.api_key' => 'lvx_clave', 'services.crm.send_sales' => true,
         ]);
         // CRM simulado: asigna la siguiente nota de venta de su serie (ya va en NV-00013) y, si la misma venta
@@ -62,7 +64,6 @@ class CrmSaleTest extends TestCase
         $sales = [];
         $last = 13;
         Http::fake([
-            'api.culqi.test/*' => Http::response(['object' => 'charge', 'id' => 'chr_ok'], 201),
             'crm.test/*' => function ($request) use (&$sales, &$last) {
                 $reference = $request['external_reference'];
                 $isNew = ! isset($sales[$reference]);
@@ -86,11 +87,18 @@ class CrmSaleTest extends TestCase
         ], $customer))->assertSessionHasNoErrors();
         $total = $this->get(route('web.checkout.payment'))->viewData('total');
         $this->post(route('web.checkout.place'), array_merge(
-            ['method' => Checkout::CARD, 'culqi_token' => 'tkn_ok', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
+            ['method' => Checkout::CARD, 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => number_format($total, 2, '.', '')],
             $place,
         ))->assertSessionHasNoErrors();
 
-        return Order::query()->latest('id')->first();
+        $order = Order::query()->latest('id')->first();
+
+        // Con tarjeta el pedido espera el pago: la clienta paga en el formulario de Izipay (resultado firmado).
+        if (($place['method'] ?? Checkout::CARD) === Checkout::CARD || ($place['deposit_method'] ?? null) === Checkout::CARD) {
+            $this->payWithIzipay($order);
+        }
+
+        return $order->fresh();
     }
 
     private function crmRequests(): array
@@ -143,7 +151,7 @@ class CrmSaleTest extends TestCase
         $this->assertSame(['type' => 'delivery', 'address' => 'Av. Larco 123', 'reference' => 'Frente al parque', 'district' => 'MIRAFLORES', 'province' => 'LIMA', 'department' => 'LIMA'], $request['delivery']);
         $this->assertEquals([['sku' => 'OVER_REF0100', 'quantity' => 2, 'unit_price' => 40, 'cross' => false]], $request['items']);
         $this->assertEquals(15, $request['shipping_cost']);
-        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 95, 'reference' => 'chr_ok', 'paid_at' => now()->toDateString()]], $request['payments']);
+        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 95, 'reference' => 'txn_'.$order->id.'_test', 'paid_at' => now()->toDateString()]], $request['payments']);
 
         $order->refresh();
         $this->assertSame(['NV-00014', 14], [$order->nota_venta, $order->crm_sale_id]);
@@ -186,7 +194,7 @@ class CrmSaleTest extends TestCase
     public function test_cash_on_delivery_to_a_shalom_agency_sends_the_agency_and_only_the_deposit_as_paid(): void
     {
         $shalom = DB::table('courier')->insertGetId(['ter_id' => '902', 'lugar_over' => 'WANCHAQ - AV. SOL', 'direccion' => 'AV. SOL 100, WANCHAQ', 'zona' => 'WANCHAQ', 'provincia' => 'CUSCO', 'departamento' => 'CUSCO']);
-        $this->buy(
+        $order = $this->buy(
             ['distrito_id' => $this->wanchaq->id, 'delivery' => 'agencia', 'agency' => $shalom],
             place: ['method' => Checkout::CASH_ON_DELIVERY, 'deposit_method' => Checkout::CARD],
         );
@@ -198,7 +206,7 @@ class CrmSaleTest extends TestCase
         $this->assertSame(['WANCHAQ', 'CUSCO', 'CUSCO'], [$request['delivery']['district'], $request['delivery']['province'], $request['delivery']['department']]);
         // Total 80 + 14 de envío: el separo de S/ 30 (envío + separo) va como pago y el saldo queda por cobrar en el CRM.
         $this->assertEquals(14, $request['shipping_cost']);
-        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 30, 'reference' => 'chr_ok', 'paid_at' => now()->toDateString()]], $request['payments']);
+        $this->assertEquals([['method' => 'Tarjeta', 'amount' => 30, 'reference' => 'txn_'.$order->id.'_test', 'paid_at' => now()->toDateString()]], $request['payments']);
     }
 
     public function test_warehouse_pickup_without_deposit_goes_as_recojo_with_nothing_paid(): void

@@ -12,7 +12,7 @@ use App\Support\Checkout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Pedidos del panel: el pago lo confirman Culqi y Ligo Pay; aquí solo se prepara, envía, entrega o anula. */
+/** Pedidos del panel: el pago lo confirma Izipay; aquí solo se prepara, envía, entrega o anula. */
 class OrdersWithoutManualConfirmationTest extends TestCase
 {
     use RefreshDatabase;

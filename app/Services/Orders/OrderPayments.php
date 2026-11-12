@@ -4,13 +4,12 @@ namespace App\Services\Orders;
 
 use App\Models\Admin\Order;
 use App\Models\Admin\StatusOrder;
-use App\Services\Payments\YapeQr;
 use App\Support\Checkout;
 
 /**
- * Cambios de estado del pago de un pedido web. Toda confirmación de pago pasa por confirm() —cobro con
- * tarjeta, QR de Yape pagado (simulado o, al integrarse, aviso de Ligo vía Zazu) o validación manual en el
- * admin— y arranca lo que sigue (OrderFulfillment).
+ * Cambios de estado del pago de un pedido web. Toda confirmación de pago pasa por confirm() —pago con tarjeta
+ * confirmado por Izipay (confirmIzipay), con firma verificada— y arranca lo que sigue (OrderFulfillment).
+ * El panel no confirma pagos a mano.
  */
 class OrderPayments
 {
@@ -28,7 +27,6 @@ class OrderPayments
         $order->update([
             'status_order_id' => self::status($status),
             'pago_referencia' => $reference ?? $order->pago_referencia,
-            'pago_qr' => null,
             'pago_qr_expira' => null,
             'fecha_envio' => $order->fecha_envio ?? Checkout::shippingDate($order->entrega),
         ]);
@@ -36,20 +34,43 @@ class OrderPayments
         OrderFulfillment::start($order);
     }
 
-    /** Genera el QR de Yape por lo que hay que pagar ahora (el total o el separo) y deja el pedido esperando. */
-    public static function startQr(Order $order, YapeQr $qr): void
+    /** Deja el pedido esperando el pago con tarjeta (el total o el separo) durante PAYMENTS_WAIT_MINUTES. */
+    public static function awaitCardPayment(Order $order): void
     {
-        $data = $qr->create($order, (float) $order->pago_monto);
-
         $order->update([
             'status_order_id' => self::status(Checkout::STATUS_AWAITING_QR),
-            'pago_qr' => $data['qr_image'],
-            'pago_qr_expira' => $data['expires_at'],
-            'pago_referencia' => $data['reference'],
+            'pago_qr_expira' => now()->addMinutes((int) config('services.payments.wait_minutes', 30)),
         ]);
     }
 
-    /** Cancela los pedidos cuyo QR venció sin pagarse. Devuelve cuántos. */
+    /**
+     * Confirma un pago de Izipay ya validado por firma (IzipayGateway::verify). Solo cuenta si la plataforma lo
+     * marca PAGADO, es de este pedido, por el importe exacto que debía pagar y en soles. Devuelve si quedó pagado.
+     *
+     * @param  array{order_id: string, paid: bool, amount: float, currency: string, uuid: ?string}  $result
+     */
+    public static function confirmIzipay(Order $order, array $result): bool
+    {
+        $order->loadMissing('statusOrder');
+
+        if (in_array($order->statusName(), self::PAID_STATUSES, true)) {
+            return true;
+        }
+
+        if (! $result['paid']
+            || $result['order_id'] !== $order->number_zazu
+            || $result['currency'] !== 'PEN'
+            || abs($result['amount'] - (float) $order->pago_monto) >= 0.01
+            || $order->statusName() === Checkout::STATUS_CANCELLED) {
+            return false;
+        }
+
+        self::confirm($order, $result['uuid'] ?? $order->pago_referencia);
+
+        return true;
+    }
+
+    /** Cancela los pedidos que esperaban el pago con tarjeta y no se pagaron a tiempo. Devuelve cuántos. */
     public static function expireQrs(): int
     {
         $expired = Order::query()
@@ -59,7 +80,6 @@ class OrderPayments
 
         $expired->each(fn (Order $order) => $order->update([
             'status_order_id' => self::status(Checkout::STATUS_CANCELLED),
-            'pago_qr' => null,
         ]));
 
         return $expired->count();

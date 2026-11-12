@@ -11,9 +11,8 @@ use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\StatusOrder;
 use App\Services\Orders\OrderFulfillment;
 use App\Services\Orders\OrderPayments;
-use App\Services\Payments\CulqiGateway;
+use App\Services\Payments\IzipayGateway;
 use App\Services\Payments\PaymentSimulator;
-use App\Services\Payments\YapeQr;
 use Illuminate\Validation\Rule;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
@@ -372,8 +371,6 @@ Route::get('/checkout/pago', function () {
         'place' => $distrito ? collect([$distrito->name, $distrito->provincia?->name, $distrito->provincia?->departamento?->name])->filter()->implode(', ') : null,
         'deposit' => Checkout::depositAmount($customer['delivery'] ?? null, $summary['total']),
         'shippingDateLabel' => Checkout::shippingDateLabel(Checkout::shippingDate($customer['delivery'] ?? null)),
-        'culqiKey' => CulqiGateway::isConfigured() ? CulqiGateway::publicKey() : null,
-        'culqiSecureUrl' => CulqiGateway::secureUrl(),
         'simulating' => PaymentSimulator::enabled(),
         'methods' => Checkout::paymentMethods(),
         'token' => session('checkout.token'),
@@ -381,7 +378,7 @@ Route::get('/checkout/pago', function () {
     ]);
 })->name('web.checkout.payment');
 
-Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi) {
+Route::post('/checkout/pedido', function (Request $request) {
     $methods = Checkout::availableMethods(); // los "Muy pronto" no se pueden elegir
     $online = Checkout::onlineMethods();
     $deposit = Checkout::depositAmount(session('checkout.customer.delivery'), Checkout::summary()['total']);
@@ -389,8 +386,6 @@ Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi)
         'method' => ['required', 'in:'.$methods->pluck('id')->implode(',')],
         // Contraentrega con separo: con qué se paga el separo ahora (tarjeta o Yape/Plin).
         'deposit_method' => [Rule::requiredIf(fn () => $request->input('method') === Checkout::CASH_ON_DELIVERY && $deposit > 0), 'nullable', 'in:'.$online->pluck('id')->implode(',')],
-        // Token de la tarjeta generado por Culqi Checkout en el navegador.
-        'culqi_token' => ['nullable', 'string', 'max:100'],
         'token' => ['required', 'string', 'size:40'],
         'terms' => ['accepted'],
         // Total que la clienta vio en la pantalla de pago: el pedido solo se crea por ese importe.
@@ -427,11 +422,8 @@ Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi)
         return back()->withInput()->withErrors(['receipt' => $isCod ? 'Sube la captura del pago de tu separo para confirmar el pedido.' : 'Sube la captura de tu pago para confirmar el pedido.']);
     }
 
-    // La tarjeta se cobra con Culqi: el navegador ya creó el token con los datos de la clienta.
-    $byCulqi = ($payWith['kind'] ?? null) === 'card';
-    if ($byCulqi && blank($validated['culqi_token'] ?? null)) {
-        return back()->withInput()->withErrors(['method' => 'Ingresa los datos de tu tarjeta para continuar.']);
-    }
+    // La tarjeta se paga en el formulario de Izipay del paso siguiente (la web nunca recibe los datos de la tarjeta).
+    $byCard = ($payWith['kind'] ?? null) === 'card';
 
     // Precio, stock y combos se vuelven a validar en el servidor; si algo cambió, el carrito se conserva.
     $cart = Checkout::verifyCart();
@@ -450,36 +442,27 @@ Route::post('/checkout/pedido', function (Request $request, CulqiGateway $culqi)
         ]);
     }
 
-    // El pedido se crea antes de cobrar: así nunca queda un cobro sin pedido.
+    // El pedido se crea antes de pagar: así nunca queda un cobro sin pedido.
     $order = Checkout::place($customer, $method, $payWith, ($payWith['receipt'] ?? false) ? $receipt : null, $validated['token'], $cart['lines'], auth('customer')->id());
 
     if ($order->wasRecentlyCreated) {
-        // Tarjeta: se cobra el total (o el separo) con Culqi. Si la rechaza, el pedido no queda y puede reintentar.
-        if ($byCulqi) {
-            $charge = $culqi->charge((float) $order->pago_monto, $validated['culqi_token'], $order->email, "Pedido {$order->number_zazu} Overshark", ['pedido' => $order->number_zazu]);
-
-            if (! $charge['ok']) {
-                $order->delete();
-
-                return redirect()->route('web.checkout.payment')->withErrors(['method' => $charge['message']]);
-            }
-
-            OrderPayments::confirm($order, $charge['id']);
-        } elseif (($payWith['kind'] ?? null) === 'yape') {
-            // Yape: se genera el QR y el pedido espera el pago (la página del pedido muestra el QR).
-            OrderPayments::startQr($order, app(YapeQr::class));
+        // Tarjeta: el pedido espera el pago (el total o el separo) y la clienta lo hace en el formulario de Izipay.
+        if ($byCard) {
+            OrderPayments::awaitCardPayment($order);
         } elseif (! $payWith) {
             // Contraentrega sin nada que pagar en línea (recojo en almacén): pasa directo a preparación; se cobra al entregar.
             OrderPayments::markCashOnDelivery($order);
         }
-        // Captura de Yape/Plin del admin: el panel ya no confirma pagos a mano (Culqi y Ligo Pay los confirman solos),
+        // Captura de Yape/Plin del admin: el panel ya no confirma pagos a mano (Izipay confirma los pagos con tarjeta),
         // así que ese pedido queda pendiente de pago hasta que su medio tenga confirmación automática.
     }
 
     session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
     session()->push('checkout.orders', $order->id);
 
-    return redirect()->route('web.checkout.done', $order);
+    return $byCard && $order->wasRecentlyCreated
+        ? redirect()->route('web.checkout.pay', $order)
+        : redirect()->route('web.checkout.done', $order);
 })->middleware('throttle:10,1')->name('web.checkout.place');
 
 // Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
@@ -492,22 +475,83 @@ Route::get('/checkout/pedido/{order}', function (Order $order) {
         'order' => $order->load('statusOrder'),
         'paid' => $order->statusOrder?->name === Checkout::STATUS_PAID,
         'depositPaid' => $order->statusOrder?->name === Checkout::STATUS_DEPOSIT_PAID,
-        'awaitingQr' => $order->statusOrder?->name === Checkout::STATUS_AWAITING_QR,
+        'awaitingPayment' => $order->statusOrder?->name === Checkout::STATUS_AWAITING_QR,
         'cancelled' => $order->statusOrder?->name === Checkout::STATUS_CANCELLED,
-        'simulating' => PaymentSimulator::enabled(),
     ]);
 })->name('web.checkout.done');
 
-// Modo simulación: "Simular pago" del QR de Yape (en real lo confirma Ligo Pay vía Zazu).
-Route::post('/checkout/pedido/{order}/simular-pago', function (Order $order) {
+// Pago con tarjeta: formulario incrustado de Izipay (en modo simulación, botones de prueba). Solo mientras el pedido
+// espera el pago; con otro estado lleva al estado del pedido.
+Route::get('/checkout/pedido/{order}/pagar', function (Order $order, IzipayGateway $izipay) {
+    $ownsOrder = auth('customer')->check() && $order->customer_account_id === auth('customer')->id();
+    abort_unless($ownsOrder || in_array($order->id, session('checkout.orders', []), true), 404);
+
+    if ($order->load('statusOrder')->statusName() !== Checkout::STATUS_AWAITING_QR) {
+        return redirect()->route('web.checkout.done', $order);
+    }
+
+    $simulating = PaymentSimulator::enabled();
+    $formToken = null;
+    $error = null;
+
+    if (! $simulating) {
+        if (! IzipayGateway::isConfigured()) {
+            $error = 'El pago con tarjeta aún no está activo en la tienda.';
+        } else {
+            $created = $izipay->createFormToken($order, (float) $order->pago_monto);
+            $formToken = $created['token'];
+            $error = $created['ok'] ? null : $created['message'];
+        }
+    }
+
+    return view('web.checkout.pay', [
+        'order' => $order,
+        'simulating' => $simulating,
+        'formToken' => $formToken,
+        'publicKey' => IzipayGateway::publicKey(),
+        'error' => $error,
+    ]);
+})->name('web.checkout.pay');
+
+// El navegador devuelve aquí el resultado del pago (kr-post-url-success). Sin token CSRF: solo se acepta con la firma
+// de Izipay válida (IzipayGateway::verify) y por el importe exacto del pedido (OrderPayments::confirmIzipay).
+Route::post('/checkout/pedido/{order}/pagado', function (Request $request, Order $order) {
+    $result = IzipayGateway::verify($request->all());
+
+    if ($result && OrderPayments::confirmIzipay($order, $result)) {
+        return redirect()->route('web.checkout.done', $order);
+    }
+
+    return redirect()->route('web.checkout.pay', $order)->withErrors(['payment' => 'No pudimos confirmar tu pago. Si ya te cobraron, no pagues de nuevo: te avisaremos por correo cuando lo confirmemos.']);
+})->middleware('throttle:20,1')->name('web.checkout.paid');
+
+// Notificación servidor a servidor (IPN) de Izipay al terminar un pago. Con la firma válida confirma el pedido aunque
+// la clienta haya cerrado el navegador. Se configura en el Back Office de Izipay: https://TU-DOMINIO/webhooks/izipay
+Route::post('/webhooks/izipay', function (Request $request) {
+    $result = IzipayGateway::verify($request->all());
+    abort_unless($result, 403);
+
+    if ($order = Order::query()->where('number_zazu', $result['order_id'])->first()) {
+        OrderPayments::confirmIzipay($order, $result);
+    }
+
+    return response('OK', 200);
+})->middleware('throttle:120,1')->name('web.izipay.ipn');
+
+// Modo simulación: "Pagar (aprobado/rechazado)" en lugar del formulario de Izipay.
+Route::post('/checkout/pedido/{order}/simular-pago', function (Request $request, Order $order) {
     abort_unless(PaymentSimulator::enabled() && in_array($order->id, session('checkout.orders', []), true), 404);
 
     if ($order->load('statusOrder')->statusName() === Checkout::STATUS_AWAITING_QR) {
-        OrderPayments::confirm($order, $order->pago_referencia);
+        if ($request->input('result') === 'declined') {
+            return redirect()->route('web.checkout.pay', $order)->withErrors(['payment' => 'Pago rechazado (simulación): fondos insuficientes. Puedes intentarlo de nuevo.']);
+        }
+
+        OrderPayments::confirm($order, 'sim_chr_'.bin2hex(random_bytes(6)));
     }
 
     return redirect()->route('web.checkout.done', $order);
-})->name('web.checkout.simulate-qr');
+})->name('web.checkout.simulate-payment');
 
 Route::post('/checkout/comprobante', function (Request $request) {
     $validated = $request->validate([

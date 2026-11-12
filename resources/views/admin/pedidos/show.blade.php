@@ -85,15 +85,15 @@
                         <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($order->comprobante_pago) }}" alt="Captura del pago" class="max-h-80 rounded-xl border border-slate-200">
                     </a>
                 @elseif ($order->pago_referencia)
-                    <p class="mt-2 text-emerald-700">Cobrado con tarjeta por Culqi · cargo {{ $order->pago_referencia }}</p>
+                    <p class="mt-2 text-emerald-700">Cobrado con tarjeta por Izipay · transacción {{ $order->pago_referencia }}</p>
                 @elseif ((float) $order->pago_monto > 0)
                     <p class="mt-2 text-red-600">Sin captura de pago.</p>
                 @endif
                 @if ((float) $order->pago_monto > 0)
                     <p class="mt-2">Pagado en línea: <span class="font-bold">S/ {{ number_format((float) $order->pago_monto, 2) }}</span></p>
                 @endif
-                @if ($order->pago_qr && $order->pago_qr_expira)
-                    <p class="mt-2 text-amber-700">QR de Yape generado · vence {{ $order->pago_qr_expira->format('d/m H:i') }}</p>
+                @if ($order->pago_qr_expira)
+                    <p class="mt-2 text-amber-700">Esperando el pago con tarjeta · se cancela a las {{ $order->pago_qr_expira->format('d/m H:i') }} si no se paga</p>
                 @endif
                 @if ((float) $order->separo > 0)
                     <dl class="mt-3 space-y-1 border-t border-slate-200 pt-3">

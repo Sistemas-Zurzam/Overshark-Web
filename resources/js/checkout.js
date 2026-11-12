@@ -381,7 +381,6 @@ if (payment) {
     const submit = $('[data-ck-submit]');
     const terms = $('[data-ck-terms]');
     const payError = $('[data-ck-pay-error]');
-    const culqiToken = $('[data-ck-culqi-token]');
     let hasReceipt = payment.dataset.hasReceipt === '1';
     let uploading = false;
 
@@ -394,15 +393,8 @@ if (payment) {
     };
     const needsReceipt = () => payWith()?.dataset.receipt === '1';
     const kindNow = () => payWith()?.dataset.kind;
-    // La tarjeta se cobra con Culqi; Yape (QR de Ligo Pay) se activará al integrar su API.
-    const byCulqi = () => kindNow() === 'card';
     const isCod = () => selectedMethod()?.dataset.kind === 'cod';
     const amountNow = () => Number(isCod() ? payment.dataset.deposit : payment.dataset.total);
-    // Panel visible del medio con el que se paga (el del método, o el del separo en contraentrega).
-    const activePanel = () => (isCod()
-        ? payment.querySelector(`[data-ck-deposit-panel="${payWith()?.value}"]`)
-        : payment.querySelector(`[data-ck-panel="${selectedMethod()?.value}"]`));
-
     const render = () => {
         const method = selectedMethod();
         const deposit = payment.querySelector('[data-ck-deposit]:checked');
@@ -412,7 +404,7 @@ if (payment) {
         const unavailable = payWith()?.dataset.available === '0';
         submit.disabled = uploading || !method || unavailable || (needsReceipt() && !hasReceipt) || !terms?.checked;
         const amount = `S/ ${amountNow().toFixed(2)}`;
-        submit.textContent = kindNow() === 'card' ? `PAGAR ${amount} CON TARJETA` : (kindNow() === 'yape' ? `PAGAR ${amount} CON YAPE` : 'REALIZAR PEDIDO');
+        submit.textContent = kindNow() === 'card' ? `CONTINUAR A PAGAR ${amount} CON TARJETA` : 'REALIZAR PEDIDO';
     };
 
     payment.querySelectorAll('[data-ck-method], [data-ck-deposit]').forEach((radio) => radio.addEventListener('change', render));
@@ -421,73 +413,6 @@ if (payment) {
     const showPayError = (message) => {
         payError.textContent = message;
         payError.classList.toggle('hidden', !message);
-    };
-
-    // Solo números en los campos de la tarjeta; el número se agrupa de a 4.
-    payment.querySelectorAll('[data-card-number], [data-card-cvv], [data-card-month], [data-card-year], [data-card-doc-number]').forEach((input) => {
-        input.addEventListener('input', () => {
-            const digits = input.value.replace(/\D/g, '');
-            input.value = input.matches('[data-card-number]') ? digits.slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ') : digits;
-        });
-    });
-
-    const luhn = (number) => {
-        let sum = 0;
-        [...number].reverse().forEach((d, i) => {
-            let n = Number(d);
-            if (i % 2) n = n * 2 > 9 ? n * 2 - 9 : n * 2;
-            sum += n;
-        });
-        return sum % 10 === 0;
-    };
-
-    // Revisa el formulario de tarjeta visible y arma lo que se envía a Culqi (o devuelve el error para la clienta).
-    const culqiRequest = () => {
-        const panel = activePanel();
-        const value = (sel) => panel?.querySelector(sel)?.value.trim() ?? '';
-        const number = value('[data-card-number]').replace(/\s/g, '');
-        const cvv = value('[data-card-cvv]');
-        const month = value('[data-card-month]').padStart(2, '0');
-        const year = value('[data-card-year]');
-        const now = new Date();
-        if (number.length < 13 || !luhn(number)) return { error: 'Revisa el número de tu tarjeta.' };
-        if (!/^\d{3,4}$/.test(cvv)) return { error: 'El CVV tiene 3 o 4 dígitos (detrás de tu tarjeta).' };
-        if (!(Number(month) >= 1 && Number(month) <= 12)) return { error: 'El mes de vencimiento va de 01 a 12.' };
-        if (!/^\d{4}$/.test(year) || Number(year) < now.getFullYear() || (Number(year) === now.getFullYear() && Number(month) < now.getMonth() + 1)) return { error: 'Revisa la fecha de vencimiento: la tarjeta parece vencida.' };
-        if (value('[data-card-name]').length < 3) return { error: 'Escribe el nombre como aparece en tu tarjeta.' };
-        return { path: '/tokens', body: { card_number: number, cvv, expiration_month: month, expiration_year: year, email: payment.dataset.email } };
-    };
-
-    // Tarjeta: los datos van directo de este navegador a Culqi (llave pública) y vuelve un token; solo el
-    // token se envía con el pedido y el servidor cobra (CulqiGateway). La web nunca recibe la tarjeta.
-    const payWithCulqi = async () => {
-        const request = culqiRequest();
-        if (request.error) {
-            showPayError(request.error);
-            return;
-        }
-        submit.disabled = true;
-        submit.textContent = 'PROCESANDO PAGO…';
-        // Modo simulación: no se llama a Culqi; 4000 0000 0000 0002 simula una tarjeta rechazada.
-        if (payment.dataset.simulate === '1') {
-            culqiToken.value = request.body.card_number === '4000000000000002' ? 'sim_tkn_declined' : 'sim_tkn_ok';
-            payment.submit();
-            return;
-        }
-        try {
-            const response = await fetch(`${payment.dataset.culqiUrl}${request.path}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${payment.dataset.culqiKey}` },
-                body: JSON.stringify(request.body),
-            });
-            const data = await response.json();
-            if (!response.ok || !data.id) throw new Error(data.user_message || '');
-            culqiToken.value = data.id;
-            payment.submit();
-        } catch (error) {
-            showPayError(error.message || 'No pudimos procesar tu pago. Revisa los datos e intenta de nuevo.');
-            render();
-        }
     };
 
     payment.querySelectorAll('[data-ck-copy]').forEach((button) => button.addEventListener('click', async () => {
@@ -534,15 +459,6 @@ if (payment) {
             return;
         }
         showPayError('');
-        if (byCulqi() && !culqiToken.value) {
-            event.preventDefault();
-            if (!payment.dataset.culqiKey && payment.dataset.simulate !== '1') {
-                showPayError('El pago con tarjeta (Culqi) aún no está activo en la tienda. Por ahora elige otro medio de pago.');
-                return;
-            }
-            payWithCulqi();
-            return;
-        }
         // Evita el doble envío; el servidor además reutiliza el pedido del mismo token.
         submit.disabled = true;
         submit.textContent = 'PROCESANDO PEDIDO…';
