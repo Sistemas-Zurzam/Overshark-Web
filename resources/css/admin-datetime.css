@@ -1,0 +1,74 @@
+@import 'flatpickr/dist/flatpickr.min.css';
+
+/* Calendario del panel: mismas esquinas, tipografía y colores (navy / azul) que el resto del admin. */
+.flatpickr-calendar {
+    width: 308px;
+    padding: 6px 6px 4px;
+    border: 1px solid #c9ced6;
+    border-radius: 2px;
+    box-shadow: 0 18px 40px -12px rgb(7 18 38 / 0.28);
+    font-family: inherit;
+}
+.flatpickr-calendar::before,
+.flatpickr-calendar::after { display: none; }
+/* Que las 7 columnas ocupen todo el ancho disponible (sin cortar «DOM»). */
+.flatpickr-innerContainer,
+.flatpickr-rContainer,
+.flatpickr-days,
+.dayContainer,
+.flatpickr-weekdays,
+.flatpickr-weekdaycontainer { width: 100%; min-width: 0; max-width: none; }
+.flatpickr-day { flex-basis: 14.2857%; }
+
+.flatpickr-months { align-items: center; padding-bottom: 6px; }
+.flatpickr-months .flatpickr-month { height: 36px; color: #0b0f14; }
+.flatpickr-current-month { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0; font-size: 14px; font-weight: 800; text-transform: capitalize; }
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year { font-weight: 800; color: #0b0f14; }
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month { top: 4px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-radius: 2px; color: #545966; }
+.flatpickr-months .flatpickr-prev-month { left: 4px; }
+.flatpickr-months .flatpickr-next-month { right: 4px; }
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover { background: #f2f2f5; color: #071226; }
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg { width: 16px; height: 16px; fill: none; }
+
+span.flatpickr-weekday { color: #65717c; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+
+.flatpickr-day {
+    max-width: none;
+    height: 36px;
+    line-height: 36px;
+    border-radius: 2px;
+    color: #0b0f14;
+    font-size: 13px;
+    font-weight: 600;
+}
+.flatpickr-day:hover,
+.flatpickr-day:focus { border-color: #eef3f9; background: #eef3f9; }
+.flatpickr-day.today { border-color: #2d69b5; }
+.flatpickr-day.today:hover { border-color: #2d69b5; background: #eef3f9; color: #0b0f14; }
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover { border-color: #071226; background: #071226; color: #fff; }
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay,
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover { color: #c9ced6; }
+
+/* Hora: dos campos grandes (hora : minutos) en una franja propia. */
+.flatpickr-time {
+    max-height: none;
+    height: 48px;
+    margin-top: 6px;
+    border-top: 1px solid #e5e7eb !important;
+}
+.flatpickr-time input,
+.flatpickr-time input.flatpickr-hour,
+.flatpickr-time input.flatpickr-minute { height: 40px; font-size: 18px; font-weight: 800; color: #0b0f14; }
+.flatpickr-time input:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:hover { background: #f5f6f8; }
+.flatpickr-time .flatpickr-time-separator { font-size: 18px; font-weight: 800; line-height: 40px; }
+.flatpickr-time .numInputWrapper span.arrowUp,
+.flatpickr-time .numInputWrapper span.arrowDown { border: 0; }

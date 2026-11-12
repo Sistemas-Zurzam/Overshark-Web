@@ -105,15 +105,23 @@
 
             <label class="block">
                 <span class="{{ $label }}">Empieza (hora de Lima)</span>
-                <input type="datetime-local" name="starts_at" value="{{ $startsAt }}" required class="{{ $field }}">
+                <input type="datetime-local" name="starts_at" value="{{ $startsAt }}" required data-datetime class="{{ $field }}">
                 @if ($error('starts_at')) <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $error('starts_at') }}</span> @endif
             </label>
 
-            <label class="block">
-                <span class="{{ $label }}">Termina (hora de Lima)</span>
-                <input type="datetime-local" name="ends_at" value="{{ $endsAt }}" required class="{{ $field }}">
-                @if ($error('ends_at')) <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $error('ends_at') }}</span> @endif
-            </label>
+            <div>
+                <label class="block">
+                    <span class="{{ $label }}">Termina (hora de Lima)</span>
+                    <input type="datetime-local" name="ends_at" value="{{ $endsAt }}" required data-datetime class="{{ $field }}">
+                    @if ($error('ends_at')) <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $error('ends_at') }}</span> @endif
+                </label>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span class="font-bold text-admin-text-secondary">Dura desde el inicio:</span>
+                    @foreach ([1, 3, 6, 12, 24, 48, 72] as $hours)
+                        <button type="button" data-end-hours="{{ $hours }}" class="border border-admin-border-strong bg-admin-surface px-2.5 py-1 font-bold text-admin-text hover:border-admin-accent hover:text-admin-accent">{{ $hours < 24 ? $hours.' h' : ($hours / 24).($hours === 24 ? ' día' : ' días') }}</button>
+                    @endforeach
+                </div>
+            </div>
 
             <label class="flex items-center gap-3 lg:col-span-2">
                 <input type="hidden" name="active" value="0">
@@ -127,6 +135,8 @@
             </div>
         </form>
     </div>
+
+    @vite('resources/js/admin-datetime.js')
 
     <script>
         document.querySelectorAll('[data-promo-form]').forEach((form) => {
