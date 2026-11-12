@@ -56,6 +56,7 @@ class SiteContentController extends Controller
         foreach (SiteContent::schema() as $group) {
             foreach ($group['fields'] as [$path, , $type, $max]) {
                 $rules['c.'.$path] = match ($type) {
+                    'toggle' => ['nullable', 'boolean'],
                     'number' => ['nullable', 'numeric', 'min:0', 'max:999'],
                     'phone' => ['nullable', 'string', 'max:'.$max, 'regex:/^[+\d\s()-]*$/'],
                     'email' => ['nullable', 'email', 'max:'.$max],
@@ -91,6 +92,15 @@ class SiteContentController extends Controller
         foreach (SiteContent::schema() as $group) {
             foreach ($group['fields'] as [$path, , $type]) {
                 $value = Arr::get($input, $path);
+
+                // Casilla: solo se guarda encendida (apagada es el valor por defecto).
+                if ($type === 'toggle') {
+                    if ($value) {
+                        Arr::set($content, $path, true);
+                    }
+
+                    continue;
+                }
 
                 if ($value === null || trim((string) $value) === '') {
                     continue;

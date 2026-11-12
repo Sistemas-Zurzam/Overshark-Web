@@ -209,4 +209,28 @@ class SiteContentTest extends TestCase
             ->assertSee('Términos y condiciones (documento legal)')
             ->assertSee('Pregunta 1');
     }
+
+    public function test_the_wafflera_banner_links_to_combos_and_can_show_only_the_uploaded_image(): void
+    {
+        // Por defecto: texto y botón sobre la imagen, y todo el banner (no solo el botón) lleva a Combos.
+        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertOk()
+            ->assertSee('9 prendas × S/ 99')
+            ->assertSee('Arma tu combo →')
+            ->assertSee('after:absolute after:inset-0', false);
+
+        // Con «solo imagen» la imagen subida ya trae su texto: no se encima nada y el banner entero es un enlace.
+        $this->save(['promos' => ['wafflera_image_only' => '1']])->assertRedirect();
+        $this->assertTrue((bool) SiteContent::get('promos.wafflera_image_only'));
+        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertOk()
+            ->assertDontSee('Arma tu combo →')
+            ->assertDontSee('Elige color y talla de cada prenda')
+            ->assertSee('href="'.route('web.combos.index').'" class="os-focus absolute inset-0"', false);
+
+        // Apagarlo vuelve a mostrar el texto.
+        $this->save(['promos' => ['wafflera_image_only' => '0']])->assertRedirect();
+        $this->assertFalse((bool) SiteContent::get('promos.wafflera_image_only'));
+        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertSee('Arma tu combo →');
+
+        $this->admin()->get(route('admin.contenido.edit'))->assertOk()->assertSee('Promo Wafflera · mostrar solo la imagen');
+    }
 }

@@ -32,6 +32,7 @@ class SiteContent
                 'anuncio_pago' => 'Pago contraentrega',
                 'wafflera_title' => '9 prendas × S/ 99',
                 'wafflera_text' => 'Elige color y talla de cada prenda. Llegan juntas en un solo envío.',
+                'wafflera_image_only' => false,
             ],
             'envio' => [
                 'home' => (float) config('services.storefront.shipping_home', 15),
@@ -270,7 +271,7 @@ class SiteContent
     }
 
     /**
-     * Campos del panel, por grupo: [ruta, etiqueta, tipo (text|textarea|number|email), máximo, ayuda].
+     * Campos del panel, por grupo: [ruta, etiqueta, tipo (text|textarea|number|email|phone|toggle), máximo, ayuda].
      * Las preguntas frecuentes y los documentos legales se arman aparte (varias filas).
      */
     public static function schema(): array
@@ -283,6 +284,7 @@ class SiteContent
                 ['promos.anuncio_pago', 'Mensaje de pago (barra superior)', 'text', 60, 'El mensaje de envío se arma solo con el precio de envío más barato.'],
                 ['promos.wafflera_title', 'Promo Wafflera · título', 'text', 60, ''],
                 ['promos.wafflera_text', 'Promo Wafflera · texto', 'textarea', 200, ''],
+                ['promos.wafflera_image_only', 'Promo Wafflera · mostrar solo la imagen', 'toggle', 0, 'Actívalo cuando la imagen que subiste ya trae su propio texto y botón: se oculta el texto de arriba. En ambos casos, al hacer clic en el banner se abre Combos.'],
             ]],
             'envio' => ['title' => 'Envíos y separo', 'help' => 'Estos importes son los que se cobran en el checkout y los que se muestran en toda la tienda. Un envío en 0 es gratis. El recojo en almacén siempre es gratis.', 'fields' => [
                 ['envio.home', 'Envío a domicilio en Lima (S/)', 'number', 999, ''],

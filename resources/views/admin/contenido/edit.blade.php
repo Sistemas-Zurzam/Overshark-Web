@@ -49,6 +49,13 @@
                         <p class="text-sm text-admin-text-secondary">{{ $group['help'] }}</p>
                         <div class="grid gap-4 lg:grid-cols-2">
                             @foreach ($group['fields'] as [$path, $text, $type, $max, $help])
+                                @if ($type === 'toggle')
+                                    <label class="flex items-start gap-2 text-sm lg:col-span-2">
+                                        <input type="checkbox" name="{{ $name($path) }}" value="1" @checked(old('c.'.$path, $current($path))) class="mt-0.5 size-4">
+                                        <span><span class="font-bold">{{ $text }}</span>@if ($help)<span class="mt-1 block text-xs text-slate-500">{{ $help }}</span>@endif</span>
+                                    </label>
+                                    @continue
+                                @endif
                                 <label @class(['block', 'lg:col-span-2' => $type === 'textarea'])>
                                     <span class="{{ $label }}">{{ $text }}</span>
                                     @if ($type === 'textarea')
