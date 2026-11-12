@@ -41,6 +41,18 @@ class StorefrontCompaniesTest extends TestCase
         $this->get(route('web.products.show', $boxPrime->id))->assertNotFound();
     }
 
+    public function test_the_combo_form_only_offers_products_of_the_store_companies(): void
+    {
+        $this->product('CLASICO', 'OVERSHARK PERU S.A.C');
+        $this->product('POLERA NERU', 'BRAVOS');
+        $this->product('AIR PODS PRO MAX', 'BOX PRIME', ['stock' => 0, 'price' => 0]);
+
+        $this->withoutMiddleware(\App\Http\Middleware\AuthenticateJwt::class)->actingAs(\App\Models\User::factory()->create())
+            ->get(route('admin.combos.index'))
+            ->assertOk()->assertSee('CLASICO · OVERSHARK PERU S.A.C')->assertSee('POLERA NERU · BRAVOS')
+            ->assertDontSee('AIR PODS PRO MAX')->assertDontSee('BOX PRIME');
+    }
+
     public function test_a_product_of_another_company_cannot_be_added_to_the_cart(): void
     {
         $boxPrime = $this->product('CASE LA', 'BOX PRIME', ['price' => 10]);

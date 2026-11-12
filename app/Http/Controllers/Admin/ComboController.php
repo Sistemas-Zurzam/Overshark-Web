@@ -245,7 +245,9 @@ class ComboController extends Controller
     {
         return [
             // Un producto por nombre y empresa: la empresa elegida define de qué inventario salen las variantes.
+            // Solo las empresas que vende la tienda (ZAZU_COMPANIES): los productos de otras, como BOX PRIME, no se ofrecen.
             'productOptions' => Producto::query()
+                ->soldByStore()
                 ->selectRaw('MIN(id) as id, name, MAX(empresa_nombre) as empresa_nombre, SUM(CASE WHEN price > 0 AND stock > 0 THEN 1 ELSE 0 END) as visibles')
                 ->whereNotNull('name')
                 ->groupBy('name', 'zazu_company_id')
