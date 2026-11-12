@@ -196,4 +196,20 @@ class PromotionsTest extends TestCase
 
         $this->assertDatabaseCount('promociones', 0);
     }
+
+    public function test_the_list_warns_when_a_promotion_changes_no_price(): void
+    {
+        // Un precio fijo de S/ 150 sobre una prenda de S/ 100 nunca baja nada; uno de S/ 80 sí.
+        $this->promo(['name' => 'Fijo alto', 'discount_type' => 'precio_fijo', 'discount_value' => 150]);
+        $this->promo(['name' => 'Fijo bajo', 'discount_type' => 'precio_fijo', 'discount_value' => 80]);
+        // Una prenda que no existe a la venta: tampoco se vería.
+        $this->promo(['name' => 'Sin prendas', 'scope_values' => ['NO EXISTE']]);
+
+        $response = $this->admin()->get(route('admin.promociones.index'))->assertOk();
+
+        $response->assertSee('no baja el precio de ninguna prenda', false)
+            ->assertSee('La más cara de las elegidas cuesta S/ 100.00', false)
+            ->assertSee('ninguna prenda a la venta coincide con lo elegido');
+        $this->assertSame(2, substr_count($response->getContent(), 'Esta promoción no se ve en la tienda'));
+    }
 }

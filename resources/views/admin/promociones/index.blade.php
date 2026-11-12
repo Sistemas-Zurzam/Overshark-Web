@@ -66,6 +66,15 @@
                             @if ($status === 'activa') · termina {{ $promo->ends_at->diffForHumans() }} @endif
                             @if ($status === 'programada') · empieza {{ $promo->starts_at->diffForHumans() }} @endif
                         </p>
+                        @if (in_array($status, ['activa', 'programada'], true) && ($reach[$promo->id]['discounted'] ?? 1) === 0)
+                            <p class="mt-2 rounded-sm border border-admin-warning bg-admin-warning-soft px-3 py-2 text-xs font-semibold leading-5 text-admin-warning" role="note">
+                                @if ($reach[$promo->id]['matching'] === 0)
+                                    Esta promoción no se ve en la tienda: ninguna prenda a la venta coincide con lo elegido.
+                                @else
+                                    Esta promoción no se ve en la tienda: no baja el precio de ninguna prenda. La más cara de las elegidas cuesta S/ {{ number_format($reach[$promo->id]['highest'], 2) }} y la promoción ({{ $promo->discountLabel() }}) no queda por debajo. El precio fijo es lo que cuesta <strong>cada prenda</strong>, no un total; para «varias prendas por un precio» usa un combo.
+                                @endif
+                            </p>
+                        @endif
                     </div>
                     <div class="flex shrink-0 items-center gap-4 text-sm font-bold">
                         <a href="{{ route('admin.promociones.edit', $promo) }}" class="text-admin-accent hover:underline">Editar</a>

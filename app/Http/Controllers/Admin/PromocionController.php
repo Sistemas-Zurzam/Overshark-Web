@@ -24,7 +24,29 @@ class PromocionController extends Controller
         return view('admin.promociones.index', [
             'promos' => $promos,
             'counts' => $promos->countBy(fn (Promocion $promo) => $promo->status()),
+            'reach' => $promos->mapWithKeys(fn (Promocion $promo) => [$promo->id => $this->reach($promo)]),
         ]);
+    }
+
+    /**
+     * Qué alcanza una promoción hoy, para avisar cuando no va a cambiar ningún precio (p. ej. un precio fijo mayor al
+     * que ya cuestan las prendas). Mira las prendas que vende la tienda, con su precio más alto.
+     *
+     * @return array{matching: int, discounted: int, highest: float}
+     */
+    private function reach(Promocion $promo): array
+    {
+        $garments = Producto::query()->soldByStore()->where('price', '>', 0)
+            ->selectRaw('name, marca, empresa_nombre, MAX(price) as price')
+            ->groupBy('name', 'marca', 'empresa_nombre')
+            ->get()
+            ->filter(fn (Producto $garment) => $promo->appliesTo($garment->name, $garment->marca, $garment->empresa_nombre));
+
+        return [
+            'matching' => $garments->count(),
+            'discounted' => $garments->filter(fn (Producto $garment) => $promo->priceFor((float) $garment->price) < (float) $garment->price)->count(),
+            'highest' => (float) $garments->max('price'),
+        ];
     }
 
     public function create(): View
