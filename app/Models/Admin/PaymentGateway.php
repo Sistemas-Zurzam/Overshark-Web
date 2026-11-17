@@ -25,15 +25,32 @@ class PaymentGateway extends Model
         return data_get($this->credentials ?? [], $key) ?: $fallback;
     }
 
-    public function isConfigured(): bool
+    /** Credenciales que usa el flujo de pago de cada pasarela; el resto (p. ej. Client ID) son opcionales. */
+    public function requiredCredentials(): array
     {
         return match ($this->provider) {
-            'culqi' => filled($this->credential('public_key')) && filled($this->credential('secret_key')),
-            'mercadopago' => filled($this->credential('access_token')) && filled($this->credential('webhook_secret')),
-            'izipay' => collect(['shop_id', 'password', 'hmac_key', 'public_key'])
-                ->every(fn ($key) => filled($this->credential($key))),
-            default => false,
+            'culqi' => ['public_key' => 'Llave pública', 'secret_key' => 'Llave secreta'],
+            // Checkout Pro solo necesita el Access Token: el pago se verifica en la API. El secreto del webhook es
+            // recomendado (valida la firma de los avisos), pero sin él los pagos igual se confirman.
+            'mercadopago' => ['access_token' => 'Access Token'],
+            'izipay' => ['shop_id' => 'ID de tienda', 'password' => 'Contraseña API REST', 'public_key' => 'Llave pública', 'hmac_key' => 'Clave HMAC-SHA256'],
+            default => [],
         };
+    }
+
+    /** @return list<string> etiquetas de las credenciales requeridas que faltan */
+    public function missingCredentials(): array
+    {
+        return collect($this->requiredCredentials())
+            // Izipay se configuraba en el .env antes de este panel: esas llaves siguen sirviendo si no hay otras guardadas.
+            ->reject(fn ($label, $key) => filled($this->credential($key, $this->provider === 'izipay' ? config('services.izipay.'.$key) : null)))
+            ->values()
+            ->all();
+    }
+
+    public function isConfigured(): bool
+    {
+        return $this->requiredCredentials() !== [] && $this->missingCredentials() === [];
     }
 
     public function isAvailable(): bool

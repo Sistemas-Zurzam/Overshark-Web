@@ -4,80 +4,278 @@ namespace App\Services\Payments;
 
 use App\Models\Admin\Order;
 use App\Models\Admin\PaymentGateway;
+use App\Services\Orders\OrderPayments;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
+/**
+ * Checkout Pro de Mercado Pago (https://www.mercadopago.com.pe/developers/es/reference).
+ *
+ * El pedido se paga en el checkout hospedado de Mercado Pago (preferencia con external_reference = id del pedido).
+ * Se confirma consultando el pago a la API con el Access Token de la tienda: por el webhook firmado, al volver la
+ * clienta (back_urls) o cuando pulsa "Ya pagué". Nunca se confía en el estado que llega en la URL o en el aviso.
+ */
 class MercadoPagoGateway
 {
+    public const API = 'https://api.mercadopago.com';
+
+    private ?PaymentGateway $settings = null;
+
+    public function settings(): ?PaymentGateway
+    {
+        return $this->settings ??= PaymentGateway::query()->where('provider', 'mercadopago')->first();
+    }
+
+    public function isProduction(): bool
+    {
+        return $this->settings()?->environment === 'production';
+    }
+
+    /** Crea la preferencia del pedido y devuelve la URL del checkout de Mercado Pago (null si no se pudo). */
     public function createCheckout(Order $order): ?string
     {
-        $gateway = PaymentGateway::query()->where('provider', 'mercadopago')->first()?->credentials ?? [];
-        $gateway['environment'] = PaymentGateway::query()->where('provider', 'mercadopago')->value('environment') ?? 'test';
-        $token = $gateway['access_token'] ?? null;
+        $token = $this->settings()?->credential('access_token');
         if (! $token) {
             return null;
         }
 
-        $response = Http::withToken($token)->acceptJson()->timeout(20)->withHeaders([
-            'X-Idempotency-Key' => (string) Str::uuid(),
-        ])->post('https://api.mercadopago.com/checkout/preferences', [
+        try {
+            $response = $this->http($token)
+                ->withHeaders(['X-Idempotency-Key' => (string) Str::uuid()])
+                ->post(self::API.'/checkout/preferences', $this->preference($order));
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago: sin conexión al crear la preferencia', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Mercado Pago: no se pudo crear la preferencia', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+                'error' => $response->json('message') ?? $response->json('error'),
+                'cause' => $response->json('cause'),
+            ]);
+
+            return null;
+        }
+
+        return $this->isProduction()
+            ? $response->json('init_point')
+            : ($response->json('sandbox_init_point') ?? $response->json('init_point'));
+    }
+
+    /** Cuerpo de POST /checkout/preferences para el importe que el pedido debe pagar en línea (total o separo). */
+    public function preference(Order $order): array
+    {
+        $order->loadMissing('cliente');
+        $names = $order->cliente?->name ?: Str::before((string) $order->cliente_name, ' ');
+        $surnames = $order->cliente?->apellidos ?: Str::after((string) $order->cliente_name, ' ');
+        $phone = preg_replace('/\D+/', '', (string) $order->cliente_cel);
+        $document = (string) $order->cliente?->documento_identidad;
+        $documentType = strtoupper((string) $order->cliente?->tipoDocumento?->code);
+        $concept = $order->isCashOnDelivery() ? 'Separo del pedido Overshark ' : 'Pedido Overshark ';
+
+        $preference = [
             'items' => [[
-                'id' => (string) $order->id,
-                'title' => 'Pedido Overshark '.$order->number_zazu,
+                'id' => (string) ($order->number_zazu ?: $order->id),
+                'title' => $concept.$order->displayNumber(),
                 'quantity' => 1,
                 'currency_id' => 'PEN',
                 'unit_price' => round((float) $order->pago_monto, 2),
             ]],
+            'payer' => array_filter([
+                'name' => $names ?: null,
+                'surname' => $surnames ?: null,
+                'email' => $order->email ?: null,
+                'phone' => $phone !== '' ? ['area_code' => '51', 'number' => $phone] : null,
+                // Solo DNI: el carné de extranjería tiene otro código en Mercado Pago y un tipo inválido rechaza la preferencia.
+                'identification' => $document !== '' && $documentType === 'DNI'
+                    ? ['type' => 'DNI', 'number' => $document] : null,
+            ]),
             'external_reference' => (string) $order->id,
-            'notification_url' => route('web.payments.mercadopago.webhook'),
             'back_urls' => [
                 'success' => route('web.checkout.done', $order),
                 'pending' => route('web.checkout.done', $order),
                 'failure' => route('web.checkout.done', $order),
             ],
-            'auto_return' => 'approved',
+            // Solo aprobado o rechazado al instante: el pedido se reserva unos minutos y no puede esperar pagos en efectivo.
+            'binary_mode' => true,
             'statement_descriptor' => 'OVERSHARK',
-        ]);
+            'metadata' => ['order_id' => $order->id, 'order_number' => $order->number_zazu],
+        ];
 
-        if (! $response->successful()) {
-            Log::warning('Mercado Pago: no se pudo crear preferencia', ['status' => $response->status(), 'order_id' => $order->id]);
-            return null;
+        // Mercado Pago no acepta retorno automático ni avisos hacia direcciones locales (http://localhost).
+        $webhook = route('web.payments.mercadopago.webhook', ['source_news' => 'webhooks']);
+        if (str_starts_with($webhook, 'https://')) {
+            $preference['notification_url'] = $webhook;
+        }
+        if (str_starts_with($preference['back_urls']['success'], 'https://')) {
+            $preference['auto_return'] = 'approved';
         }
 
-        $body = $response->json();
-        return ($gateway['environment'] ?? 'test') === 'production'
-            ? ($body['init_point'] ?? null)
-            : ($body['sandbox_init_point'] ?? $body['init_point'] ?? null);
+        // La preferencia vence con la reserva del pedido: después ya no se puede pagar un pedido cancelado.
+        if ($order->pago_qr_expira) {
+            $preference['expires'] = true;
+            $preference['expiration_date_to'] = $order->pago_qr_expira->copy()->setTimezone('America/Lima')->format('Y-m-d\TH:i:s.vP');
+        }
+
+        return $preference;
     }
 
-    public function verifyNotification(string $paymentId, string $signature, string $requestId): bool
+    /**
+     * Valida x-signature (ts=...,v1=...) con el secreto del webhook: HMAC-SHA256 del manifiesto
+     * "id:[data.id];request-id:[x-request-id];ts:[ts];", omitiendo las partes que no llegaron.
+     * Sin secreto guardado no hay firma que validar: el pago igual se comprueba consultándolo a la API.
+     */
+    public function signatureIsValid(string $dataId, ?string $signature, ?string $requestId): bool
     {
-        $secret = PaymentGateway::query()->where('provider', 'mercadopago')->first()?->credential('webhook_secret');
-        $parts = collect(explode(',', $signature))->mapWithKeys(function ($part) {
+        $secret = $this->settings()?->credential('webhook_secret');
+        if (! $secret) {
+            return true;
+        }
+
+        $parts = collect(explode(',', (string) $signature))->mapWithKeys(function (string $part) {
             [$key, $value] = array_pad(explode('=', trim($part), 2), 2, null);
-            return [$key => $value];
+
+            return [trim((string) $key) => trim((string) $value)];
         });
         $ts = $parts->get('ts');
         $v1 = $parts->get('v1');
-        if (! $secret || ! $ts || ! $v1) {
+        if (! $ts || ! $v1) {
             return false;
         }
 
-        $manifest = "id:{$paymentId};request-id:{$requestId};ts:{$ts};";
+        $manifest = ($dataId !== '' ? 'id:'.(ctype_alnum($dataId) ? strtolower($dataId) : $dataId).';' : '')
+            .(filled($requestId) ? 'request-id:'.$requestId.';' : '')
+            .'ts:'.$ts.';';
+
         return hash_equals(hash_hmac('sha256', $manifest, $secret), $v1);
     }
 
+    /**
+     * Tipo de evento e id del recurso de un aviso. Webhooks: ?data.id=123&type=payment (PHP convierte "data.id" en
+     * "data_id") y el mismo dato en el cuerpo JSON. Los avisos IPN (topic/id) no se usan.
+     *
+     * @return array{type: ?string, id: string}
+     */
+    public static function notification(Request $request): array
+    {
+        $raw = [];
+        foreach (explode('&', (string) $request->server('QUERY_STRING')) as $pair) {
+            [$key, $value] = array_pad(explode('=', $pair, 2), 2, '');
+            $raw[urldecode($key)] = urldecode($value);
+        }
+
+        return [
+            'type' => $raw['type'] ?? $request->query('type') ?? $request->json('type'),
+            'id' => trim((string) ($raw['data.id'] ?? $request->query('data_id') ?? $request->json('data.id') ?? '')),
+        ];
+    }
+
+    /**
+     * Pago tal como lo tiene Mercado Pago. Null si no existe para esta cuenta (404/400); lanza excepción si la API
+     * falla o rechaza el token, para que el aviso se reintente.
+     */
     public function payment(string $paymentId): ?array
     {
-        $token = PaymentGateway::query()->where('provider', 'mercadopago')->first()?->credential('access_token');
+        $token = $this->settings()?->credential('access_token');
+        if (! $token || ! ctype_digit($paymentId)) {
+            return null;
+        }
+
+        $response = $this->http($token)->get(self::API.'/v1/payments/'.$paymentId);
+        if ($response->successful()) {
+            return $response->json();
+        }
+        if (in_array($response->status(), [400, 404], true)) {
+            return null;
+        }
+        $response->throw();
+
+        return null;
+    }
+
+    /** Último pago aprobado del pedido (busca por external_reference), para "Ya pagué" si el aviso no llegó. */
+    public function approvedPaymentFor(Order $order): ?array
+    {
+        $token = $this->settings()?->credential('access_token');
         if (! $token) {
             return null;
         }
-        $response = Http::withToken($token)->acceptJson()->timeout(15)->get('https://api.mercadopago.com/v1/payments/'.rawurlencode($paymentId));
-        if (! $response->successful()) {
-            return null;
+
+        $response = $this->http($token)->get(self::API.'/v1/payments/search', [
+            'external_reference' => (string) $order->id,
+            'sort' => 'date_created',
+            'criteria' => 'desc',
+        ]);
+
+        return $response->successful()
+            ? collect($response->json('results', []))->firstWhere('status', 'approved')
+            : null;
+    }
+
+    /** Confirma el pedido del pago si es aprobado y coincide (pedido, importe, soles). Devuelve si quedó pagado. */
+    public function apply(array $payment): bool
+    {
+        $order = Order::query()->find((int) ($payment['external_reference'] ?? 0));
+        if (! $order) {
+            return false;
         }
-        return $response->json();
+
+        $confirmed = OrderPayments::confirmMercadoPago($order, $payment, $this->isProduction());
+        if (! $confirmed && ($payment['status'] ?? null) === 'approved') {
+            Log::warning('Mercado Pago: pago aprobado que no coincide con el pedido o llegó tarde', [
+                'payment_id' => $payment['id'] ?? null,
+                'order_id' => $order->id,
+                'amount' => $payment['transaction_amount'] ?? null,
+                'currency' => $payment['currency_id'] ?? null,
+                'live_mode' => $payment['live_mode'] ?? null,
+            ]);
+        }
+
+        return $confirmed;
+    }
+
+    /**
+     * Comprueba el Access Token contra Mercado Pago (GET /users/me).
+     *
+     * @return array{ok: bool, definitive: bool, message: string}
+     */
+    public function checkCredentials(string $token, string $environment): array
+    {
+        if ($environment === 'production' && str_starts_with($token, 'TEST-')) {
+            return ['ok' => false, 'definitive' => true, 'message' => 'El Access Token es de prueba (TEST-) y el ambiente está en Producción. Usa las credenciales de producción (APP_USR-) o cambia el ambiente a Pruebas.'];
+        }
+
+        try {
+            $response = $this->http($token)->timeout(10)->get(self::API.'/users/me');
+        } catch (\Throwable) {
+            return ['ok' => false, 'definitive' => false, 'message' => 'No se pudo contactar a Mercado Pago para comprobar el Access Token. Inténtalo de nuevo en unos minutos.'];
+        }
+
+        if (in_array($response->status(), [401, 403], true)) {
+            return ['ok' => false, 'definitive' => true, 'message' => 'Mercado Pago rechazó el Access Token. Cópialo de nuevo desde Tus integraciones > Credenciales (sin espacios).'];
+        }
+        if (! $response->successful()) {
+            return ['ok' => false, 'definitive' => false, 'message' => 'Mercado Pago no respondió bien al comprobar el Access Token (HTTP '.$response->status().'). Inténtalo de nuevo en unos minutos.'];
+        }
+
+        $site = $response->json('site_id');
+        if ($site && $site !== 'MPE') {
+            return ['ok' => false, 'definitive' => true, 'message' => 'La cuenta de Mercado Pago es de otro país ('.$site.'). La tienda cobra en soles: usa una cuenta de Mercado Pago Perú.'];
+        }
+
+        $account = $response->json('nickname') ?: $response->json('email') ?: 'ID '.$response->json('id');
+
+        return ['ok' => true, 'definitive' => true, 'message' => 'Conectado a la cuenta de Mercado Pago '.$account.($site ? ' ('.$site.')' : '').'.'];
+    }
+
+    private function http(string $token): PendingRequest
+    {
+        return Http::withToken($token)->acceptJson()->asJson()->timeout(20);
     }
 }

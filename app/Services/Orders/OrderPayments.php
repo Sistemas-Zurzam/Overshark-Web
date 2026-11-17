@@ -70,6 +70,34 @@ class OrderPayments
         return true;
     }
 
+    /**
+     * Confirma un pago de Mercado Pago obtenido de su API con el Access Token de la tienda (nunca el que llega en un
+     * aviso o en la URL). Solo cuenta si está aprobado, es de este pedido, por el importe exacto, en soles y, en
+     * producción, real (live_mode). Devuelve si el pedido quedó pagado.
+     */
+    public static function confirmMercadoPago(Order $order, array $payment, bool $production): bool
+    {
+        $order->loadMissing('statusOrder');
+
+        if (in_array($order->statusName(), self::PAID_STATUSES, true)) {
+            return true;
+        }
+
+        if (($payment['status'] ?? null) !== 'approved'
+            || (string) ($payment['external_reference'] ?? '') !== (string) $order->id
+            || $order->payment_gateway !== 'mercadopago'
+            || ($payment['currency_id'] ?? null) !== 'PEN'
+            || ($production && ! ($payment['live_mode'] ?? false))
+            || abs((float) ($payment['transaction_amount'] ?? 0) - (float) $order->pago_monto) >= 0.01
+            || $order->statusName() === Checkout::STATUS_CANCELLED) {
+            return false;
+        }
+
+        self::confirm($order, (string) ($payment['id'] ?? $order->pago_referencia));
+
+        return true;
+    }
+
     /** Cancela los pedidos que esperaban el pago con tarjeta y no se pagaron a tiempo. Devuelve cuántos. */
     public static function expireQrs(): int
     {

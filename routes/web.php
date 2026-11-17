@@ -6,7 +6,6 @@ use App\Models\Admin\Departamento;
 use App\Models\Admin\Distrito;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Order;
-use App\Models\Admin\PaymentGateway;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\StatusOrder;
@@ -484,38 +483,66 @@ Route::post('/checkout/pedido', function (Request $request) {
         : redirect()->route('web.checkout.done', $order);
 })->middleware('throttle:10,1')->name('web.checkout.place');
 
+// Webhook de Mercado Pago (?data.id=PAGO&type=payment). Se registra en Tus integraciones > Webhooks y además va en cada
+// preferencia (notification_url con source_news=webhooks). Con secreto guardado exige la firma x-signature; el pago
+// siempre se consulta a la API con el Access Token antes de confirmar. Responde 200 salvo firma inválida (401) o API
+// caída (503, para que Mercado Pago reintente).
 Route::post('/webhooks/mercadopago', function (Request $request, MercadoPagoGateway $mercadoPago) {
-    $paymentId = (string) ($request->query('data.id') ?? $request->input('data.id') ?? '');
-    abort_if($paymentId === '', 400);
-    abort_unless($mercadoPago->verifyNotification($paymentId, (string) $request->header('x-signature'), (string) $request->header('x-request-id')), 401);
+    $notification = MercadoPagoGateway::notification($request);
+    if ($notification['type'] !== 'payment' || $notification['id'] === '') {
+        return response()->json(['received' => true]); // otros eventos (o avisos IPN) no cambian pedidos
+    }
 
-    $payment = $mercadoPago->payment($paymentId);
-    if (! $payment) {
-        // La API falló temporalmente; responder con error permite que Mercado Pago reenvíe el webhook.
+    if (! $mercadoPago->signatureIsValid($notification['id'], $request->header('x-signature'), $request->header('x-request-id'))) {
+        Log::warning('Mercado Pago: webhook con firma inválida; revisa el Secreto de webhook en Pasarelas de pago', ['payment_id' => $notification['id']]);
+
+        return response()->json(['received' => false], 401);
+    }
+
+    try {
+        $payment = $mercadoPago->payment($notification['id']);
+    } catch (\Throwable $e) {
+        Log::warning('Mercado Pago: no se pudo consultar el pago del webhook', ['payment_id' => $notification['id'], 'error' => $e->getMessage()]);
+
         return response()->json(['received' => false], 503);
     }
-    if (($payment['status'] ?? null) !== 'approved') {
-        return response()->json(['received' => true], 200);
-    }
-    $order = Order::query()->find((int) ($payment['external_reference'] ?? 0));
-    if (! $order || $order->payment_gateway !== 'mercadopago'
-        || ($payment['currency_id'] ?? null) !== 'PEN'
-        || ((PaymentGateway::query()->where('provider', 'mercadopago')->value('environment') === 'production') !== (bool) ($payment['live_mode'] ?? false))
-        || abs((float) ($payment['transaction_amount'] ?? 0) - (float) $order->pago_monto) >= 0.01) {
-        Log::warning('Mercado Pago: pago aprobado no coincide con el pedido', ['payment_id' => $paymentId, 'order_id' => $order?->id]);
-        // El webhook fue recibido; no confirmar pagos inconsistentes ni pedir reintentos indefinidos.
-        return response()->json(['received' => true], 200);
+
+    if ($payment) {
+        $mercadoPago->apply($payment);
     }
 
-    OrderPayments::confirm($order, (string) $paymentId);
-    return response()->json(['received' => true], 200);
-})->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])->name('web.payments.mercadopago.webhook');
+    return response()->json(['received' => true]);
+})->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])->middleware('throttle:120,1')->name('web.payments.mercadopago.webhook');
 
 // Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
-Route::get('/checkout/pedido/{order}', function (Order $order) {
+Route::get('/checkout/pedido/{order}', function (Request $request, Order $order, MercadoPagoGateway $mercadoPago) {
     // Lo ve quien lo hizo desde esta sesión o la cuenta dueña del pedido (nunca otra cuenta ni otro invitado).
     $ownsOrder = auth('customer')->check() && $order->customer_account_id === auth('customer')->id();
     abort_unless($ownsOrder || in_array($order->id, session('checkout.orders', []), true), 404);
+
+    // Vuelta desde Mercado Pago (back_urls: ?payment_id=...&status=...) o "Ya pagué": el estado se consulta a la API;
+    // lo que trae la URL nunca confirma nada por sí solo.
+    $paymentId = (string) ($request->query('payment_id') ?: $request->query('collection_id'));
+    $checking = ctype_digit($paymentId) || $request->boolean('verificar') || $request->has('status');
+    if ($order->payment_gateway === 'mercadopago' && $checking) {
+        $confirmed = false;
+        if ($order->load('statusOrder')->statusName() === Checkout::STATUS_AWAITING_QR) {
+            try {
+                $payment = ctype_digit($paymentId) ? $mercadoPago->payment($paymentId) : $mercadoPago->approvedPaymentFor($order);
+                $confirmed = $payment && $mercadoPago->apply($payment);
+            } catch (\Throwable $e) {
+                Log::warning('Mercado Pago: no se pudo consultar el pago al volver al pedido', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+            }
+        }
+        $redirect = redirect()->route('web.checkout.done', $order);
+        $declined = in_array($request->query('status') ?? $request->query('collection_status'), ['rejected', 'null', 'failure'], true);
+
+        return $confirmed || $order->fresh('statusOrder')->statusName() !== Checkout::STATUS_AWAITING_QR
+            ? $redirect
+            : $redirect->withErrors(['payment' => $declined
+                ? 'El pago no se completó en Mercado Pago. Puedes intentarlo de nuevo antes de que venza la reserva.'
+                : 'Aún no vemos tu pago aprobado en Mercado Pago. Si ya pagaste, espera unos segundos y actualiza; no pagues de nuevo.']);
+    }
 
     return view('web.checkout.status', [
         'order' => $order->load('statusOrder'),
@@ -534,6 +561,15 @@ Route::get('/checkout/pedido/{order}/pagar', function (Order $order, IzipayGatew
 
     if ($order->load('statusOrder')->statusName() !== Checkout::STATUS_AWAITING_QR) {
         return redirect()->route('web.checkout.done', $order);
+    }
+
+    // Pedido de Mercado Pago: se abre de nuevo su checkout con una preferencia nueva (vence con la reserva).
+    if ($order->payment_gateway === 'mercadopago') {
+        $url = app(MercadoPagoGateway::class)->createCheckout($order);
+
+        return $url
+            ? redirect()->away($url)
+            : redirect()->route('web.checkout.done', $order)->withErrors(['payment' => 'No pudimos abrir Mercado Pago. Inténtalo de nuevo en unos segundos.']);
     }
 
     $simulating = PaymentSimulator::enabled();

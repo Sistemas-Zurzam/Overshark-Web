@@ -3,6 +3,7 @@
 namespace Tests\Concerns;
 
 use App\Models\Admin\Order;
+use App\Models\Admin\PaymentGateway;
 
 /** Llaves de prueba de Izipay y respuestas firmadas como las enviaría su plataforma (kr-answer + kr-hash). */
 trait PaysWithIzipay
@@ -16,6 +17,8 @@ trait PaysWithIzipay
             'services.izipay.hmac_key' => 'test_hmac_key',
             'services.izipay.api_url' => 'https://api.izipay.test/api-payment/V4',
         ]);
+        // Activada en Pasarelas de pago (la migración la deja apagada si el .env no tenía llaves).
+        PaymentGateway::query()->where('provider', 'izipay')->update(['enabled' => true]);
     }
 
     /**

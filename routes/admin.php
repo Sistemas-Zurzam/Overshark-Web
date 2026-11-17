@@ -105,6 +105,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/pasarelas-pago', [PaymentGatewayController::class, 'index'])->name('pasarelas-pago.index');
     Route::put('/pasarelas-pago/{gateway}', [PaymentGatewayController::class, 'update'])->name('pasarelas-pago.update');
     Route::delete('/pasarelas-pago/{gateway}/credenciales', [PaymentGatewayController::class, 'clear'])->name('pasarelas-pago.clear');
+    Route::post('/pasarelas-pago/{gateway}/probar', [PaymentGatewayController::class, 'test'])->middleware('throttle:10,1')->name('pasarelas-pago.test');
     Route::get('/banners', [BannerController::class, 'index'])->name('banners.index');
     Route::post('/banners', [BannerController::class, 'store'])->name('banners.store');
     Route::post('/banners/reordenar', [BannerController::class, 'reorder'])->name('banners.reorder');

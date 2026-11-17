@@ -418,15 +418,16 @@ class CheckoutTest extends TestCase
         $this->assertSame(Checkout::STATUS_CANCELLED, $order->fresh()->statusOrder->name);
     }
 
-    public function test_without_izipay_keys_the_card_option_shows_but_cannot_pay(): void
+    public function test_without_izipay_keys_the_card_option_is_hidden_and_cannot_pay(): void
     {
         config(['services.izipay.shop_id' => null, 'services.izipay.password' => null, 'services.izipay.public_key' => null, 'services.izipay.hmac_key' => null]);
         $this->addToCart();
         $this->post(route('web.checkout.personal.store'), $this->customer());
 
-        // La opción se ve (para revisar el diseño) con un aviso; la contraentrega igual pide separo.
+        // Solo se ofrecen las pasarelas configuradas (Pasarelas de pago); la contraentrega igual pide separo.
         $this->get(route('web.checkout.payment'))->assertOk()
-            ->assertSeeInOrder(['Tarjeta de crédito o débito', 'El pago con tarjeta aún no está activo', 'Pago contraentrega'])
+            ->assertDontSee('Tarjeta de crédito o débito')
+            ->assertSee('Pago contraentrega')
             ->assertSee('Separo S/ 15.00');
 
         $base = ['token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'];

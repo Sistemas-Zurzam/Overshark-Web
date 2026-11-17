@@ -56,5 +56,8 @@ The brand maintainer at `/admin/marcas` defines the public visual palette and st
 - Saving a blank credential preserves the stored value; private credentials are encrypted at rest and never rendered back into the form.
 - Enabling a gateway requires the credentials used by its payment flow. Only configured gateways with an implemented checkout driver are offered to buyers.
 - Mercado Pago order confirmation validates the webhook signature, retrieves the payment from Mercado Pago, and checks the order reference, PEN currency, and expected amount before idempotent confirmation.
+- Mercado Pago needs only the Access Token to be enabled; saving or "Probar conexión" checks it against Mercado Pago and rejects test tokens in production or accounts outside Peru. The webhook secret is recommended: when stored, unsigned or badly signed notifications are rejected.
+- Returning from Mercado Pago, or pressing "Ya pagué", looks the payment up in the API; URL parameters never confirm an order on their own. A pending Mercado Pago order can reopen its checkout until the reservation expires, and the preference expires with it.
+- Izipay keys stored in `.env` keep counting as configured when the panel has none.
 - Existing manual payment methods remain separate from online gateway configuration.
 - Izipay credential keys map to the existing REST V4 payment form and signed callback; Mercado Pago can be enabled independently.

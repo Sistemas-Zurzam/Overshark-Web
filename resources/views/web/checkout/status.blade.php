@@ -17,13 +17,19 @@
 
 @section('checkout')
     @if ($awaitingPayment)
+        @php
+            $byMercadoPago = $order->payment_gateway === 'mercadopago';
+        @endphp
         <h1 class="text-[28px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">FALTA TU PAGO</h1>
         <section class="flex flex-col gap-4 border-2 border-[#0b1015] p-6 text-[#0b1015] sm:p-10" aria-label="Pago pendiente">
             <p class="text-[26px] font-extrabold leading-[1.2]">S/ {{ number_format((float) $order->pago_monto, 2) }}</p>
-            <p class="text-[15px] leading-[1.45]">Tu pedido #{{ $order->displayNumber() }} se reserva hasta las {{ $order->pago_qr_expira?->format('H:i') }}. Paga con tarjeta para confirmarlo{{ $cashOnDelivery ? '; el saldo de '.$saldo.' lo pagas al recibir' : '' }}. Si el tiempo termina sin pago, el pedido se cancela y puedes volver a comprar.</p>
+            <p class="text-[15px] leading-[1.45]">Tu pedido #{{ $order->displayNumber() }} se reserva hasta las {{ $order->pago_qr_expira?->format('H:i') }}. Paga {{ $byMercadoPago ? 'con Mercado Pago' : 'con tarjeta' }} para confirmarlo{{ $cashOnDelivery ? '; el saldo de '.$saldo.' lo pagas al recibir' : '' }}. Si el tiempo termina sin pago, el pedido se cancela y puedes volver a comprar.</p>
+            @error('payment')
+                <p class="border border-[#f0c2c2] bg-[#fdf1f1] px-4 py-3 text-[14px] font-bold leading-[1.45] text-[#a32020]" role="alert">{{ $message }}</p>
+            @enderror
             <div class="flex flex-col gap-2 sm:flex-row">
-                <a href="{{ route('web.checkout.pay', $order) }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">CONTINUAR CON EL PAGO</a>
-                <a href="{{ route('web.checkout.done', $order) }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[240px]">YA PAGUÉ · ACTUALIZAR</a>
+                <a href="{{ route('web.checkout.pay', $order) }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">{{ $byMercadoPago ? 'PAGAR CON MERCADO PAGO' : 'CONTINUAR CON EL PAGO' }}</a>
+                <a href="{{ $byMercadoPago ? route('web.checkout.done', [$order, 'verificar' => 1]) : route('web.checkout.done', $order) }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[240px]">YA PAGUÉ · ACTUALIZAR</a>
             </div>
         </section>
     @elseif ($cancelled)

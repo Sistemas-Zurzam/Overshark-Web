@@ -31,6 +31,9 @@
                     <div>
                         <h2 class="text-xl font-extrabold text-admin-text">{{ $gateway->label() }}</h2>
                         <p class="mt-1 text-sm text-slate-600">{{ $gateway->provider === 'culqi' ? 'Guarda aquí las llaves para una integración futura del checkout.' : ($gateway->provider === 'mercadopago' ? 'Checkout Pro para enviar al cliente al entorno seguro de Mercado Pago.' : 'Credenciales del checkout web de Izipay.') }}</p>
+                        @if (! $configured)
+                            <p class="mt-1 text-sm font-bold text-amber-800">Falta: {{ implode(', ', $gateway->missingCredentials()) }}</p>
+                        @endif
                     </div>
                     <span @class(['shrink-0 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide', 'bg-emerald-100 text-emerald-800' => $gateway->isAvailable(), 'bg-amber-100 text-amber-800' => ! $gateway->isAvailable()])>
                         {{ $gateway->isAvailable() ? 'Visible en tienda' : (in_array($gateway->provider, ['izipay', 'mercadopago'], true) && $gateway->enabled ? 'Faltan credenciales' : ($gateway->enabled ? 'Integración pendiente' : ($configured ? 'Desactivada' : 'Faltan credenciales'))) }}
@@ -59,7 +62,12 @@
                         <div class="border-l-2 border-admin-accent bg-admin-canvas px-4 py-3 text-sm text-slate-700">
                             <p class="font-extrabold text-admin-text">Webhook para registrar en Mercado Pago</p>
                             <code class="mt-1 block break-all text-xs">{{ route('web.payments.mercadopago.webhook') }}</code>
-                            <p class="mt-1">En Tus integraciones, abre esta aplicación y entra a Webhooks &gt; Configurar notificaciones. En Modo productivo registra esta URL, activa el evento Pagos y guarda la configuración. Copia aquí la clave secreta que genera Mercado Pago.</p>
+                            <p class="mt-1">Obligatorio: el Access Token de producción (empieza con APP_USR-) con el ambiente en Producción. Public Key, Client ID y Client Secret no se usan en Checkout Pro; puedes guardarlos como referencia.</p>
+                            <p class="mt-1">Recomendado: en Tus integraciones abre esta aplicación, entra a Webhooks &gt; Configurar notificaciones, pega esta URL en Modo productivo, marca el evento Pagos y guarda. Copia la clave secreta que muestra Mercado Pago en Secreto de webhook: así se valida la firma de cada aviso.</p>
+                            <p class="mt-1">Cada pago también se verifica consultando a Mercado Pago cuando el cliente vuelve a la tienda, así que el pedido se confirma aunque un aviso no llegue.</p>
+                            @if ($gateway->credential('access_token') && ! $gateway->credential('webhook_secret'))
+                                <p class="mt-1 font-bold text-amber-800">Sin secreto de webhook: los avisos se aceptan sin firma y el pago se confirma solo después de consultarlo a Mercado Pago.</p>
+                            @endif
                         </div>
                     @endif
                     <label class="flex items-start gap-3 border border-admin-border bg-admin-canvas p-3 text-sm">
@@ -68,17 +76,25 @@
                         <span><strong class="block text-admin-text">Activar esta pasarela</strong><span class="mt-0.5 block text-slate-600">Aparecerá al cliente cuando tenga credenciales válidas y procesamiento de pagos disponible.</span></span>
                     </label>
                     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-admin-border pt-4">
-                        <button type="submit" class="bg-admin-text px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-admin-accent">Guardar configuración</button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="submit" class="bg-admin-text px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-admin-accent">Guardar configuración</button>
+                            @if ($gateway->provider === 'mercadopago' && $gateway->credential('access_token'))
+                                <button type="submit" form="test-gateway-{{ $gateway->id }}" class="border border-admin-border px-4 py-2.5 text-sm font-bold text-admin-text transition hover:border-admin-accent hover:text-admin-accent">Probar conexión</button>
+                            @endif
+                        </div>
                         @if ($configured)
                             <button type="submit" form="clear-gateway-{{ $gateway->id }}" class="px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50" onclick="return confirm('¿Eliminar credenciales guardadas de {{ $gateway->label() }}?')">Eliminar credenciales</button>
                         @endif
                     </div>
                 </form>
+                @if ($gateway->provider === 'mercadopago' && $gateway->credential('access_token'))
+                    <form id="test-gateway-{{ $gateway->id }}" action="{{ route('admin.pasarelas-pago.test', $gateway) }}" method="POST" class="hidden">@csrf</form>
+                @endif
                 @if ($configured)
                     <form id="clear-gateway-{{ $gateway->id }}" action="{{ route('admin.pasarelas-pago.clear', $gateway) }}" method="POST" class="hidden">@csrf @method('DELETE')</form>
                 @endif
             </section>
         @endforeach
     </div>
-    <p class="mt-6 max-w-4xl text-xs leading-5 text-slate-500">Culqi queda preparado como proveedor configurable, pero no se publica en el checkout de esta versión. Izipay utiliza la integración ya implementada; Mercado Pago confirma pagos mediante webhook firmado. No copies llaves privadas a chats ni a JavaScript.</p>
+    <p class="mt-6 max-w-4xl text-xs leading-5 text-slate-500">Culqi queda preparado como proveedor configurable, pero no se publica en el checkout de esta versión. Izipay utiliza la integración ya implementada; Mercado Pago confirma pagos consultando cada pago a su API (por el webhook firmado o cuando el cliente vuelve a la tienda). No copies llaves privadas a chats ni a JavaScript.</p>
 @endsection
