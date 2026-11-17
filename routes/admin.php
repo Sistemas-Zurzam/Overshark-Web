@@ -66,6 +66,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/pedidos/{order}/correo/reenviar', [OrderController::class, 'resendEmail'])->name('pedidos.email.resend');
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
     Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+    Route::post('/clientes/cuentas/{account}/verificacion', [ClienteController::class, 'resendVerification'])->middleware('throttle:10,1')->name('clientes.verification.send');
     Route::get('/agencias-shalom', [CourierController::class, 'index'])->name('agencias.index');
     Route::get('/reclamos', [LibroReclamacionController::class, 'index'])->name('reclamos.index');
     Route::get('/reclamos/exportar-csv', [LibroReclamacionController::class, 'exportCsv'])->name('reclamos.export');

@@ -16,6 +16,10 @@
             <p class="max-w-160 text-sm text-admin-text-secondary">Quienes compraron en la tienda y las cuentas registradas en la web. Los datos se generan solos al comprar o al crear una cuenta.</p>
         </div>
 
+        @if (session('status'))
+            <div class="rounded-sm border border-admin-success bg-admin-success-soft px-4 py-3 text-sm font-semibold text-admin-success" role="status">{{ session('status') }}</div>
+        @endif
+
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <nav class="flex gap-2" aria-label="Tipo de cliente">
                 <a href="{{ $tabLink('compradores') }}" @class(['px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px]', 'bg-admin-navy text-white' => $tab === 'compradores', 'border border-admin-border-strong text-admin-text' => $tab !== 'compradores'])>Compradores ({{ $buyerCount }})</a>
@@ -61,7 +65,17 @@
                                 <td class="{{ $td }} font-bold">{{ $account->fullName() ?: '—' }}</td>
                                 <td class="{{ $td }}">{{ $account->email }}</td>
                                 <td class="{{ $td }}">{{ $account->phone ?: '—' }}</td>
-                                <td class="{{ $td }}">{{ $account->email_verified_at ? 'Sí' : 'Pendiente' }}</td>
+                                <td class="{{ $td }}">
+                                    @if ($account->email_verified_at)
+                                        Sí
+                                    @else
+                                        <form method="POST" action="{{ route('admin.clientes.verification.send', $account) }}" class="flex items-center gap-3">
+                                            @csrf
+                                            <span>Pendiente</span>
+                                            <button type="submit" class="text-xs font-extrabold uppercase tracking-[1px] text-admin-accent hover:underline" title="Reenviar el enlace de verificación a {{ $account->email }}">Reenviar</button>
+                                        </form>
+                                    @endif
+                                </td>
                                 <td class="{{ $td }}">{{ $account->orders_count }}</td>
                                 <td class="{{ $td }}">{{ $account->created_at?->format('d/m/Y') }}</td>
                             </tr>

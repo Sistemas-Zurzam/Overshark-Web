@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Cliente;
 use App\Models\CustomerAccount;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -46,6 +47,18 @@ class ClienteController extends Controller
             'buyerCount' => Cliente::query()->count(),
             'accountCount' => CustomerAccount::query()->count(),
         ]);
+    }
+
+    /** Reenvía a una cuenta web el enlace para verificar su correo (el mismo que recibe al registrarse). */
+    public function resendVerification(CustomerAccount $account): RedirectResponse
+    {
+        if ($account->hasVerifiedEmail()) {
+            return back()->with('status', "El correo {$account->email} ya está verificado.");
+        }
+
+        $account->sendEmailVerificationNotification();
+
+        return back()->with('status', "Enviamos un nuevo enlace de verificación a {$account->email}.");
     }
 
     public function show(Cliente $cliente): View
