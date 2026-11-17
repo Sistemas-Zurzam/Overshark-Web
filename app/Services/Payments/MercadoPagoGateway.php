@@ -68,7 +68,7 @@ class MercadoPagoGateway
         return hash_equals(hash_hmac('sha256', $manifest, $secret), $v1);
     }
 
-    public function approvedPayment(string $paymentId): ?array
+    public function payment(string $paymentId): ?array
     {
         $token = PaymentGateway::query()->where('provider', 'mercadopago')->first()?->credential('access_token');
         if (! $token) {
@@ -78,7 +78,6 @@ class MercadoPagoGateway
         if (! $response->successful()) {
             return null;
         }
-        $payment = $response->json();
-        return ($payment['status'] ?? null) === 'approved' ? $payment : null;
+        return $response->json();
     }
 }

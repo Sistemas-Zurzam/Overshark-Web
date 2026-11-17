@@ -59,7 +59,7 @@
                         <div class="border-l-2 border-admin-accent bg-admin-canvas px-4 py-3 text-sm text-slate-700">
                             <p class="font-extrabold text-admin-text">Webhook para registrar en Mercado Pago</p>
                             <code class="mt-1 block break-all text-xs">{{ route('web.payments.mercadopago.webhook') }}</code>
-                            <p class="mt-1">Activa el evento de pagos y guarda el secreto de firma en esta pantalla.</p>
+                            <p class="mt-1">En Tus integraciones, abre esta aplicación y entra a Webhooks &gt; Configurar notificaciones. En Modo productivo registra esta URL, activa el evento Pagos y guarda la configuración. Copia aquí la clave secreta que genera Mercado Pago.</p>
                         </div>
                     @endif
                     <label class="flex items-start gap-3 border border-admin-border bg-admin-canvas p-3 text-sm">

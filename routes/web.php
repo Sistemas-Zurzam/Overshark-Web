@@ -16,6 +16,7 @@ use App\Services\Payments\IzipayGateway;
 use App\Services\Payments\MercadoPagoGateway;
 use App\Services\Payments\PaymentSimulator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use App\Models\Brand;
 use App\Http\Controllers\LibroReclamacionController;
 use App\Support\AccountCheckout;
@@ -488,20 +489,26 @@ Route::post('/webhooks/mercadopago', function (Request $request, MercadoPagoGate
     abort_if($paymentId === '', 400);
     abort_unless($mercadoPago->verifyNotification($paymentId, (string) $request->header('x-signature'), (string) $request->header('x-request-id')), 401);
 
-    $payment = $mercadoPago->approvedPayment($paymentId);
+    $payment = $mercadoPago->payment($paymentId);
     if (! $payment) {
-        return response()->noContent();
+        // La API falló temporalmente; responder con error permite que Mercado Pago reenvíe el webhook.
+        return response()->json(['received' => false], 503);
+    }
+    if (($payment['status'] ?? null) !== 'approved') {
+        return response()->json(['received' => true], 200);
     }
     $order = Order::query()->find((int) ($payment['external_reference'] ?? 0));
     if (! $order || $order->payment_gateway !== 'mercadopago'
         || ($payment['currency_id'] ?? null) !== 'PEN'
         || ((PaymentGateway::query()->where('provider', 'mercadopago')->value('environment') === 'production') !== (bool) ($payment['live_mode'] ?? false))
         || abs((float) ($payment['transaction_amount'] ?? 0) - (float) $order->pago_monto) >= 0.01) {
-        abort(422);
+        Log::warning('Mercado Pago: pago aprobado no coincide con el pedido', ['payment_id' => $paymentId, 'order_id' => $order?->id]);
+        // El webhook fue recibido; no confirmar pagos inconsistentes ni pedir reintentos indefinidos.
+        return response()->json(['received' => true], 200);
     }
 
     OrderPayments::confirm($order, (string) $paymentId);
-    return response()->noContent();
+    return response()->json(['received' => true], 200);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])->name('web.payments.mercadopago.webhook');
 
 // Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
