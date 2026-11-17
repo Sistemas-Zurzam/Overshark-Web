@@ -12,7 +12,7 @@
     $code = 'block overflow-x-auto whitespace-pre bg-admin-canvas px-3 py-2 font-mono text-xs text-admin-text';
     $connectionInfo = [
         'crm' => ['title' => 'CRM Livex', 'text' => 'Cada pedido pagado se registra como venta en el CRM (nota de venta, Zazu y boleta).', 'toggle' => 'Enviar los pedidos pagados al CRM', 'env' => config('services.crm.send_sales')],
-        'zazu' => ['title' => 'Zazu', 'text' => 'Inventario (stock y precios cada 5 minutos) y agencias Shalom (cada 6 horas).', 'toggle' => 'Sincronizar inventario y agencias automáticamente', 'env' => true],
+        'zazu' => ['title' => 'Zazu', 'text' => 'Trae de Zazu los productos activos con su stock y precio (cada 5 minutos) y las agencias Shalom (cada 6 horas).', 'toggle' => 'Sincronizar inventario y agencias automáticamente', 'env' => true],
         'pixels' => ['title' => 'Píxeles de anuncios', 'text' => 'Meta, Google Analytics 4 y TikTok en la tienda: visitas, producto visto, agregar al carrito, inicio de pago y compra.', 'toggle' => 'Cargar los píxeles en la tienda', 'env' => false],
     ];
     $envValue = fn (string $provider, string $key) => match ($provider) {
@@ -56,6 +56,43 @@
                     @unless ($connection->exists)
                         <p class="mt-1 text-xs font-bold text-slate-500">Hoy usa la configuración del servidor (.env). Al guardar aquí, el panel manda.</p>
                     @endunless
+
+                    @if ($provider === 'zazu')
+                        @php
+                            $lastSync = $zazuLastSync ? \Illuminate\Support\Carbon::parse($zazuLastSync) : null;
+                            $syncOn = $connection->exists ? $connection->enabled : true;
+                            $stale = $syncOn && (! $lastSync || $lastSync->lt(now()->subMinutes(30)));
+                        @endphp
+                        <div class="mt-3 border-t border-admin-border pt-3 text-sm">
+                            <p @class(['font-bold text-amber-800' => $stale, 'text-slate-700' => ! $stale])>Últimos productos recibidos de Zazu: {{ $lastSync ? $lastSync->format('d/m/Y H:i') : 'nunca' }}</p>
+                            @if ($stale)
+                                <p class="mt-1 text-xs text-amber-800">La sincronización automática corre cada 5 minutos con el programador del servidor (<code>schedule:run</code>). Si esta hora no avanza, revisa ese cron; mientras tanto usa «Traer productos ahora».</p>
+                            @endif
+                            @if ($zazuManualSync)
+                                @php
+                                    $manualAt = \Illuminate\Support\Carbon::parse($zazuManualSync['at'])->format('d/m/Y H:i');
+                                @endphp
+                                @if ($zazuManualSync['status'] === 'running')
+                                    <p class="mt-1 text-xs font-bold text-slate-600">Sincronización manual en curso desde las {{ $manualAt }}. Recarga en un minuto.</p>
+                                @elseif ($zazuManualSync['status'] === 'ok')
+                                    <p class="mt-1 text-xs font-bold text-emerald-700">Sincronización manual del {{ $manualAt }}: {{ $zazuManualSync['result']['received'] }} productos recibidos, {{ $zazuManualSync['result']['synced'] }} actualizados, {{ $zazuManualSync['result']['stale_zeroed'] }} que Zazu ya no envía quedaron sin stock.</p>
+                                @else
+                                    <p class="mt-1 text-xs font-bold text-red-700">La sincronización manual del {{ $manualAt }} falló: {{ $zazuManualSync['message'] }}</p>
+                                @endif
+                            @endif
+                        </div>
+                    @elseif ($provider === 'crm')
+                        <div class="mt-3 border-t border-admin-border pt-3 text-sm text-slate-700">
+                            <p>Se envía cuando el pago se confirma (tarjeta, Mercado Pago o el separo de la contraentrega). Un pedido contraentrega sin separo (recojo en almacén) se envía al confirmarse.</p>
+                            <p class="mt-1">Última venta enviada: {{ $crmLastSale ? ($crmLastSale->nota_venta ?: $crmLastSale->number_zazu).' el '.$crmLastSale->updated_at->format('d/m/Y H:i') : 'ninguna todavía' }}</p>
+                            @if ($crmFailed)
+                                <p class="mt-1 font-bold text-red-700">{{ $crmFailed }} {{ $crmFailed === 1 ? 'pedido no se pudo enviar' : 'pedidos no se pudieron enviar' }} al CRM: ábrelos en Pedidos y pulsa «Reintentar».</p>
+                            @endif
+                            @if ($crmPending)
+                                <p class="mt-1 text-xs text-slate-500">{{ $crmPending }} en espera de envío (se reintentan solos).</p>
+                            @endif
+                        </div>
+                    @endif
                 </div>
                 <form method="POST" action="{{ route('admin.integraciones.connections.update', $provider) }}" class="grid gap-4 p-5">
                     @csrf @method('PUT')
@@ -83,10 +120,16 @@
                         @if (in_array($provider, ['crm', 'zazu'], true))
                             <button type="submit" form="test-{{ $provider }}" class="{{ $secondary }}">Probar conexión</button>
                         @endif
+                        @if ($provider === 'zazu')
+                            <button type="submit" form="sync-zazu" class="{{ $secondary }}">Traer productos ahora</button>
+                        @endif
                     </div>
                 </form>
                 @if (in_array($provider, ['crm', 'zazu'], true))
                     <form id="test-{{ $provider }}" method="POST" action="{{ route('admin.integraciones.connections.test', $provider) }}" class="hidden">@csrf</form>
+                @endif
+                @if ($provider === 'zazu')
+                    <form id="sync-zazu" method="POST" action="{{ route('admin.integraciones.zazu.sync') }}" class="hidden">@csrf</form>
                 @endif
             </section>
         @endforeach

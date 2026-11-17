@@ -112,6 +112,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/integraciones', [IntegrationController::class, 'index'])->name('integraciones.index');
     Route::put('/integraciones/conexiones/{provider}', [IntegrationController::class, 'updateConnection'])->whereIn('provider', ['crm', 'zazu', 'pixels'])->name('integraciones.connections.update');
     Route::post('/integraciones/conexiones/{provider}/probar', [IntegrationController::class, 'testConnection'])->whereIn('provider', ['crm', 'zazu'])->middleware('throttle:10,1')->name('integraciones.connections.test');
+    Route::post('/integraciones/zazu/sincronizar', [IntegrationController::class, 'syncZazu'])->middleware('throttle:3,1')->name('integraciones.zazu.sync');
     Route::post('/integraciones/claves', [IntegrationController::class, 'storeKey'])->name('integraciones.keys.store');
     Route::delete('/integraciones/claves/{apiKey}', [IntegrationController::class, 'revokeKey'])->name('integraciones.keys.revoke');
     Route::post('/integraciones/webhooks', [IntegrationController::class, 'storeWebhook'])->name('integraciones.webhooks.store');

@@ -65,6 +65,7 @@ The brand maintainer at `/admin/marcas` defines the public visual palette and st
 - API keys are shown in full once, stored only as a SHA-256 hash, scoped by permission (`catalog.read`, `orders.read`, `orders.write`) and revoked from the same page. Revoking and deleting use an inline confirmation, not browser dialogs.
 - Webhooks are signed (`X-Overshark-Signature`), sent through the queue with retries, and never block a payment or a status change. Each endpoint shows its last delivery result and has "Enviar prueba".
 - Pixel IDs are validated by format before they reach the page; with pixels disabled the store loads no tracking code. Purchase is reported once per order and session.
+- The Zazu card shows when products last arrived (amber if the 5-minute sync stopped) and «Traer productos ahora» runs the inventory sync after the response; the CRM card shows the last sale sent and orders that failed to send.
 - The public API contract lives in `docs/api-integraciones.md`.
 
 ## Mercado Pago fraud alerts

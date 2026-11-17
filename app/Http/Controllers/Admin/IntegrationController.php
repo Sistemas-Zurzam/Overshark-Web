@@ -5,13 +5,22 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\ApiKey;
 use App\Models\Admin\IntegrationSetting;
+use App\Models\Admin\Order;
+use App\Models\Admin\OrderTask;
+use App\Models\Admin\Producto;
 use App\Models\Admin\WebhookEndpoint;
 use App\Services\Integrations\Webhooks;
+use App\Services\ZazuInventorySyncService;
 use App\Support\Integrations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
+
+use function Illuminate\Support\defer;
 
 /**
  * Admin → Configuración → Integraciones: conexiones de salida (CRM Livex, Zazu, píxeles), claves de la API de Overshark
@@ -19,6 +28,9 @@ use Illuminate\View\View;
  */
 class IntegrationController extends Controller
 {
+    /** Resultado de la última sincronización manual con Zazu (botón «Traer productos ahora»). */
+    private const ZAZU_SYNC_CACHE = 'integrations.zazu.manual-sync';
+
     /** Campos de cada conexión de salida: [clave, etiqueta, ¿secreto?]. */
     public const FIELDS = [
         'crm' => [['base_url', 'URL del CRM', false], ['api_key', 'Clave API (permiso sales.write)', true]],
@@ -29,6 +41,12 @@ class IntegrationController extends Controller
     public function index(): View
     {
         return view('admin.integraciones.index', [
+            // Estado real de cada flujo: cuándo llegaron los últimos productos de Zazu y qué pasó con las ventas al CRM.
+            'zazuLastSync' => Producto::query()->max('zazu_synced_at'),
+            'zazuManualSync' => Cache::get(self::ZAZU_SYNC_CACHE),
+            'crmLastSale' => Order::query()->whereNotNull('crm_sale_id')->latest('updated_at')->first(),
+            'crmFailed' => OrderTask::query()->where('task', 'crm_venta')->where('status', OrderTask::FAILED)->count(),
+            'crmPending' => OrderTask::query()->where('task', 'crm_venta')->where('status', OrderTask::PENDING)->count(),
             'connections' => collect(IntegrationSetting::PROVIDERS)->mapWithKeys(fn (string $provider) => [$provider => IntegrationSetting::for($provider)]),
             'fields' => self::FIELDS,
             'apiKeys' => ApiKey::query()->latest('id')->get(),
@@ -82,6 +100,31 @@ class IntegrationController extends Controller
         };
 
         return $result['ok'] ? back()->with('status', $result['message']) : back()->withErrors(['integration' => $result['message']]);
+    }
+
+    /**
+     * «Traer productos ahora»: corre la sincronización del inventario de Zazu (la misma que zazu:sync-products cada
+     * 5 minutos) después de responder, para no dejar la página esperando. El resultado se ve al recargar.
+     */
+    public function syncZazu(): RedirectResponse
+    {
+        if (blank(config('services.zazu.base_url')) || blank(config('services.zazu.token'))) {
+            return back()->withErrors(['integration' => 'Guarda primero la URL y el token de Zazu.']);
+        }
+
+        Cache::put(self::ZAZU_SYNC_CACHE, ['status' => 'running', 'at' => now()->toIso8601String()], now()->addDay());
+        defer(function (): void {
+            @set_time_limit(600);
+            try {
+                $result = app(ZazuInventorySyncService::class)->sync();
+                Cache::put(self::ZAZU_SYNC_CACHE, ['status' => 'ok', 'at' => now()->toIso8601String(), 'result' => $result], now()->addDays(7));
+            } catch (Throwable $e) {
+                report($e);
+                Cache::put(self::ZAZU_SYNC_CACHE, ['status' => 'error', 'at' => now()->toIso8601String(), 'message' => Str::limit($e->getMessage(), 300)], now()->addDays(7));
+            }
+        });
+
+        return back()->with('status', 'Trayendo productos y stock desde Zazu. Recarga la página en un minuto para ver el resultado.');
     }
 
     public function storeKey(Request $request): RedirectResponse

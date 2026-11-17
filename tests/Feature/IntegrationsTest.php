@@ -199,6 +199,35 @@ class IntegrationsTest extends TestCase
         $this->post(route('admin.integraciones.connections.test', 'zazu'))->assertSessionHas('status', 'Conectado a Zazu: 2 sedes disponibles.');
     }
 
+    public function test_admin_brings_the_zazu_products_now_and_sees_the_crm_status(): void
+    {
+        Http::fake(['zazu.test/*' => Http::response([
+            'data' => [[
+                'zazu_product_id' => 7, 'zazu_variant_id' => 70, 'sku' => 'BT-NEGRO-S', 'nombre' => 'BABY TY',
+                'talla' => 'S', 'color' => 'NEGRO', 'disponible_venta' => 3, 'precio_venta' => '17.00',
+                'producto' => ['id' => 7, 'nombre' => 'BABY TY', 'precio_venta' => '17.00'],
+                'empresa' => ['id' => 1, 'nombre' => 'OVERSHARK PERU S.A.C'],
+            ]],
+            'last_page' => 1,
+        ])]);
+        $this->admin()->withoutDefer();
+
+        $this->post(route('admin.integraciones.zazu.sync'))->assertSessionHasErrors('integration'); // sin URL ni token
+        $this->get(route('admin.integraciones.index'))->assertSee('Últimos productos recibidos de Zazu: nunca')->assertSee('Última venta enviada: ninguna todavía');
+
+        $this->put(route('admin.integraciones.connections.update', 'zazu'), ['settings' => ['base_url' => 'https://zazu.test', 'token' => 'tok', 'companies' => 'OVERSHARK'], 'enabled' => 1]);
+        $this->post(route('admin.integraciones.zazu.sync'))->assertSessionHas('status');
+
+        $this->assertDatabaseHas('productos', ['name' => 'BABY TY', 'stock' => 3]);
+        $this->get(route('admin.integraciones.index'))->assertOk()
+            ->assertSee('1 productos recibidos, 1 actualizados')
+            ->assertDontSee('Si esta hora no avanza');
+
+        $order = $this->order(Checkout::STATUS_PAID, ['nota_venta' => 'NV-00014', 'crm_sale_id' => 14]);
+        $order->tasks()->create(['task' => 'crm_venta', 'status' => \App\Models\Admin\OrderTask::FAILED]);
+        $this->get(route('admin.integraciones.index'))->assertSee('Última venta enviada: NV-00014')->assertSee('1 pedido no se pudo enviar al CRM');
+    }
+
     public function test_pixels_load_in_the_store_and_report_add_to_cart_and_purchase(): void
     {
         $this->admin();
