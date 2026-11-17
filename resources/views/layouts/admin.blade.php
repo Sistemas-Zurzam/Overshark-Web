@@ -29,6 +29,7 @@
         ['admin.medios-pago.index', 'Medios de pago', 'card'],
         ['admin.agencias.index', 'Agencias Shalom', 'truck'],
         ['admin.pasarelas-pago.index', 'Pasarelas de pago', 'card'],
+        ['admin.integraciones.index', 'Integraciones', 'plug'],
         ['admin.usuarios.index', 'Usuarios y roles', 'user'],
     ],
 ])

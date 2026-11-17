@@ -37,6 +37,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="preload" as="image" href="{{ \App\Support\SiteContent::asset('images/explorar/mar.jpg') }}">
+    @include('partials.tracking-pixels')
     @vite(['resources/css/app.css', 'resources/css/explore.css', 'resources/js/explore.js'])
 </head>
 <body class="ex antialiased">

@@ -5,6 +5,7 @@ namespace App\Services\Orders;
 use App\Jobs\RunOrderTask;
 use App\Models\Admin\Order;
 use App\Models\Admin\OrderTask;
+use App\Services\Integrations\Webhooks;
 use App\Services\Orders\Tasks\RegisterCrmSale;
 use App\Services\Orders\Tasks\SendOrderEmail;
 use Illuminate\Support\Facades\Bus;
@@ -48,6 +49,9 @@ class OrderFulfillment
         foreach (array_keys(self::TASKS) as $task) {
             $order->tasks()->create(['task' => $task, 'status' => OrderTask::PENDING]);
         }
+
+        // Sistemas externos suscritos (Admin → Integraciones → Webhooks): el pedido quedó pagado o confirmado.
+        Webhooks::dispatch('order.confirmed', $order);
 
         foreach (array_keys(self::TASKS) as $task) {
             if (! in_array($task, self::INLINE, true)) {

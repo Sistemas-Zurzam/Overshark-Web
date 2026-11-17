@@ -22,6 +22,7 @@ use App\Support\AccountCheckout;
 use App\Support\CartSuggestions;
 use App\Support\Checkout;
 use App\Support\GirlsHome;
+use App\Support\PixelEvents;
 use App\Support\ProductCards;
 use App\Support\Promotions;
 use App\Support\SessionCart;
@@ -150,6 +151,11 @@ Route::post('/carrito', function (Request $request) {
     $notice = $added < (int) $validated['qty']
         ? "Solo quedaban {$after} unidades disponibles: agregamos {$added} a tu carrito."
         : null;
+
+    PixelEvents::flash('AddToCart', [
+        'value' => (float) $variant->price * $added,
+        'items' => [['id' => $variant->id, 'name' => $variant->name, 'price' => (float) $variant->price, 'quantity' => $added]],
+    ]);
 
     if ($request->boolean('checkout')) {
         return redirect()->route('web.cart.index')->with('cart_notice', $notice);
@@ -370,6 +376,7 @@ Route::get('/checkout/pago', function () {
 
     $customer = session('checkout.customer');
     $distrito = Distrito::query()->with('provincia.departamento')->find($customer['distrito_id'] ?? 0);
+    PixelEvents::now('InitiateCheckout', ['value' => $summary['total'], 'items' => PixelEvents::cartItems($summary['items'])]);
 
     return view('web.checkout.payment', $summary + [
         'customer' => $customer,
@@ -569,6 +576,11 @@ Route::get('/checkout/pedido/{order}', function (Request $request, Order $order,
             : $redirect->withErrors(['payment' => $declined
                 ? 'El pago no se completó en Mercado Pago. Puedes intentarlo de nuevo antes de que venza la reserva.'
                 : 'Aún no vemos tu pago aprobado en Mercado Pago. Si ya pagaste, espera unos segundos y actualiza; no pagues de nuevo.']);
+    }
+
+    // Píxeles: la compra cuenta cuando el pedido queda confirmado (pagado, separo pagado o contraentrega).
+    if (in_array($order->load('statusOrder')->statusName(), Checkout::PREPARATION_STATUSES, true)) {
+        PixelEvents::purchase($order);
     }
 
     return view('web.checkout.status', [
@@ -905,6 +917,11 @@ Route::get('/productos/{producto}', function (Producto $producto) {
             $fallbackImage,
         );
     }
+
+    PixelEvents::now('ViewContent', [
+        'value' => (float) $variants->min('price'),
+        'items' => [['id' => $producto->id, 'name' => $producto->name, 'price' => (float) $variants->min('price'), 'quantity' => 1]],
+    ]);
 
     return view('web.product-show', [
         'brandPage' => $bravosBrand,

@@ -11,6 +11,7 @@ use App\Models\Admin\StatusOrder;
 use App\Models\Brand;
 use App\Services\Orders\OrderFulfillment;
 use App\Services\Orders\OrderPayments;
+use App\Services\Orders\OrderStatus;
 use App\Support\Checkout;
 use Illuminate\Http\RedirectResponse;
 use App\Support\CsvSafe;
@@ -28,7 +29,7 @@ use Illuminate\View\View;
 class OrderController extends Controller
 {
     /** Estados que el equipo puede poner a mano. Los de pago los pone el sistema, nunca el panel. */
-    public const STATUSES = ['Enviado', 'Entregado', Checkout::STATUS_CANCELLED];
+    public const STATUSES = OrderStatus::MANUAL;
 
     /** Agrupa los estados internos del checkout en las columnas de estado que ve el equipo. */
     private const STATUS_GROUPS = [
@@ -126,7 +127,8 @@ class OrderController extends Controller
     {
         $validated = $request->validate(['status' => ['required', 'in:'.implode(',', self::STATUSES)]]);
 
-        $order->update(['status_order_id' => StatusOrder::query()->firstOrCreate(['name' => $validated['status']])->id]);
+        // Mismo cambio que la API de integraciones: avisa por webhook a los sistemas suscritos.
+        OrderStatus::change($order, $validated['status']);
 
         return back()->with('status', "Pedido {$order->number_zazu}: {$validated['status']}.");
     }

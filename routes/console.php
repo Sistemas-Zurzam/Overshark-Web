@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('zazu:sync-products')
     ->everyFiveMinutes()
+    ->when(fn () => \App\Support\Integrations::zazuSyncEnabled()) // se pausa desde Admin → Integraciones
     ->withoutOverlapping();
 
 Schedule::command('zazu:sync-agencies')
     ->everySixHours()
+    ->when(fn () => \App\Support\Integrations::zazuSyncEnabled())
     ->withoutOverlapping();
 
 // Pedidos que esperaban el pago con tarjeta y no se pagaron a tiempo: se cancelan (App\Services\Orders\OrderPayments).
