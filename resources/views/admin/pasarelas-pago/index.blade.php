@@ -77,7 +77,8 @@
                     </label>
                     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-admin-border pt-4">
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="submit" class="bg-admin-text px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-admin-accent">Guardar configuración</button>
+                            {{-- bg-admin-navy: el mismo botón principal de las otras pantallas del admin (ya está en el CSS compilado). --}}
+                            <button type="submit" class="bg-admin-navy px-6 py-3 text-xs font-extrabold uppercase tracking-[1px] text-white">Guardar configuración</button>
                             @if ($gateway->provider === 'mercadopago' && $gateway->credential('access_token'))
                                 <button type="submit" form="test-gateway-{{ $gateway->id }}" class="border border-admin-border px-4 py-2.5 text-sm font-bold text-admin-text transition hover:border-admin-accent hover:text-admin-accent">Probar conexión</button>
                             @endif
