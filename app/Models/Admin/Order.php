@@ -13,6 +13,7 @@ class Order extends Model
         'tipo_registro_id', 'distrito_id', 'direccion', 'cuenta_cliente',
         'email', 'subtotal', 'envio', 'entrega', 'agencia', 'referencia', 'tipo_comprobante', 'ruc', 'razon_social',
         'metodo_pago_nombre', 'comprobante_pago', 'checkout_token', 'separo', 'pago_monto', 'pago_referencia', 'payment_gateway',
+        'fraud_alert_at', 'fraud_alert_detail', 'fraud_alert_reviewed_at',
         'pago_qr', 'pago_qr_expira', 'agencia_shalom_id', 'nota_venta', 'crm_sale_id', 'fecha_envio', 'customer_account_id',
     ];
 
@@ -27,6 +28,8 @@ class Order extends Model
             'pago_monto' => 'decimal:2',
             'pago_qr_expira' => 'datetime',
             'fecha_envio' => 'date',
+            'fraud_alert_at' => 'datetime',
+            'fraud_alert_reviewed_at' => 'datetime',
         ];
     }
 
@@ -58,6 +61,17 @@ class Order extends Model
         [$local, $domain] = array_pad(explode('@', (string) $this->email, 2), 2, '');
 
         return mb_substr($local, 0, 3).'•••@'.$domain;
+    }
+
+    /** Alerta de fraude de Mercado Pago que el equipo aún no revisó: el pedido no se debe despachar. */
+    public function hasOpenFraudAlert(): bool
+    {
+        return $this->fraud_alert_at !== null && $this->fraud_alert_reviewed_at === null;
+    }
+
+    public function scopeWithOpenFraudAlert($query)
+    {
+        return $query->whereNotNull('fraud_alert_at')->whereNull('fraud_alert_reviewed_at');
     }
 
     public function cliente() { return $this->belongsTo(Cliente::class); }

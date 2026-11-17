@@ -22,6 +22,9 @@ class MercadoPagoGateway
 {
     public const API = 'https://api.mercadopago.com';
 
+    /** Evento «Alertas de fraude»: Mercado Pago recomienda no despachar el pedido de ese pago. */
+    public const FRAUD_ALERT = 'stop_delivery_op_wh';
+
     private ?PaymentGateway $settings = null;
 
     public function settings(): ?PaymentGateway
@@ -160,7 +163,9 @@ class MercadoPagoGateway
      * Tipo de evento e id del recurso de un aviso. Webhooks: ?data.id=123&type=payment (PHP convierte "data.id" en
      * "data_id") y el mismo dato en el cuerpo JSON. Los avisos IPN (topic/id) no se usan.
      *
-     * @return array{type: ?string, id: string}
+     * url_id es el data.id de la URL (el que firma Mercado Pago); id usa el del cuerpo si la URL no lo trae.
+     *
+     * @return array{type: ?string, id: string, url_id: string}
      */
     public static function notification(Request $request): array
     {
@@ -169,11 +174,47 @@ class MercadoPagoGateway
             [$key, $value] = array_pad(explode('=', $pair, 2), 2, '');
             $raw[urldecode($key)] = urldecode($value);
         }
+        $urlId = trim((string) ($raw['data.id'] ?? $request->query('data_id') ?? ''));
+        $bodyId = $request->json('data.id');
 
         return [
             'type' => $raw['type'] ?? $request->query('type') ?? $request->json('type'),
-            'id' => trim((string) ($raw['data.id'] ?? $request->query('data_id') ?? $request->json('data.id') ?? '')),
+            'id' => $urlId !== '' ? $urlId : trim(is_scalar($bodyId) ? (string) $bodyId : ''),
+            'url_id' => $urlId,
         ];
+    }
+
+    /**
+     * Marca el pedido del pago de una alerta de fraude (data.payment_id). Lo busca por la referencia guardada al
+     * confirmarlo o, si aún no la tiene, consultando el pago (external_reference). Devuelve el pedido marcado o null
+     * si el pago no es de la tienda; lanza excepción si la API falla, para que el aviso se reintente.
+     */
+    public function flagFraud(array $data): ?Order
+    {
+        $paymentId = trim(is_scalar($data['payment_id'] ?? null) ? (string) $data['payment_id'] : '');
+        if (! ctype_digit($paymentId)) {
+            return null;
+        }
+
+        $order = Order::query()->where('payment_gateway', 'mercadopago')->where('pago_referencia', $paymentId)->first();
+        if (! $order && ($payment = $this->payment($paymentId))) {
+            $order = Order::query()->where('payment_gateway', 'mercadopago')->find((int) ($payment['external_reference'] ?? 0));
+        }
+        if (! $order) {
+            Log::info('Mercado Pago: alerta de fraude de un pago que no es de la tienda', ['payment_id' => $paymentId]);
+
+            return null;
+        }
+
+        $description = trim(is_scalar($data['description'] ?? null) ? (string) $data['description'] : '');
+        $order->update([
+            'fraud_alert_at' => now(),
+            'fraud_alert_detail' => Str::limit('Pago '.$paymentId.($description !== '' ? ': '.$description : ''), 590),
+            'fraud_alert_reviewed_at' => null,
+        ]);
+        Log::warning('Mercado Pago: alerta de fraude, no despachar el pedido', ['order_id' => $order->id, 'payment_id' => $paymentId]);
+
+        return $order;
     }
 
     /**

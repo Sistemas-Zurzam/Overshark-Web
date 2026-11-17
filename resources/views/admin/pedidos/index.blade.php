@@ -30,6 +30,17 @@
             <div class="rounded-sm border border-admin-success bg-admin-success-soft px-4 py-3 text-sm font-semibold text-admin-success">{{ session('status') }}</div>
         @endif
 
+        @if ($fraudAlerts->isNotEmpty())
+            <div class="rounded-sm border border-admin-danger bg-admin-danger-soft px-4 py-3 text-sm text-admin-danger" role="alert">
+                <p class="font-extrabold">Mercado Pago marcó {{ $fraudAlerts->count() === 1 ? 'un pedido' : $fraudAlerts->count().' pedidos' }} con alerta de fraude. No los despaches hasta revisarlos.</p>
+                <p class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                    @foreach ($fraudAlerts as $alerted)
+                        <a href="{{ route('admin.pedidos.show', $alerted) }}" class="font-bold underline">{{ $alerted->displayNumber() }} · {{ $alerted->cliente_name }}</a>
+                    @endforeach
+                </p>
+            </div>
+        @endif
+
         <div class="flex flex-col rounded-sm border border-admin-border bg-admin-surface">
             <div class="flex items-center gap-6 overflow-x-auto border-b border-admin-border px-5">
                 @foreach ([
@@ -106,7 +117,12 @@
                         <div class="w-35 text-sm text-admin-text">{{ $order->marca_computed }}</div>
                         <div class="w-32.5 text-sm text-admin-text">{{ $order->metodo_pago_nombre ?: '—' }}</div>
                         <div class="w-25 text-right text-sm font-bold text-admin-text">S/ {{ number_format((float) $order->precio_total, 2) }}</div>
-                        <div class="w-45 pl-6"><x-admin.badge :tone="$group['tone'] ?? 'neutral'" :label="$group['label'] ?? $order->statusOrder?->name" /></div>
+                        <div class="w-45 pl-6">
+                            <x-admin.badge :tone="$group['tone'] ?? 'neutral'" :label="$group['label'] ?? $order->statusOrder?->name" />
+                            @if ($order->hasOpenFraudAlert())
+                                <x-admin.badge tone="danger" label="Alerta de fraude" class="mt-1" />
+                            @endif
+                        </div>
                         <div class="w-27.5 text-[13px] text-admin-text-secondary">{{ $order->created_at?->format('d/m/Y') }}</div>
                         <div class="flex w-31.5 justify-end">
                             <a href="{{ route('admin.pedidos.show', $order) }}" class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-[1px] text-admin-accent">Ver</a>

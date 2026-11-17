@@ -59,5 +59,6 @@ The brand maintainer at `/admin/marcas` defines the public visual palette and st
 - Mercado Pago needs only the Access Token to be enabled; saving or "Probar conexión" checks it against Mercado Pago and rejects test tokens in production or accounts outside Peru. The webhook secret is recommended: when stored, unsigned or badly signed notifications are rejected.
 - Returning from Mercado Pago, or pressing "Ya pagué", looks the payment up in the API; URL parameters never confirm an order on their own. A pending Mercado Pago order can reopen its checkout until the reservation expires, and the preference expires with it.
 - Izipay keys stored in `.env` keep counting as configured when the panel has none.
+- A signed Mercado Pago fraud alert (`stop_delivery_op_wh`) flags its order without changing the status: the Pedidos badge turns red, the list shows the flagged orders on top, and the order page says not to ship until someone marks the alert as reviewed.
 - Existing manual payment methods remain separate from online gateway configuration.
 - Izipay credential keys map to the existing REST V4 payment form and signed callback; Mercado Pago can be enabled independently.

@@ -71,6 +71,8 @@ class OrderController extends Controller
         );
 
         return view('admin.pedidos.index', [
+            // Alertas de fraude sin revisar: se listan arriba aunque el pedido no esté en la página o pestaña actual.
+            'fraudAlerts' => Order::query()->withOpenFraudAlert()->latest('fraud_alert_at')->get(),
             'orders' => $orders,
             'filters' => $filters,
             'tab' => $tab,
@@ -127,6 +129,16 @@ class OrderController extends Controller
         $order->update(['status_order_id' => StatusOrder::query()->firstOrCreate(['name' => $validated['status']])->id]);
 
         return back()->with('status', "Pedido {$order->number_zazu}: {$validated['status']}.");
+    }
+
+    /** El equipo revisó la alerta de fraude de Mercado Pago (canceló, devolvió o confirmó que el pago es legítimo). */
+    public function reviewFraudAlert(Order $order): RedirectResponse
+    {
+        abort_unless($order->fraud_alert_at !== null, 404);
+
+        $order->update(['fraud_alert_reviewed_at' => now()]);
+
+        return back()->with('status', "Alerta de fraude del pedido {$order->displayNumber()} marcada como revisada.");
     }
 
     /** Vista previa del correo de confirmación tal como le llega a la clienta (no envía nada). */

@@ -36,6 +36,22 @@
         <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') }}</div>
     @endif
 
+    @if ($order->hasOpenFraudAlert())
+        <div class="mb-6 flex flex-col gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between" role="alert">
+            <div>
+                <p class="font-black uppercase">Alerta de fraude de Mercado Pago · No despaches este pedido</p>
+                <p class="mt-1">Recibida el {{ $order->fraud_alert_at->format('d/m/Y H:i') }}. {{ $order->fraud_alert_detail }}</p>
+                <p class="mt-1">Revisa el pago en tu cuenta de Mercado Pago. Si no es legítimo, anula el pedido y devuelve el dinero desde Mercado Pago; luego márcala como revisada.</p>
+            </div>
+            <form method="POST" action="{{ route('admin.pedidos.fraud-alert.review', $order) }}" class="shrink-0">
+                @csrf @method('PATCH')
+                <button type="submit" class="rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white hover:bg-red-600">Marcar como revisada</button>
+            </form>
+        </div>
+    @elseif ($order->fraud_alert_at)
+        <p class="mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">Alerta de fraude de Mercado Pago del {{ $order->fraud_alert_at->format('d/m/Y H:i') }}, revisada el {{ $order->fraud_alert_reviewed_at?->format('d/m/Y H:i') }}. {{ $order->fraud_alert_detail }}</p>
+    @endif
+
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
             <h2 class="text-lg font-black text-slate-950">Prendas</h2>

@@ -63,7 +63,7 @@
                             <p class="font-extrabold text-admin-text">Webhook para registrar en Mercado Pago</p>
                             <code class="mt-1 block break-all text-xs">{{ route('web.payments.mercadopago.webhook') }}</code>
                             <p class="mt-1">Obligatorio: el Access Token de producción (empieza con APP_USR-) con el ambiente en Producción. Public Key, Client ID y Client Secret no se usan en Checkout Pro; puedes guardarlos como referencia.</p>
-                            <p class="mt-1">Recomendado: en Tus integraciones abre esta aplicación, entra a Webhooks &gt; Configurar notificaciones, pega esta URL en Modo productivo, marca el evento Pagos y guarda. Copia la clave secreta que muestra Mercado Pago en Secreto de webhook: así se valida la firma de cada aviso.</p>
+                            <p class="mt-1">Recomendado: en Tus integraciones abre esta aplicación, entra a Webhooks &gt; Configurar notificaciones, pega esta URL en Modo productivo, marca los eventos Pagos (legacy) y Alertas de fraude y guarda. Las alertas de fraude marcan el pedido en Pedidos para que no se despache. Copia la clave secreta que muestra Mercado Pago en Secreto de webhook: así se valida la firma de cada aviso.</p>
                             <p class="mt-1">Cada pago también se verifica consultando a Mercado Pago cuando el cliente vuelve a la tienda, así que el pedido se confirma aunque un aviso no llegue.</p>
                             @if ($gateway->credential('access_token') && ! $gateway->credential('webhook_secret'))
                                 <p class="mt-1 font-bold text-amber-800">Sin secreto de webhook: los avisos se aceptan sin firma y el pago se confirma solo después de consultarlo a Mercado Pago.</p>

@@ -103,6 +103,18 @@ class MercadoPagoCheckoutTest extends TestCase
             array_filter(['x-signature' => $signature, 'x-request-id' => 'req-1']));
     }
 
+    /** Alerta de fraude como la de la simulación de Mercado Pago: sin data.id en la URL, el pago va en data.payment_id. */
+    private function fraudAlert(string $paymentId, ?string $secret = self::SECRET)
+    {
+        $ts = '1742505638683';
+        $signature = $secret ? 'ts='.$ts.',v1='.hash_hmac('sha256', "request-id:req-2;ts:{$ts};", $secret) : null;
+
+        return $this->postJson('/webhooks/mercadopago?type='.MercadoPagoGateway::FRAUD_ALERT, [
+            'action' => 'Created', 'type' => MercadoPagoGateway::FRAUD_ALERT, 'id' => '123456', 'live_mode' => true,
+            'data' => ['description' => 'Posible fraude con tarjeta', 'merchant_order' => 45679012, 'payment_id' => (int) $paymentId, 'site_id' => 'MPE'],
+        ], array_filter(['x-signature' => $signature, 'x-request-id' => 'req-2']));
+    }
+
     private function orderStatus(Order $order): ?string
     {
         return $order->fresh('statusOrder')->statusName();
@@ -253,6 +265,51 @@ class MercadoPagoCheckoutTest extends TestCase
         $this->payment = $this->approvedPayment($order);
         $this->get(route('web.checkout.done', [$order, 'verificar' => 1]))->assertRedirect(route('web.checkout.done', $order));
         $this->assertSame(Checkout::STATUS_PAID, $this->orderStatus($order));
+    }
+
+    public function test_a_signed_fraud_alert_flags_the_order_in_the_admin_until_it_is_reviewed(): void
+    {
+        $this->enableMercadoPago();
+        $order = $this->placeOrder();
+        $this->payment = $this->approvedPayment($order);
+        $this->webhook('123456789')->assertOk();
+        $this->flushSession();
+
+        // Sin firma o de un pago ajeno (la simulación de Mercado Pago): se recibe sin marcar nada.
+        $this->fraudAlert('123456789', null)->assertStatus(401);
+        $this->fraudAlert('123456789', 'otro-secreto')->assertStatus(401);
+        $this->fraudAlert('404')->assertOk();
+        $this->assertNull($order->fresh()->fraud_alert_at);
+
+        $this->fraudAlert('123456789')->assertOk();
+        $order->refresh();
+        $this->assertTrue($order->hasOpenFraudAlert());
+        $this->assertSame('Pago 123456789: Posible fraude con tarjeta', $order->fraud_alert_detail);
+        $this->assertSame(Checkout::STATUS_PAID, $this->orderStatus($order)); // el estado no cambia: decide el equipo
+
+        $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
+        $this->get(route('admin.pedidos.index'))->assertOk()
+            ->assertSee('con alerta de fraude. No los despaches hasta revisarlos.', false)
+            ->assertSee('Alerta de fraude')
+            ->assertSee('1 con alerta de fraude');
+        $this->get(route('admin.pedidos.show', $order))->assertOk()
+            ->assertSee('No despaches este pedido')
+            ->assertSee('Posible fraude con tarjeta');
+
+        $this->patch(route('admin.pedidos.fraud-alert.review', $order))->assertSessionHas('status');
+        $this->assertFalse($order->fresh()->hasOpenFraudAlert());
+        $this->get(route('admin.pedidos.index'))->assertOk()->assertDontSee('No los despaches hasta revisarlos');
+        $this->get(route('admin.pedidos.show', $order))->assertOk()->assertDontSee('No despaches este pedido')->assertSee('revisada el');
+    }
+
+    public function test_a_fraud_alert_before_the_payment_is_confirmed_finds_the_order_through_the_api(): void
+    {
+        $this->enableMercadoPago();
+        $order = $this->placeOrder();
+        $this->payment = $this->approvedPayment($order, ['id' => 555]);
+
+        $this->fraudAlert('555')->assertOk();
+        $this->assertTrue($order->fresh()->hasOpenFraudAlert());
     }
 
     public function test_admin_checks_the_access_token_before_enabling_mercado_pago(): void

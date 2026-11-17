@@ -23,11 +23,21 @@ class AdminNav
         $claims = LibroReclamacion::query()->whereNull('responded_at')->get();
         $overdue = $claims->filter(fn (LibroReclamacion $claim) => $claim->isOverdue())->count();
 
+        // Una alerta de fraude sin revisar pone la marca de Pedidos en rojo (aunque el pedido ya no esté por preparar).
+        $fraudAlerts = Order::query()->withOpenFraudAlert()->count();
+
         $all = [
             // Pedidos pagados (o por cobrar al entregar) que el equipo todavía tiene que preparar y enviar.
             'admin.pedidos.index' => [
-                'count' => Order::query()->whereHas('statusOrder', fn ($query) => $query->whereIn('name', Checkout::PREPARATION_STATUSES))->count(),
-                'tone' => 'info', 'title' => 'pedidos por preparar y enviar',
+                'count' => Order::query()
+                    ->where(fn ($query) => $query
+                        ->whereHas('statusOrder', fn ($status) => $status->whereIn('name', Checkout::PREPARATION_STATUSES))
+                        ->orWhere(fn ($alert) => $alert->withOpenFraudAlert()))
+                    ->count(),
+                'tone' => $fraudAlerts > 0 ? 'danger' : 'info',
+                'title' => $fraudAlerts > 0
+                    ? "pedidos por preparar y enviar ({$fraudAlerts} con alerta de fraude)"
+                    : 'pedidos por preparar y enviar',
             ],
             'admin.reclamos.index' => [
                 'count' => $claims->count(),

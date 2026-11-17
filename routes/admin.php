@@ -60,6 +60,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/pedidos/exportar-csv', [OrderController::class, 'exportCsv'])->name('pedidos.export');
     Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('pedidos.show');
     Route::patch('/pedidos/{order}/estado', [OrderController::class, 'updateStatus'])->name('pedidos.status');
+    Route::patch('/pedidos/{order}/alerta-fraude', [OrderController::class, 'reviewFraudAlert'])->name('pedidos.fraud-alert.review');
     Route::post('/pedidos/{order}/tareas/{task}/reintentar', [OrderController::class, 'retryTask'])->name('pedidos.tasks.retry');
     Route::get('/pedidos/{order}/correo', [OrderController::class, 'emailPreview'])->name('pedidos.email.preview');
     Route::post('/pedidos/{order}/correo/reenviar', [OrderController::class, 'resendEmail'])->name('pedidos.email.resend');

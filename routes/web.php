@@ -489,6 +489,29 @@ Route::post('/checkout/pedido', function (Request $request) {
 // caída (503, para que Mercado Pago reintente).
 Route::post('/webhooks/mercadopago', function (Request $request, MercadoPagoGateway $mercadoPago) {
     $notification = MercadoPagoGateway::notification($request);
+
+    // Alerta de fraude (evento «Alertas de fraude»): marca el pedido del pago para no despacharlo; no cambia su estado.
+    // Su aviso no siempre trae data.id en la URL: la firma se valida con o sin esa parte del manifiesto.
+    if ($notification['type'] === MercadoPagoGateway::FRAUD_ALERT) {
+        $signed = collect(array_unique([$notification['url_id'], '']))
+            ->contains(fn (string $id) => $mercadoPago->signatureIsValid($id, $request->header('x-signature'), $request->header('x-request-id')));
+        if (! $signed) {
+            Log::warning('Mercado Pago: alerta de fraude con firma inválida; revisa el Secreto de webhook en Pasarelas de pago', ['query' => $request->getQueryString()]);
+
+            return response()->json(['received' => false], 401);
+        }
+
+        try {
+            $mercadoPago->flagFraud((array) $request->json('data', []));
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago: no se pudo consultar el pago de una alerta de fraude', ['error' => $e->getMessage()]);
+
+            return response()->json(['received' => false], 503);
+        }
+
+        return response()->json(['received' => true]);
+    }
+
     if ($notification['type'] !== 'payment' || $notification['id'] === '') {
         return response()->json(['received' => true]); // otros eventos (o avisos IPN) no cambian pedidos
     }
