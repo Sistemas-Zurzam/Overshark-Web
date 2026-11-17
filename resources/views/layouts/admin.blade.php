@@ -28,6 +28,7 @@
         ['admin.brands.index', 'Marcas', 'tag'],
         ['admin.medios-pago.index', 'Medios de pago', 'card'],
         ['admin.agencias.index', 'Agencias Shalom', 'truck'],
+        ['admin.pasarelas-pago.index', 'Pasarelas de pago', 'card'],
         ['admin.usuarios.index', 'Usuarios y roles', 'user'],
     ],
 ])

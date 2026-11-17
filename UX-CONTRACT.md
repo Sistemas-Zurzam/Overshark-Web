@@ -4,6 +4,8 @@
 
 This contract covers the `/admin/combos` CRUD surface and the public `/combos/{combo}` detail route.
 
+The payment gateway settings at `/admin/pasarelas-pago` control encrypted provider credentials and checkout visibility for Culqi, Izipay, and Mercado Pago. Izipay uses the existing signed payment form; Mercado Pago uses a verified server notification to confirm an order. The browser return alone never marks a Mercado Pago order paid. Culqi is configurable but remains hidden until its checkout driver is integrated.
+
 The product catalog at `/admin/productos` also follows the filter and brand-assignment behavior below.
 
 The brand maintainer at `/admin/marcas` defines the public visual palette and storefront context for each commercial brand.
@@ -48,3 +50,11 @@ The brand maintainer at `/admin/marcas` defines the public visual palette and st
 - Delete uses an app-owned dialog; browser confirmation APIs are not used.
 - The list is a bounded card grid, with all actions available by keyboard and touch.
 - Import can create the catalog before ZAZU products are linked; the unresolved names are reported inline.
+
+## Payment gateways
+
+- Saving a blank credential preserves the stored value; private credentials are encrypted at rest and never rendered back into the form.
+- Enabling a gateway requires the credentials used by its payment flow. Only configured gateways with an implemented checkout driver are offered to buyers.
+- Mercado Pago order confirmation validates the webhook signature, retrieves the payment from Mercado Pago, and checks the order reference, PEN currency, and expected amount before idempotent confirmation.
+- Existing manual payment methods remain separate from online gateway configuration.
+- Izipay credential keys map to the existing REST V4 payment form and signed callback; Mercado Pago can be enabled independently.

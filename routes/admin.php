@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CourierController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\LibroReclamacionController;
 use App\Http\Controllers\Admin\MetodoPagoController;
+use App\Http\Controllers\Admin\PaymentGatewayController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PromocionController;
 use App\Http\Controllers\Admin\SiteContentController;
@@ -101,6 +102,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'update'])->name('medios-pago.update');
     Route::patch('/medios-pago/{metodoPago}/estado', [MetodoPagoController::class, 'toggle'])->name('medios-pago.toggle');
     Route::delete('/medios-pago/{metodoPago}', [MetodoPagoController::class, 'destroy'])->name('medios-pago.destroy');
+    Route::get('/pasarelas-pago', [PaymentGatewayController::class, 'index'])->name('pasarelas-pago.index');
+    Route::put('/pasarelas-pago/{gateway}', [PaymentGatewayController::class, 'update'])->name('pasarelas-pago.update');
+    Route::delete('/pasarelas-pago/{gateway}/credenciales', [PaymentGatewayController::class, 'clear'])->name('pasarelas-pago.clear');
     Route::get('/banners', [BannerController::class, 'index'])->name('banners.index');
     Route::post('/banners', [BannerController::class, 'store'])->name('banners.store');
     Route::post('/banners/reordenar', [BannerController::class, 'reorder'])->name('banners.reorder');

@@ -12,7 +12,7 @@ class Order extends Model
         'tipo_documento_id', 'status_order_id', 'tipo_envio_id',
         'tipo_registro_id', 'distrito_id', 'direccion', 'cuenta_cliente',
         'email', 'subtotal', 'envio', 'entrega', 'agencia', 'referencia', 'tipo_comprobante', 'ruc', 'razon_social',
-        'metodo_pago_nombre', 'comprobante_pago', 'checkout_token', 'separo', 'pago_monto', 'pago_referencia',
+        'metodo_pago_nombre', 'comprobante_pago', 'checkout_token', 'separo', 'pago_monto', 'pago_referencia', 'payment_gateway',
         'pago_qr', 'pago_qr_expira', 'agencia_shalom_id', 'nota_venta', 'crm_sale_id', 'fecha_envio', 'customer_account_id',
     ];
 

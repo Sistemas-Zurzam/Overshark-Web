@@ -6,12 +6,14 @@ use App\Models\Admin\Departamento;
 use App\Models\Admin\Distrito;
 use App\Models\Admin\MetodoPago;
 use App\Models\Admin\Order;
+use App\Models\Admin\PaymentGateway;
 use App\Models\Admin\Producto;
 use App\Models\Admin\ProductoColorImage;
 use App\Models\Admin\StatusOrder;
 use App\Services\Orders\OrderFulfillment;
 use App\Services\Orders\OrderPayments;
 use App\Services\Payments\IzipayGateway;
+use App\Services\Payments\MercadoPagoGateway;
 use App\Services\Payments\PaymentSimulator;
 use Illuminate\Validation\Rule;
 use App\Models\Brand;
@@ -422,8 +424,9 @@ Route::post('/checkout/pedido', function (Request $request) {
         return back()->withInput()->withErrors(['receipt' => $isCod ? 'Sube la captura del pago de tu separo para confirmar el pedido.' : 'Sube la captura de tu pago para confirmar el pedido.']);
     }
 
-    // La tarjeta se paga en el formulario de Izipay del paso siguiente (la web nunca recibe los datos de la tarjeta).
+    // Izipay abre su formulario en el siguiente paso; Mercado Pago redirige al checkout hospedado.
     $byCard = ($payWith['kind'] ?? null) === 'card';
+    $byMercadoPago = ($payWith['kind'] ?? null) === 'mercadopago';
 
     // Precio, stock y combos se vuelven a validar en el servidor; si algo cambió, el carrito se conserva.
     $cart = Checkout::verifyCart();
@@ -446,9 +449,24 @@ Route::post('/checkout/pedido', function (Request $request) {
     $order = Checkout::place($customer, $method, $payWith, ($payWith['receipt'] ?? false) ? $receipt : null, $validated['token'], $cart['lines'], auth('customer')->id());
 
     if ($order->wasRecentlyCreated) {
-        // Tarjeta: el pedido espera el pago (el total o el separo) y la clienta lo hace en el formulario de Izipay.
+        if ($byCard) {
+            $order->update(['payment_gateway' => 'izipay']);
+        } elseif ($byMercadoPago) {
+            $order->update(['payment_gateway' => 'mercadopago']);
+        }
+        // Izipay mantiene el formulario incrustado y confirma mediante su callback firmado.
         if ($byCard) {
             OrderPayments::awaitCardPayment($order);
+        } elseif ($byMercadoPago) {
+            OrderPayments::awaitCardPayment($order);
+            $preferenceUrl = app(MercadoPagoGateway::class)->createCheckout($order);
+            if (! $preferenceUrl) {
+                $order->delete();
+                return redirect()->route('web.checkout.payment')->withErrors(['method' => 'No pudimos iniciar el pago con Mercado Pago. Revisa la configuración e inténtalo de nuevo.']);
+            }
+            session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
+            session()->push('checkout.orders', $order->id);
+            return redirect()->away($preferenceUrl);
         } elseif (! $payWith) {
             // Contraentrega sin nada que pagar en línea (recojo en almacén): pasa directo a preparación; se cobra al entregar.
             OrderPayments::markCashOnDelivery($order);
@@ -464,6 +482,27 @@ Route::post('/checkout/pedido', function (Request $request) {
         ? redirect()->route('web.checkout.pay', $order)
         : redirect()->route('web.checkout.done', $order);
 })->middleware('throttle:10,1')->name('web.checkout.place');
+
+Route::post('/webhooks/mercadopago', function (Request $request, MercadoPagoGateway $mercadoPago) {
+    $paymentId = (string) ($request->query('data.id') ?? $request->input('data.id') ?? '');
+    abort_if($paymentId === '', 400);
+    abort_unless($mercadoPago->verifyNotification($paymentId, (string) $request->header('x-signature'), (string) $request->header('x-request-id')), 401);
+
+    $payment = $mercadoPago->approvedPayment($paymentId);
+    if (! $payment) {
+        return response()->noContent();
+    }
+    $order = Order::query()->find((int) ($payment['external_reference'] ?? 0));
+    if (! $order || $order->payment_gateway !== 'mercadopago'
+        || ($payment['currency_id'] ?? null) !== 'PEN'
+        || ((PaymentGateway::query()->where('provider', 'mercadopago')->value('environment') === 'production') !== (bool) ($payment['live_mode'] ?? false))
+        || abs((float) ($payment['transaction_amount'] ?? 0) - (float) $order->pago_monto) >= 0.01) {
+        abort(422);
+    }
+
+    OrderPayments::confirm($order, (string) $paymentId);
+    return response()->noContent();
+})->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])->name('web.payments.mercadopago.webhook');
 
 // Estado del pedido (pendiente o confirmado): solo lo ve quien lo hizo, desde su sesión.
 Route::get('/checkout/pedido/{order}', function (Order $order) {

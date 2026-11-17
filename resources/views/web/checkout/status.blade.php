@@ -77,6 +77,9 @@
             <p class="max-w-[640px] text-[17px] leading-[1.5] sm:text-[18px]">Gracias por tu compra. Recibimos tu separo de <strong>{{ $separo }}</strong>. El saldo de {{ $saldo }} lo pagas al recibir tu pedido; te escribiremos por WhatsApp para coordinar la entrega.</p>
         @elseif ($cashOnDelivery && (float) $order->separo > 0)
             <p class="max-w-[640px] text-[17px] leading-[1.5] sm:text-[18px]">Gracias por tu compra. Estamos verificando la captura de tu separo de <strong>{{ $separo }}</strong>; no vuelvas a pagar. Despachamos tu pedido cuando se confirme y el saldo de {{ $saldo }} lo pagas al recibir.</p>
+        @elseif ($order->payment_gateway === 'mercadopago')
+            <p class="max-w-[640px] text-[17px] leading-[1.5] sm:text-[18px]">Mercado Pago está confirmando la operación. No vuelvas a pagar; actualiza el estado en unos segundos.</p>
+            <a href="{{ route('web.checkout.done', $order) }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[280px]">ACTUALIZAR ESTADO</a>
         @elseif ($cashOnDelivery)
             <p class="max-w-[640px] text-[17px] leading-[1.5] sm:text-[18px]">Gracias por tu compra. Pagas al recibir tu pedido; te escribiremos por WhatsApp para coordinar la entrega.</p>
         @else

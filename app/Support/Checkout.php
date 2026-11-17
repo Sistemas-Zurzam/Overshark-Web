@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Admin\Cliente;
 use App\Models\Admin\Combo;
 use App\Models\Admin\MetodoPago;
+use App\Models\Admin\PaymentGateway;
 use App\Models\Admin\Order;
 use App\Models\Admin\Producto;
 use App\Models\Admin\StatusOrder;
@@ -242,13 +243,17 @@ class Checkout
      */
     public static function paymentMethods(): Collection
     {
-        // La tarjeta (Izipay) se muestra siempre; sin configurar se ve con un aviso pero no se puede pagar (available false).
-        $methods = collect([
-            [
-                'id' => self::CARD, 'kind' => 'card', 'name' => 'Tarjeta de crédito o débito', 'available' => IzipayGateway::isConfigured() || PaymentSimulator::enabled(),
-                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
-            ],
-        ]);
+        $izipay = PaymentGateway::query()->where('provider', 'izipay')->first();
+        $mercadoPago = PaymentGateway::query()->where('provider', 'mercadopago')->first();
+        $methods = collect();
+        if (($izipay?->isAvailable() ?? IzipayGateway::isConfigured()) || PaymentSimulator::enabled()) {
+            $methods->push(['id' => self::CARD, 'kind' => 'card', 'name' => 'Tarjeta de crédito o débito', 'available' => true,
+                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false]);
+        }
+        if ($mercadoPago?->isAvailable()) {
+            $methods->push(['id' => 'mercadopago', 'kind' => 'mercadopago', 'name' => 'Mercado Pago', 'available' => true,
+                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false]);
+        }
 
         MetodoPago::active()->each(fn (MetodoPago $method) => $methods->push([
             'id' => (string) $method->id,
