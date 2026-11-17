@@ -32,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Encabezados de seguridad en toda la web, el panel incluido.
         $middleware->web(append: [\App\Http\Middleware\SecurityHeaders::class]);
 
+        // www.overshark.com.pe → overshark.com.pe (301), antes de abrir sesión: Google ve una sola dirección.
+        $middleware->web(prepend: [\App\Http\Middleware\CanonicalHost::class]);
+
         // Compradores ya conectados que abren /iniciar-sesion o /registro van a su cuenta.
         $middleware->redirectUsersTo(fn () => route('customer.account'));
     })

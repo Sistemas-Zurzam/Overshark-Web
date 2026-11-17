@@ -34,6 +34,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+// Google: sitemap y los enlaces de la tienda anterior (/shop/camisero-jersey-…) que aún muestra, con redirección 301.
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('web.sitemap');
+Route::get('/shop/{slug?}', [\App\Http\Controllers\SeoController::class, 'legacyShop'])->where('slug', '.*')->name('web.legacy-shop');
+
 // Checkout (Figma "04 · Compra compartida"): Carrito → Datos y entrega → Pago → Estado del pedido.
 Route::get('/carrito', fn () => view('web.checkout.cart', Checkout::summary()))->name('web.cart.index');
 

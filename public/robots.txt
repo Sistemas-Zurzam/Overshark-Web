@@ -1,2 +1,6 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /checkout
+Disallow: /mi-cuenta
+
+Sitemap: https://overshark.com.pe/sitemap.xml
