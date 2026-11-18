@@ -162,6 +162,28 @@ class MercadoPagoGateway
     /** Crea la preferencia del pedido y devuelve la URL del checkout de Mercado Pago (null si no se pudo). */
     public function createCheckout(Order $order): ?string
     {
+        $preference = $this->createPreference($order);
+        if (! $preference) {
+            return null;
+        }
+
+        return $this->isProduction()
+            ? ($preference['init_point'] ?? null)
+            : ($preference['sandbox_init_point'] ?? $preference['init_point'] ?? null);
+    }
+
+    /**
+     * Id de una preferencia nueva del pedido, para la opción "Cuenta de Mercado Pago" del Payment Brick (la clienta
+     * paga con su saldo o tarjetas guardadas en Mercado Pago y vuelve por back_urls). Null si no se pudo crear.
+     */
+    public function createPreferenceId(Order $order): ?string
+    {
+        return $this->createPreference($order)['id'] ?? null;
+    }
+
+    /** POST /checkout/preferences; devuelve la respuesta de Mercado Pago o null si falló. */
+    private function createPreference(Order $order): ?array
+    {
         $token = $this->settings()?->credential('access_token');
         if (! $token) {
             return null;
@@ -188,9 +210,7 @@ class MercadoPagoGateway
             return null;
         }
 
-        return $this->isProduction()
-            ? $response->json('init_point')
-            : ($response->json('sandbox_init_point') ?? $response->json('init_point'));
+        return $response->json();
     }
 
     /** Cuerpo de POST /checkout/preferences para el importe que el pedido debe pagar en línea (total o separo). */

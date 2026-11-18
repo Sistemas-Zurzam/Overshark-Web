@@ -612,6 +612,8 @@ Route::get('/checkout/pedido/{order}/pagar', function (Order $order, IzipayGatew
             return view('web.checkout.pay-mercadopago', [
                 'order' => $order,
                 'publicKey' => $mercadoPago->publicKey(),
+                // Sin preferencia el Payment Brick igual cobra con tarjeta; solo se oculta "Cuenta de Mercado Pago".
+                'preferenceId' => $mercadoPago->createPreferenceId($order),
             ]);
         }
 

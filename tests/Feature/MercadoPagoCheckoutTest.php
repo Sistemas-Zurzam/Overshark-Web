@@ -334,7 +334,11 @@ class MercadoPagoCheckoutTest extends TestCase
         $this->get(route('web.checkout.pay', $order))->assertOk()
             ->assertSee('sdk.mercadopago.com/js/v2', false)
             ->assertSee('APP_USR-public-key-123')
-            ->assertSee('mp-card-brick');
+            ->assertSee('mp-payment-brick')
+            // Preferencia del pedido para la opción "Cuenta de Mercado Pago" del Payment Brick.
+            ->assertSee('pref-1');
+        Http::assertSent(fn (HttpRequest $request) => str_ends_with($request->url(), '/checkout/preferences')
+            && $request['external_reference'] === (string) $order->id);
 
         $card = [
             'token' => 'card-token-1', 'payment_method_id' => 'visa', 'issuer_id' => '1001', 'installments' => 1,

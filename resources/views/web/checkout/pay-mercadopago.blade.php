@@ -2,10 +2,13 @@
 
 {{--
     Pago con Mercado Pago dentro de la tienda (MercadoPago.js v2 con la Public Key), con dos opciones:
-     - Tarjeta: Card Payment Brick (Checkout Bricks).
-     - Yape: celular + código de aprobación (OTP) de la app Yape; mp.yape({otp, phoneNumber}).create() da el token.
-    En ambos casos Mercado Pago devuelve un token de un solo uso (el navegador nunca manda datos de la tarjeta ni de
-    Yape a Overshark) y web.checkout.mercadopago.charge crea el pago por el importe del pedido y lo confirma con la API.
+     - Mercado Pago: Payment Brick (Checkout Bricks) con tarjeta de crédito, débito o prepago y la cuenta de Mercado
+       Pago. Sin PagoEfectivo: se paga después y la reserva del pedido dura minutos. La cuenta de Mercado Pago usa la
+       preferencia del pedido ($preferenceId): la clienta paga en Mercado Pago y vuelve por back_urls.
+     - Yape: celular + código de aprobación (OTP) de la app Yape; mp.yape({otp, phoneNumber}).create() da el token
+       (Yape no tiene Brick).
+    Con tarjeta o Yape, Mercado Pago devuelve un token de un solo uso (el navegador nunca manda esos datos a Overshark)
+    y web.checkout.mercadopago.charge crea el pago por el importe del pedido y lo confirma con la API.
 --}}
 
 @section('title', 'Pago | Overshark')
@@ -30,7 +33,7 @@
         <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Cómo quieres pagar">
             <label class="os-ck-option !items-center !py-3">
                 <input type="radio" name="mp_option" value="card" checked class="os-ck-radio" data-mp-option>
-                <span class="flex-1 text-[15px] font-bold">Tarjeta</span>
+                <span class="flex-1 text-[15px] font-bold">Tarjeta o Mercado Pago</span>
             </label>
             <label class="os-ck-option !items-center !py-3">
                 <input type="radio" name="mp_option" value="yape" class="os-ck-radio" data-mp-option>
@@ -40,10 +43,10 @@
 
         <p class="hidden bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert" data-mp-error></p>
 
-        {{-- Tarjeta de crédito o débito --}}
+        {{-- Payment Brick: tarjetas y cuenta de Mercado Pago --}}
         <div data-mp-panel="card">
             <p class="text-[14px] text-[#65717c]" data-mp-loading>Cargando el formulario seguro de Mercado Pago…</p>
-            <div id="mp-card-brick"></div>
+            <div id="mp-payment-brick"></div>
         </div>
 
         {{-- Yape: celular y código de aprobación de la app --}}
@@ -72,6 +75,7 @@
             'publicKey' => $publicKey,
             'amount' => round((float) $order->pago_monto, 2),
             'email' => (string) $order->email,
+            'preferenceId' => $preferenceId,
             'chargeUrl' => route('web.checkout.mercadopago.charge', $order),
         ];
     @endphp
@@ -127,20 +131,29 @@
 
             const mp = new window.MercadoPago(config.publicKey, { locale: 'es-PE' });
 
-            // Tarjeta: Card Payment Brick.
-            mp.bricks().create('cardPayment', 'mp-card-brick', {
+            // Payment Brick: tarjetas siempre; la cuenta de Mercado Pago solo si hay preferencia del pedido.
+            const paymentMethods = { creditCard: 'all', debitCard: 'all', prepaidCard: 'all', maxInstallments: 12 };
+            if (config.preferenceId) {
+                paymentMethods.mercadoPago = 'all';
+            }
+            mp.bricks().create('payment', 'mp-payment-brick', {
                 initialization: {
                     amount: config.amount,
+                    ...(config.preferenceId ? { preferenceId: config.preferenceId } : {}),
                     payer: config.email ? { email: config.email } : undefined,
                 },
                 customization: {
-                    paymentMethods: { maxInstallments: 12 },
+                    paymentMethods,
                     visual: { style: { theme: 'default' } },
                 },
                 callbacks: {
                     onReady: () => loading.classList.add('hidden'),
-                    onSubmit: (formData) => {
+                    onSubmit: ({ selectedPaymentMethod, formData }) => {
                         hideError();
+                        // Cuenta de Mercado Pago: el Brick lleva a Mercado Pago con la preferencia; vuelve por back_urls.
+                        if (selectedPaymentMethod === 'wallet_purchase') {
+                            return Promise.resolve();
+                        }
                         return charge({ ...formData, method: 'card' }).then((ok) => (ok ? undefined : Promise.reject()));
                     },
                     onError: (error) => {
