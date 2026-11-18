@@ -251,8 +251,10 @@ class Checkout
                 'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false]);
         }
         if ($mercadoPago?->isAvailable()) {
+            // embedded: con Public Key se paga con el formulario de tarjeta en la tienda; sin ella, en Checkout Pro.
             $methods->push(['id' => 'mercadopago', 'kind' => 'mercadopago', 'name' => 'Mercado Pago', 'available' => true,
-                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false]);
+                'owner' => null, 'number' => null, 'logo' => null, 'qr' => null, 'receipt' => false,
+                'embedded' => filled($mercadoPago->credential('public_key'))]);
         }
 
         MetodoPago::active()->each(fn (MetodoPago $method) => $methods->push([

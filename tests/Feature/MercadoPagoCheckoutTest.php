@@ -51,7 +51,8 @@ class MercadoPagoCheckoutTest extends TestCase
                     'id' => 'pref-1', 'init_point' => 'https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=pref-1',
                     'sandbox_init_point' => 'https://sandbox.mercadopago.com.pe/checkout/v1/redirect?pref_id=pref-1',
                 ], 201),
-                $path === '/v1/payments/search' => Http::response(['results' => $this->payment ? [$this->payment] : []]),
+                $path === '/v1/payments' => Http::response($this->payment, 201),
+                $path === '/v1/payments/search' =>Http::response(['results' => $this->payment ? [$this->payment] : []]),
                 $path === '/v1/payments/404' => Http::response(['message' => 'Payment not found'], 404),
                 $path === '/v1/payments/500' => Http::response(['message' => 'internal_error'], 500),
                 str_starts_with($path, '/v1/payments/') => Http::response($this->payment),
@@ -310,6 +311,102 @@ class MercadoPagoCheckoutTest extends TestCase
 
         $this->fraudAlert('555')->assertOk();
         $this->assertTrue($order->fresh()->hasOpenFraudAlert());
+    }
+
+    public function test_with_a_public_key_the_buyer_pays_with_the_card_form_inside_the_store(): void
+    {
+        $this->enableMercadoPago(['access_token' => self::TOKEN, 'public_key' => 'APP_USR-public-key-123']);
+        $this->post(route('web.cart.store'), ['producto_id' => $this->polo->id, 'color' => 'NEGRO', 'talla' => 'M', 'qty' => 2]);
+        $this->post(route('web.checkout.personal.store'), [
+            'email' => 'ana@example.com', 'nombres' => 'Ana', 'apellidos' => 'Ríos', 'phone' => '987654321',
+            'doc_type' => 'DNI', 'doc_number' => '12345678', 'distrito_id' => $this->miraflores->id,
+            'address' => 'Av. Larco 123', 'delivery' => 'domicilio', 'delivery_lat' => -12.1211, 'delivery_lng' => -77.0297, 'invoice' => 'boleta',
+        ]);
+        $this->get(route('web.checkout.payment'))->assertOk()->assertSee('formulario seguro de Mercado Pago');
+
+        $this->post(route('web.checkout.place'), ['method' => 'mercadopago', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00'])
+            ->assertRedirect(route('web.checkout.pay', Order::query()->sole()));
+        $order = Order::query()->sole();
+        $this->assertSame('mercadopago', $order->payment_gateway);
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $order->statusName());
+        Http::assertNotSent(fn (HttpRequest $request) => str_ends_with($request->url(), '/checkout/preferences'));
+
+        $this->get(route('web.checkout.pay', $order))->assertOk()
+            ->assertSee('sdk.mercadopago.com/js/v2', false)
+            ->assertSee('APP_USR-public-key-123')
+            ->assertSee('mp-card-brick');
+
+        $card = [
+            'token' => 'card-token-1', 'payment_method_id' => 'visa', 'issuer_id' => '1001', 'installments' => 1,
+            // El importe que mande el navegador no cuenta: se cobra el del pedido.
+            'transaction_amount' => 1,
+            'payer' => ['email' => 'ana@example.com', 'identification' => ['type' => 'DNI', 'number' => '12345678']],
+        ];
+
+        // Rechazado: mensaje para probar otra tarjeta y el pedido sigue esperando.
+        $this->payment = $this->approvedPayment($order, ['status' => 'rejected', 'status_detail' => 'cc_rejected_insufficient_amount']);
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), $card)
+            ->assertStatus(422)->assertJson(['message' => 'Tu tarjeta no tiene fondos suficientes. Prueba con otra tarjeta.']);
+        $this->assertSame(Checkout::STATUS_AWAITING_QR, $this->orderStatus($order));
+
+        $this->payment = $this->approvedPayment($order);
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), ['token' => 'card-token-2'] + $card)
+            ->assertOk()->assertJson(['redirect' => route('web.checkout.done', $order)]);
+        $this->assertSame(Checkout::STATUS_PAID, $this->orderStatus($order));
+        $this->assertSame('123456789', $order->fresh()->pago_referencia);
+
+        Http::assertSent(function (HttpRequest $request) use ($order) {
+            return $request->url() === MercadoPagoGateway::API.'/v1/payments'
+                && $request->method() === 'POST'
+                && $request->header('Authorization')[0] === 'Bearer '.self::TOKEN
+                && $request->header('X-Idempotency-Key')[0] === 'os-'.$order->id.'-'.sha1('card-token-2')
+                && $request['token'] === 'card-token-2'
+                && $request['transaction_amount'] == 95.0
+                && $request['external_reference'] === (string) $order->id
+                && $request['issuer_id'] === 1001
+                && $request['binary_mode'] === true
+                && $request['payer']['identification'] === ['type' => 'DNI', 'number' => '12345678'];
+        });
+
+        // Ya pagado: no se vuelve a cobrar.
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), ['token' => 'card-token-3'] + $card)
+            ->assertOk()->assertJson(['redirect' => route('web.checkout.done', $order)]);
+        $this->assertCount(2, Http::recorded(fn (HttpRequest $request) => $request->url() === MercadoPagoGateway::API.'/v1/payments'));
+    }
+
+    public function test_only_the_buyer_session_can_charge_the_card_form(): void
+    {
+        $this->enableMercadoPago(['access_token' => self::TOKEN, 'public_key' => 'APP_USR-public-key-123']);
+        $order = $this->placeOrderWithCardForm();
+        $this->flushSession();
+
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), ['token' => 't', 'payment_method_id' => 'visa', 'installments' => 1])
+            ->assertNotFound();
+    }
+
+    private function placeOrderWithCardForm(): Order
+    {
+        $this->post(route('web.cart.store'), ['producto_id' => $this->polo->id, 'color' => 'NEGRO', 'talla' => 'M', 'qty' => 2]);
+        $this->post(route('web.checkout.personal.store'), [
+            'email' => 'ana@example.com', 'nombres' => 'Ana', 'apellidos' => 'Ríos', 'phone' => '987654321',
+            'doc_type' => 'DNI', 'doc_number' => '12345678', 'distrito_id' => $this->miraflores->id,
+            'address' => 'Av. Larco 123', 'delivery' => 'domicilio', 'delivery_lat' => -12.1211, 'delivery_lng' => -77.0297, 'invoice' => 'boleta',
+        ]);
+        $this->get(route('web.checkout.payment'));
+        $this->post(route('web.checkout.place'), ['method' => 'mercadopago', 'token' => session('checkout.token'), 'terms' => 1, 'expected_total' => '95.00']);
+
+        return Order::query()->sole();
+    }
+
+    public function test_admin_rejects_a_test_public_key_in_production(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
+        $gateway = PaymentGateway::query()->where('provider', 'mercadopago')->sole();
+
+        $this->from(route('admin.pasarelas-pago.index'))->put(route('admin.pasarelas-pago.update', $gateway), [
+            'environment' => 'production', 'enabled' => 1, 'credentials' => ['access_token' => self::TOKEN, 'public_key' => 'TEST-abc'],
+        ])->assertSessionHasErrors('credentials');
+        $this->assertFalse($gateway->fresh()->enabled);
     }
 
     public function test_admin_checks_the_access_token_before_enabling_mercado_pago(): void

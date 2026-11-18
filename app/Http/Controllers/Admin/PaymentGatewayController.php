@@ -49,7 +49,7 @@ class PaymentGatewayController extends Controller
 
         // Mercado Pago: antes de mostrarlo en la tienda se comprueba que el Access Token funcione en el ambiente elegido.
         $check = $gateway->provider === 'mercadopago' && $gateway->credential('access_token')
-            ? $mercadoPago->checkCredentials($gateway->credential('access_token'), $gateway->environment)
+            ? $mercadoPago->checkCredentials($gateway->credential('access_token'), $gateway->environment, $gateway->credential('public_key'))
             : null;
         if ($check && ! $check['ok'] && $check['definitive'] && $gateway->enabled) {
             return back()->withInput()->withErrors(['credentials' => $check['message']]);
@@ -71,7 +71,7 @@ class PaymentGatewayController extends Controller
             return back()->withErrors(['credentials' => 'Guarda primero el Access Token de Mercado Pago.']);
         }
 
-        $check = $mercadoPago->checkCredentials($token, $gateway->environment);
+        $check = $mercadoPago->checkCredentials($token, $gateway->environment, $gateway->credential('public_key'));
 
         return $check['ok'] ? back()->with('status', $check['message']) : back()->withErrors(['credentials' => $check['message']]);
     }

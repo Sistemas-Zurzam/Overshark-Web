@@ -12,11 +12,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Checkout Pro de Mercado Pago (https://www.mercadopago.com.pe/developers/es/reference).
+ * Mercado Pago (https://www.mercadopago.com.pe/developers/es/reference).
  *
- * El pedido se paga en el checkout hospedado de Mercado Pago (preferencia con external_reference = id del pedido).
- * Se confirma consultando el pago a la API con el Access Token de la tienda: por el webhook firmado, al volver la
- * clienta (back_urls) o cuando pulsa "Ya pagué". Nunca se confía en el estado que llega en la URL o en el aviso.
+ * Con Public Key guardada el pedido se paga en la tienda con el Card Payment Brick (Checkout Bricks): los datos de la
+ * tarjeta van del navegador a Mercado Pago, que devuelve un token de un solo uso, y el servidor crea el pago
+ * (POST /v1/payments) por el importe del pedido. Sin Public Key se usa Checkout Pro (preferencia y redirección).
+ * En ambos casos external_reference = id del pedido y el pedido se confirma con el pago leído de la API con el Access
+ * Token de la tienda: por el webhook firmado, al volver la clienta o cuando pulsa "Ya pagué". Nunca se confía en el
+ * estado que llega en la URL o en el aviso.
  */
 class MercadoPagoGateway
 {
@@ -35,6 +38,114 @@ class MercadoPagoGateway
     public function isProduction(): bool
     {
         return $this->settings()?->environment === 'production';
+    }
+
+    public function publicKey(): ?string
+    {
+        return $this->settings()?->credential('public_key');
+    }
+
+    /** Con Public Key se cobra con el formulario de tarjeta incrustado (Card Payment Brick) en vez de Checkout Pro. */
+    public function usesCardForm(): bool
+    {
+        return filled($this->publicKey());
+    }
+
+    /**
+     * Crea el pago con el token del Card Payment Brick por el importe que el pedido debe pagar (nunca el que manda el
+     * navegador). Devuelve el pago creado o, si Mercado Pago no lo aceptó, un mensaje para la clienta.
+     *
+     * @param  array{token: string, payment_method_id: string, issuer_id?: mixed, installments: int, payer: array}  $form
+     * @return array{payment: ?array, message: ?string}
+     */
+    public function chargeCard(Order $order, array $form, ?string $deviceId = null): array
+    {
+        $token = $this->settings()?->credential('access_token');
+        if (! $token) {
+            return ['payment' => null, 'message' => 'El pago con Mercado Pago no está activo en la tienda.'];
+        }
+
+        $order->loadMissing('cliente');
+        $identification = array_filter([
+            'type' => data_get($form, 'payer.identification.type'),
+            'number' => data_get($form, 'payer.identification.number'),
+        ]);
+        $body = [
+            'transaction_amount' => round((float) $order->pago_monto, 2),
+            'token' => $form['token'],
+            'installments' => (int) $form['installments'],
+            'payment_method_id' => $form['payment_method_id'],
+            'issuer_id' => filled($form['issuer_id'] ?? null) ? (int) $form['issuer_id'] : null,
+            'payer' => array_filter([
+                'email' => data_get($form, 'payer.email') ?: $order->email,
+                'first_name' => $this->payerNames($order)[0] ?: null,
+                'last_name' => $this->payerNames($order)[1] ?: null,
+                'identification' => count($identification) === 2 ? $identification : null,
+            ]),
+            'description' => $this->concept($order),
+            'external_reference' => (string) $order->id,
+            'statement_descriptor' => 'OVERSHARK',
+            // Solo aprobado o rechazado al instante: el pedido se reserva unos minutos.
+            'binary_mode' => true,
+            'metadata' => ['order_id' => $order->id, 'order_number' => $order->number_zazu],
+            'additional_info' => [
+                'items' => collect($order->productos_json ?? [])->map(fn ($line) => [
+                    'id' => (string) ($line['variant_id'] ?? $line['combo_id'] ?? ''),
+                    'title' => Str::limit(trim(implode(' ', array_filter([is_string($line['producto'] ?? null) ? $line['producto'] : 'Producto Overshark', $line['color'] ?? null, $line['talla'] ?? null]))), 250, ''),
+                    'quantity' => max(1, (int) ($line['cantidad'] ?? 1)),
+                    'unit_price' => round((float) ($line['precio'] ?? 0), 2),
+                ])->values()->all(),
+            ],
+        ];
+        if ($webhook = $this->webhookUrl()) {
+            $body['notification_url'] = $webhook;
+        }
+
+        try {
+            $response = $this->http($token)
+                // El token de la tarjeta es de un solo uso: el mismo envío repetido no genera dos cobros.
+                ->withHeaders(array_filter([
+                    'X-Idempotency-Key' => 'os-'.$order->id.'-'.sha1($form['token']),
+                    'X-meli-session-id' => $deviceId ?: null,
+                ]))
+                ->post(self::API.'/v1/payments', array_filter($body, fn ($value) => $value !== null));
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago: sin conexión al crear el pago con tarjeta', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+
+            return ['payment' => null, 'message' => 'No pudimos conectar con Mercado Pago. No se hizo ningún cobro; inténtalo de nuevo.'];
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Mercado Pago: no se pudo crear el pago con tarjeta', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+                'error' => $response->json('message') ?? $response->json('error'),
+                'cause' => $response->json('cause'),
+            ]);
+
+            return ['payment' => null, 'message' => 'Mercado Pago no pudo procesar la tarjeta. Revisa los datos e inténtalo de nuevo.'];
+        }
+
+        return ['payment' => $response->json(), 'message' => null];
+    }
+
+    /** Mensaje para la clienta según el motivo de rechazo (status_detail) de Mercado Pago. */
+    public static function rejectionMessage(?string $detail): string
+    {
+        return match ($detail) {
+            'cc_rejected_insufficient_amount' => 'Tu tarjeta no tiene fondos suficientes. Prueba con otra tarjeta.',
+            'cc_rejected_bad_filled_security_code' => 'El código de seguridad (CVV) no es correcto. Revísalo e inténtalo de nuevo.',
+            'cc_rejected_bad_filled_date' => 'La fecha de vencimiento no es correcta. Revísala e inténtalo de nuevo.',
+            'cc_rejected_bad_filled_card_number' => 'El número de tarjeta no es correcto. Revísalo e inténtalo de nuevo.',
+            'cc_rejected_bad_filled_other' => 'Algún dato de la tarjeta no es correcto. Revísalos e inténtalo de nuevo.',
+            'cc_rejected_call_for_authorize' => 'Tu banco necesita que autorices el pago. Llámalo y vuelve a intentarlo, o usa otra tarjeta.',
+            'cc_rejected_card_disabled' => 'Tu tarjeta no está activa. Llama a tu banco para activarla o usa otra tarjeta.',
+            'cc_rejected_duplicated_payment' => 'Ya hiciste un pago por este mismo importe. Si necesitas pagar de nuevo, usa otra tarjeta.',
+            'cc_rejected_max_attempts' => 'Llegaste al límite de intentos con esta tarjeta. Usa otra tarjeta.',
+            'cc_rejected_high_risk', 'rejected_high_risk', 'rejected_by_regulations' => 'Mercado Pago rechazó el pago. Prueba con otra tarjeta.',
+            'cc_rejected_blacklist', 'cc_rejected_card_error' => 'No pudimos procesar el pago con esta tarjeta. Prueba con otra.',
+            default => 'Tu banco rechazó el pago. Prueba con otra tarjeta o con otro medio de pago.',
+        };
     }
 
     /** Crea la preferencia del pedido y devuelve la URL del checkout de Mercado Pago (null si no se pudo). */
@@ -75,17 +186,15 @@ class MercadoPagoGateway
     public function preference(Order $order): array
     {
         $order->loadMissing('cliente');
-        $names = $order->cliente?->name ?: Str::before((string) $order->cliente_name, ' ');
-        $surnames = $order->cliente?->apellidos ?: Str::after((string) $order->cliente_name, ' ');
+        [$names, $surnames] = $this->payerNames($order);
         $phone = preg_replace('/\D+/', '', (string) $order->cliente_cel);
         $document = (string) $order->cliente?->documento_identidad;
         $documentType = strtoupper((string) $order->cliente?->tipoDocumento?->code);
-        $concept = $order->isCashOnDelivery() ? 'Separo del pedido Overshark ' : 'Pedido Overshark ';
 
         $preference = [
             'items' => [[
                 'id' => (string) ($order->number_zazu ?: $order->id),
-                'title' => $concept.$order->displayNumber(),
+                'title' => $this->concept($order),
                 'quantity' => 1,
                 'currency_id' => 'PEN',
                 'unit_price' => round((float) $order->pago_monto, 2),
@@ -112,8 +221,7 @@ class MercadoPagoGateway
         ];
 
         // Mercado Pago no acepta retorno automático ni avisos hacia direcciones locales (http://localhost).
-        $webhook = route('web.payments.mercadopago.webhook', ['source_news' => 'webhooks']);
-        if (str_starts_with($webhook, 'https://')) {
+        if ($webhook = $this->webhookUrl()) {
             $preference['notification_url'] = $webhook;
         }
         if (str_starts_with($preference['back_urls']['success'], 'https://')) {
@@ -127,6 +235,29 @@ class MercadoPagoGateway
         }
 
         return $preference;
+    }
+
+    /** Concepto del cobro: el pedido completo o, en contraentrega, solo su separo. */
+    private function concept(Order $order): string
+    {
+        return ($order->isCashOnDelivery() ? 'Separo del pedido Overshark ' : 'Pedido Overshark ').$order->displayNumber();
+    }
+
+    /** @return array{0: string, 1: string} nombres y apellidos de quien paga */
+    private function payerNames(Order $order): array
+    {
+        return [
+            (string) ($order->cliente?->name ?: Str::before((string) $order->cliente_name, ' ')),
+            (string) ($order->cliente?->apellidos ?: Str::after((string) $order->cliente_name, ' ')),
+        ];
+    }
+
+    /** URL del webhook para cada pago; null en direcciones locales (Mercado Pago solo avisa a https). */
+    private function webhookUrl(): ?string
+    {
+        $webhook = route('web.payments.mercadopago.webhook', ['source_news' => 'webhooks']);
+
+        return str_starts_with($webhook, 'https://') ? $webhook : null;
     }
 
     /**
@@ -286,10 +417,13 @@ class MercadoPagoGateway
      *
      * @return array{ok: bool, definitive: bool, message: string}
      */
-    public function checkCredentials(string $token, string $environment): array
+    public function checkCredentials(string $token, string $environment, ?string $publicKey = null): array
     {
         if ($environment === 'production' && str_starts_with($token, 'TEST-')) {
             return ['ok' => false, 'definitive' => true, 'message' => 'El Access Token es de prueba (TEST-) y el ambiente está en Producción. Usa las credenciales de producción (APP_USR-) o cambia el ambiente a Pruebas.'];
+        }
+        if ($environment === 'production' && str_starts_with((string) $publicKey, 'TEST-')) {
+            return ['ok' => false, 'definitive' => true, 'message' => 'La Public Key es de prueba (TEST-) y el ambiente está en Producción. Usa la Public Key de producción (APP_USR-), de la misma aplicación que el Access Token.'];
         }
 
         try {

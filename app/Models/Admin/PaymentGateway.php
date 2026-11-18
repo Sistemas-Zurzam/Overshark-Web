@@ -30,8 +30,9 @@ class PaymentGateway extends Model
     {
         return match ($this->provider) {
             'culqi' => ['public_key' => 'Llave pública', 'secret_key' => 'Llave secreta'],
-            // Checkout Pro solo necesita el Access Token: el pago se verifica en la API. El secreto del webhook es
-            // recomendado (valida la firma de los avisos), pero sin él los pagos igual se confirman.
+            // Basta el Access Token: el pago se verifica en la API. Con Public Key se cobra con el formulario de tarjeta
+            // en la tienda (Card Payment Brick); sin ella, con Checkout Pro. El secreto del webhook es recomendado
+            // (valida la firma de los avisos), pero sin él los pagos igual se confirman.
             'mercadopago' => ['access_token' => 'Access Token'],
             'izipay' => ['shop_id' => 'ID de tienda', 'password' => 'Contraseña API REST', 'public_key' => 'Llave pública', 'hmac_key' => 'Clave HMAC-SHA256'],
             default => [],

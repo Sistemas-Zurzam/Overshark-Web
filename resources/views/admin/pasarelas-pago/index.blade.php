@@ -30,7 +30,7 @@
                 <div class="flex items-start justify-between gap-4 border-b border-admin-border p-5 sm:p-6">
                     <div>
                         <h2 class="text-xl font-extrabold text-admin-text">{{ $gateway->label() }}</h2>
-                        <p class="mt-1 text-sm text-slate-600">{{ $gateway->provider === 'culqi' ? 'Guarda aquí las llaves para una integración futura del checkout.' : ($gateway->provider === 'mercadopago' ? 'Checkout Pro para enviar al cliente al entorno seguro de Mercado Pago.' : 'Credenciales del checkout web de Izipay.') }}</p>
+                        <p class="mt-1 text-sm text-slate-600">{{ $gateway->provider === 'culqi' ? 'Guarda aquí las llaves para una integración futura del checkout.' : ($gateway->provider === 'mercadopago' ? 'Formulario de tarjeta de Mercado Pago dentro de la tienda (con Public Key) o Checkout Pro (sin ella).' : 'Credenciales del checkout web de Izipay.') }}</p>
                         @if (! $configured)
                             <p class="mt-1 text-sm font-bold text-amber-800">Falta: {{ implode(', ', $gateway->missingCredentials()) }}</p>
                         @endif
@@ -62,7 +62,11 @@
                         <div class="border-l-2 border-admin-accent bg-admin-canvas px-4 py-3 text-sm text-slate-700">
                             <p class="font-extrabold text-admin-text">Webhook para registrar en Mercado Pago</p>
                             <code class="mt-1 block break-all text-xs">{{ route('web.payments.mercadopago.webhook') }}</code>
-                            <p class="mt-1">Obligatorio: el Access Token de producción (empieza con APP_USR-) con el ambiente en Producción. Public Key, Client ID y Client Secret no se usan en Checkout Pro; puedes guardarlos como referencia.</p>
+                            <p class="mt-1">Obligatorio: el Access Token de producción (empieza con APP_USR-) con el ambiente en Producción.</p>
+                            <p class="mt-1">Public Key (de la misma aplicación): con ella el cliente paga con tarjeta dentro de la tienda, en el formulario seguro de Mercado Pago (Card Payment Brick). Sin Public Key se le envía a Checkout Pro, la página de Mercado Pago. Client ID y Client Secret no se usan; puedes guardarlos como referencia.</p>
+                            @if ($gateway->credential('access_token') && ! $gateway->credential('public_key'))
+                                <p class="mt-1 font-bold text-amber-800">Sin Public Key: el cliente sale de la tienda a Checkout Pro para pagar.</p>
+                            @endif
                             <p class="mt-1">Recomendado: en Tus integraciones abre esta aplicación, entra a Webhooks &gt; Configurar notificaciones, pega esta URL en Modo productivo, marca los eventos Pagos (legacy) y Alertas de fraude y guarda. Las alertas de fraude marcan el pedido en Pedidos para que no se despache. Copia la clave secreta que muestra Mercado Pago en Secreto de webhook: así se valida la firma de cada aviso.</p>
                             <p class="mt-1">Cada pago también se verifica consultando a Mercado Pago cuando el cliente vuelve a la tienda, así que el pedido se confirma aunque un aviso no llegue.</p>
                             @if ($gateway->credential('access_token') && ! $gateway->credential('webhook_secret'))

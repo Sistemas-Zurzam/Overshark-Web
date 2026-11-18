@@ -435,9 +435,11 @@ Route::post('/checkout/pedido', function (Request $request) {
         return back()->withInput()->withErrors(['receipt' => $isCod ? 'Sube la captura del pago de tu separo para confirmar el pedido.' : 'Sube la captura de tu pago para confirmar el pedido.']);
     }
 
-    // Izipay abre su formulario en el siguiente paso; Mercado Pago redirige al checkout hospedado.
+    // Izipay y Mercado Pago con Public Key abren su formulario de tarjeta en el siguiente paso; Mercado Pago sin Public
+    // Key redirige a Checkout Pro.
     $byCard = ($payWith['kind'] ?? null) === 'card';
     $byMercadoPago = ($payWith['kind'] ?? null) === 'mercadopago';
+    $byMercadoPagoForm = $byMercadoPago && app(MercadoPagoGateway::class)->usesCardForm();
 
     // Precio, stock y combos se vuelven a validar en el servidor; si algo cambió, el carrito se conserva.
     $cart = Checkout::verifyCart();
@@ -466,7 +468,7 @@ Route::post('/checkout/pedido', function (Request $request) {
             $order->update(['payment_gateway' => 'mercadopago']);
         }
         // Izipay mantiene el formulario incrustado y confirma mediante su callback firmado.
-        if ($byCard) {
+        if ($byCard || $byMercadoPagoForm) {
             OrderPayments::awaitCardPayment($order);
         } elseif ($byMercadoPago) {
             OrderPayments::awaitCardPayment($order);
@@ -489,7 +491,7 @@ Route::post('/checkout/pedido', function (Request $request) {
     session()->forget(['cart.items', 'checkout.token', 'checkout.payment_receipt_path']);
     session()->push('checkout.orders', $order->id);
 
-    return $byCard && $order->wasRecentlyCreated
+    return ($byCard || $byMercadoPagoForm) && $order->wasRecentlyCreated
         ? redirect()->route('web.checkout.pay', $order)
         : redirect()->route('web.checkout.done', $order);
 })->middleware('throttle:10,1')->name('web.checkout.place');
@@ -602,9 +604,18 @@ Route::get('/checkout/pedido/{order}/pagar', function (Order $order, IzipayGatew
         return redirect()->route('web.checkout.done', $order);
     }
 
-    // Pedido de Mercado Pago: se abre de nuevo su checkout con una preferencia nueva (vence con la reserva).
+    // Pedido de Mercado Pago: con Public Key, su formulario de tarjeta (Card Payment Brick) en la tienda; sin ella se
+    // abre Checkout Pro con una preferencia nueva (vence con la reserva).
     if ($order->payment_gateway === 'mercadopago') {
-        $url = app(MercadoPagoGateway::class)->createCheckout($order);
+        $mercadoPago = app(MercadoPagoGateway::class);
+        if ($mercadoPago->usesCardForm()) {
+            return view('web.checkout.pay-mercadopago', [
+                'order' => $order,
+                'publicKey' => $mercadoPago->publicKey(),
+            ]);
+        }
+
+        $url = $mercadoPago->createCheckout($order);
 
         return $url
             ? redirect()->away($url)
@@ -633,6 +644,45 @@ Route::get('/checkout/pedido/{order}/pagar', function (Order $order, IzipayGatew
         'error' => $error,
     ]);
 })->name('web.checkout.pay');
+
+// Card Payment Brick de Mercado Pago: el navegador envía el token de la tarjeta (nunca sus datos) y aquí se crea el pago
+// por el importe del pedido. Solo el pago devuelto por la API confirma el pedido (MercadoPagoGateway::apply). Responde
+// JSON: {redirect} al estado del pedido, o 422 {message} si se rechazó para que la clienta pruebe otra tarjeta.
+Route::post('/checkout/pedido/{order}/mercadopago', function (Request $request, Order $order, MercadoPagoGateway $mercadoPago) {
+    $ownsOrder = auth('customer')->check() && $order->customer_account_id === auth('customer')->id();
+    abort_unless($order->payment_gateway === 'mercadopago' && ($ownsOrder || in_array($order->id, session('checkout.orders', []), true)), 404);
+
+    $done = route('web.checkout.done', $order);
+    if ($order->load('statusOrder')->statusName() !== Checkout::STATUS_AWAITING_QR) {
+        return response()->json(['redirect' => $done]);
+    }
+
+    $form = $request->validate([
+        'token' => ['required', 'string', 'max:255'],
+        'payment_method_id' => ['required', 'string', 'max:50'],
+        'issuer_id' => ['nullable', 'max:50'],
+        'installments' => ['required', 'integer', 'min:1', 'max:36'],
+        'payer.email' => ['nullable', 'email', 'max:255'],
+        'payer.identification.type' => ['nullable', 'string', 'max:20'],
+        'payer.identification.number' => ['nullable', 'string', 'max:30'],
+        'device_id' => ['nullable', 'string', 'max:255'],
+    ]);
+
+    $charge = $mercadoPago->chargeCard($order, $form, $form['device_id'] ?? null);
+    $payment = $charge['payment'];
+    if (! $payment) {
+        return response()->json(['message' => $charge['message']], 422);
+    }
+
+    if (($payment['status'] ?? null) === 'rejected') {
+        return response()->json(['message' => MercadoPagoGateway::rejectionMessage($payment['status_detail'] ?? null)], 422);
+    }
+
+    // Aprobado (o en revisión): el pedido se confirma solo si el pago coincide; si no, el estado lo explica.
+    $mercadoPago->apply($payment);
+
+    return response()->json(['redirect' => $done]);
+})->middleware('throttle:20,1')->name('web.checkout.mercadopago.charge');
 
 // El navegador devuelve aquí el resultado del pago (kr-post-url-success). Sin token CSRF: solo se acepta con la firma
 // de Izipay válida (IzipayGateway::verify) y por el importe exacto del pedido (OrderPayments::confirmIzipay).

@@ -131,7 +131,11 @@
                                 @include('web.checkout.partials.wallet-pay', ['method' => $method, 'amount' => $total, 'concept' => 'tu pedido'])
                             @elseif ($method['kind'] === 'mercadopago')
                                 <hr class="border-[#0b1015]">
-                                <p class="text-[14px] leading-[1.5]">Al continuar te enviaremos al checkout seguro de Mercado Pago para completar el pago de {{ $money($total) }}.</p>
+                                @if ($method['embedded'] ?? false)
+                                    <p class="text-[14px] leading-[1.5]">Al continuar ingresas tu tarjeta de crédito o débito en el formulario seguro de Mercado Pago para pagar {{ $money($total) }}.</p>
+                                @else
+                                    <p class="text-[14px] leading-[1.5]">Al continuar te enviaremos al checkout seguro de Mercado Pago para completar el pago de {{ $money($total) }}.</p>
+                                @endif
                             @elseif ($deposit > 0)
                                 <hr class="border-[#0b1015]">
                                 <p class="text-[13px] font-extrabold uppercase tracking-[.5px]">Separa tu pedido con {{ $money($deposit) }}</p>
@@ -162,7 +166,7 @@
                                         @if ($option['kind'] === 'card')
                                             @include('web.checkout.partials.izipay-card-note')
                                         @elseif ($option['kind'] === 'mercadopago')
-                                            <p class="text-[14px] leading-[1.5]">Te enviaremos al checkout seguro de Mercado Pago para pagar el separo de {{ $money($deposit) }}.</p>
+                                            <p class="text-[14px] leading-[1.5]">{{ ($option['embedded'] ?? false) ? 'Al continuar ingresas tu tarjeta en el formulario seguro de Mercado Pago para pagar el separo de '.$money($deposit).'.' : 'Te enviaremos al checkout seguro de Mercado Pago para pagar el separo de '.$money($deposit).'.' }}</p>
                                         @else
                                             @include('web.checkout.partials.wallet-pay', ['method' => $option, 'amount' => $deposit, 'concept' => 'tu separo'])
                                         @endif
