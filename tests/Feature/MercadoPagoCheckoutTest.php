@@ -374,6 +374,33 @@ class MercadoPagoCheckoutTest extends TestCase
         $this->assertCount(2, Http::recorded(fn (HttpRequest $request) => $request->url() === MercadoPagoGateway::API.'/v1/payments'));
     }
 
+    public function test_the_buyer_can_pay_with_yape_in_the_same_page(): void
+    {
+        $this->enableMercadoPago(['access_token' => self::TOKEN, 'public_key' => 'APP_USR-public-key-123']);
+        $order = $this->placeOrderWithCardForm();
+        $this->get(route('web.checkout.pay', $order))->assertOk()->assertSee('data-mp-yape-form', false)->assertSee('CON YAPE');
+
+        // Aunque el navegador mande otro medio o cuotas, Yape se cobra como "yape" en una cuota.
+        $yape = ['method' => 'yape', 'token' => 'yape-token-1', 'payment_method_id' => 'visa', 'installments' => 6, 'payer' => ['email' => 'ana@example.com']];
+
+        $this->payment = $this->approvedPayment($order, ['status' => 'rejected', 'status_detail' => 'cc_rejected_insufficient_amount', 'payment_method_id' => 'yape']);
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), $yape)
+            ->assertStatus(422)->assertJsonFragment(['message' => 'No tienes saldo suficiente en Yape o el monto supera tu límite por pago. Revisa tu app o paga con tarjeta.']);
+
+        $this->payment = $this->approvedPayment($order, ['payment_method_id' => 'yape', 'payment_type_id' => 'debit_card']);
+        $this->postJson(route('web.checkout.mercadopago.charge', $order), ['token' => 'yape-token-2'] + $yape)
+            ->assertOk()->assertJson(['redirect' => route('web.checkout.done', $order)]);
+        $this->assertSame(Checkout::STATUS_PAID, $this->orderStatus($order));
+
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === MercadoPagoGateway::API.'/v1/payments'
+            && $request['token'] === 'yape-token-2'
+            && $request['payment_method_id'] === 'yape'
+            && $request['installments'] === 1
+            && ! isset($request['issuer_id'])
+            && $request['transaction_amount'] == 95.0
+            && $request['payer']['email'] === 'ana@example.com');
+    }
+
     public function test_only_the_buyer_session_can_charge_the_card_form(): void
     {
         $this->enableMercadoPago(['access_token' => self::TOKEN, 'public_key' => 'APP_USR-public-key-123']);

@@ -63,7 +63,7 @@
                             <p class="font-extrabold text-admin-text">Webhook para registrar en Mercado Pago</p>
                             <code class="mt-1 block break-all text-xs">{{ route('web.payments.mercadopago.webhook') }}</code>
                             <p class="mt-1">Obligatorio: el Access Token de producción (empieza con APP_USR-) con el ambiente en Producción.</p>
-                            <p class="mt-1">Public Key (de la misma aplicación): con ella el cliente paga con tarjeta dentro de la tienda, en el formulario seguro de Mercado Pago (Card Payment Brick). Sin Public Key se le envía a Checkout Pro, la página de Mercado Pago. Client ID y Client Secret no se usan; puedes guardarlos como referencia.</p>
+                            <p class="mt-1">Public Key (de la misma aplicación): con ella el cliente paga dentro de la tienda con tarjeta (Card Payment Brick) o con Yape (celular y código de aprobación), en los formularios seguros de Mercado Pago. Sin Public Key se le envía a Checkout Pro, la página de Mercado Pago. Client ID y Client Secret no se usan; puedes guardarlos como referencia.</p>
                             @if ($gateway->credential('access_token') && ! $gateway->credential('public_key'))
                                 <p class="mt-1 font-bold text-amber-800">Sin Public Key: el cliente sale de la tienda a Checkout Pro para pagar.</p>
                             @endif

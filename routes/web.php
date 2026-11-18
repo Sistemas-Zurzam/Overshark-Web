@@ -658,6 +658,7 @@ Route::post('/checkout/pedido/{order}/mercadopago', function (Request $request, 
     }
 
     $form = $request->validate([
+        'method' => ['nullable', 'in:card,yape'],
         'token' => ['required', 'string', 'max:255'],
         'payment_method_id' => ['required', 'string', 'max:50'],
         'issuer_id' => ['nullable', 'max:50'],
@@ -668,6 +669,12 @@ Route::post('/checkout/pedido/{order}/mercadopago', function (Request $request, 
         'device_id' => ['nullable', 'string', 'max:255'],
     ]);
 
+    // Yape se cobra como débito: siempre medio "yape", una cuota y sin banco emisor.
+    $yape = ($form['method'] ?? null) === 'yape';
+    if ($yape) {
+        $form = array_merge($form, ['payment_method_id' => 'yape', 'installments' => 1, 'issuer_id' => null]);
+    }
+
     $charge = $mercadoPago->chargeCard($order, $form, $form['device_id'] ?? null);
     $payment = $charge['payment'];
     if (! $payment) {
@@ -675,7 +682,7 @@ Route::post('/checkout/pedido/{order}/mercadopago', function (Request $request, 
     }
 
     if (($payment['status'] ?? null) === 'rejected') {
-        return response()->json(['message' => MercadoPagoGateway::rejectionMessage($payment['status_detail'] ?? null)], 422);
+        return response()->json(['message' => MercadoPagoGateway::rejectionMessage($payment['status_detail'] ?? null, $yape)], 422);
     }
 
     // Aprobado (o en revisión): el pedido se confirma solo si el pago coincide; si no, el estado lo explica.

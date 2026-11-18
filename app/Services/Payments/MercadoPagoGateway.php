@@ -129,9 +129,20 @@ class MercadoPagoGateway
         return ['payment' => $response->json(), 'message' => null];
     }
 
-    /** Mensaje para la clienta según el motivo de rechazo (status_detail) de Mercado Pago. */
-    public static function rejectionMessage(?string $detail): string
+    /** Mensaje para la clienta según el motivo de rechazo (status_detail) de Mercado Pago, con tarjeta o Yape. */
+    public static function rejectionMessage(?string $detail, bool $yape = false): string
     {
+        if ($yape) {
+            return match ($detail) {
+                'cc_rejected_insufficient_amount' => 'No tienes saldo suficiente en Yape o el monto supera tu límite por pago. Revisa tu app o paga con tarjeta.',
+                'cc_rejected_bad_filled_security_code', 'cc_rejected_form_error' => 'El código de aprobación no es correcto o ya venció. Genera uno nuevo en tu app Yape e inténtalo de nuevo.',
+                'cc_rejected_call_for_authorize' => 'Yape necesita que autorices este pago. Revisa tu app e inténtalo de nuevo.',
+                'cc_rejected_max_attempts' => 'Llegaste al límite de intentos con Yape. Paga con tarjeta o inténtalo más tarde.',
+                'cc_rejected_card_type_not_allowed' => 'Este Yape no puede usarse para pagar en línea. Paga con tarjeta.',
+                default => 'Yape rechazó el pago. Genera un código de aprobación nuevo e inténtalo de nuevo, o paga con tarjeta.',
+            };
+        }
+
         return match ($detail) {
             'cc_rejected_insufficient_amount' => 'Tu tarjeta no tiene fondos suficientes. Prueba con otra tarjeta.',
             'cc_rejected_bad_filled_security_code' => 'El código de seguridad (CVV) no es correcto. Revísalo e inténtalo de nuevo.',
@@ -143,7 +154,7 @@ class MercadoPagoGateway
             'cc_rejected_duplicated_payment' => 'Ya hiciste un pago por este mismo importe. Si necesitas pagar de nuevo, usa otra tarjeta.',
             'cc_rejected_max_attempts' => 'Llegaste al límite de intentos con esta tarjeta. Usa otra tarjeta.',
             'cc_rejected_high_risk', 'rejected_high_risk', 'rejected_by_regulations' => 'Mercado Pago rechazó el pago. Prueba con otra tarjeta.',
-            'cc_rejected_blacklist', 'cc_rejected_card_error' => 'No pudimos procesar el pago con esta tarjeta. Prueba con otra.',
+            'cc_rejected_blacklist', 'cc_rejected_card_error', 'cc_rejected_card_type_not_allowed' => 'No pudimos procesar el pago con esta tarjeta. Prueba con otra.',
             default => 'Tu banco rechazó el pago. Prueba con otra tarjeta o con otro medio de pago.',
         };
     }
