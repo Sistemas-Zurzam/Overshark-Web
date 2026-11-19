@@ -19,6 +19,9 @@
         ->map(fn ($items) => $items->groupBy('talla')->map(fn ($rows) => (int) $rows->sum('stock')));
     $firstColor = $colorOptions->first()['name'] ?? null;
     $firstSize = $allSizes->first(fn ($size) => ($stockByColor[$firstColor][$size] ?? 0) > 0) ?? $allSizes->first();
+    // Precio de la variante elegida al abrir la ficha (cambia con el color y la talla: resources/js/product-page.js).
+    $shown = $priceMap[$firstColor][$firstSize] ?? ['regular' => $price, 'now' => $price];
+    $onSale = $shown['now'] < $shown['regular'];
     $payments = $paymentMethods->pluck('name')->filter()->values();
     $details = array_filter(['Material' => $producto->material, 'Fit' => $producto->fit, 'Sensación' => $producto->sensacion]);
     $about = array_filter(['Descripción' => $producto->descripcion, 'Composición' => $producto->composicion, 'Cuidados' => $producto->cuidados]);
@@ -28,7 +31,7 @@
 @endphp
 
 @section('content')
-    <div @class(['os-hh os-bpdp', 'os-hh--girls' => $line === 'girls', 'os-hh--bravos' => $line === 'bravos']) data-pdp data-pdp-stock='@json($stockByColor)'>
+    <div @class(['os-hh os-bpdp', 'os-hh--girls' => $line === 'girls', 'os-hh--bravos' => $line === 'bravos']) data-pdp data-pdp-stock='@json($stockByColor)' data-pdp-prices='@json($priceMap)'>
         <div class="os-bravos-wrap flex flex-col gap-8 py-10 lg:py-16">
             <nav aria-label="Ruta" class="text-[13px] leading-[1.45] text-[#65717c]">
                 <a href="{{ $homeUrl }}" class="hover:text-[#0b1015]">Inicio</a>
@@ -72,18 +75,16 @@
                 <div class="flex flex-col gap-5 text-[#0b1015]">
                     <p class="text-[12px] font-bold uppercase leading-[1.45] text-[var(--hh-accent)]">{{ $brandLabel }}</p>
                     <h1 class="text-[30px] font-extrabold uppercase leading-[1.45] sm:text-[38px]">{{ \App\Support\ProductName::display($producto->name) }}</h1>
-                    @if ($promo)
-                        <div class="flex flex-col gap-1">
-                            <p class="flex flex-wrap items-baseline gap-3 leading-[1.45]">
-                                <span class="text-[30px] font-extrabold text-[#b42318]">S/ {{ number_format($promo['price'], 2) }}</span>
-                                <span class="text-[18px] text-[#65717c] line-through">S/ {{ number_format($promo['regular'], 2) }}</span>
-                                <span class="bg-[#b42318] px-2 py-1 text-[13px] font-extrabold leading-none text-white">{{ $promo['label'] ?: '-'.$promo['percent'].'%' }}</span>
-                            </p>
+                    <div class="flex flex-col gap-1">
+                        <p class="flex flex-wrap items-baseline gap-3 leading-[1.45]">
+                            <span data-pdp-price-now @class(['text-[30px] font-extrabold', 'text-[#b42318]' => $onSale])>S/ {{ number_format($shown['now'], 2) }}</span>
+                            <span data-pdp-price-regular @class(['text-[18px] text-[#65717c] line-through', 'hidden' => ! $onSale])>S/ {{ number_format($shown['regular'], 2) }}</span>
+                            <span data-pdp-price-badge data-label="{{ $promo['label'] ?? '' }}" @class(['bg-[#b42318] px-2 py-1 text-[13px] font-extrabold leading-none text-white', 'hidden' => ! $onSale])>{{ ($promo['label'] ?? '') ?: '-'.round((1 - $shown['now'] / max($shown['regular'], 0.01)) * 100).'%' }}</span>
+                        </p>
+                        @if ($promo)
                             @include('web.partials.promo-countdown', ['promo' => $promo, 'prefix' => 'Oferta termina en ', 'class' => 'text-[13px] font-extrabold uppercase tracking-[0.5px] text-[#b42318]'])
-                        </div>
-                    @else
-                        <p class="text-[30px] font-extrabold leading-[1.45]">S/ {{ number_format($price, 2) }}</p>
-                    @endif
+                        @endif
+                    </div>
 
                     <div class="flex flex-col gap-3">
                         <p class="text-[15px] font-bold leading-[1.45]">Color: <span data-pdp-color-name class="uppercase">{{ $firstColor ?? 'Elige un color' }}</span></p>

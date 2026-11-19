@@ -977,6 +977,12 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         );
     }
 
+    // Precio por color y talla (con la promoción vigente): la ficha muestra el de la variante elegida, el mismo que se cobra.
+    $priceMap = $variants->whereNotNull('color')->groupBy('color')->map(fn ($items) => $items->groupBy('talla')->map(fn ($rows) => [
+        'regular' => round((float) $rows->min('price'), 2),
+        'now' => round((float) $rows->map(fn (Producto $variant) => Promotions::priceFor($variant))->min(), 2),
+    ]));
+
     PixelEvents::now('ViewContent', [
         'value' => (float) $variants->min('price'),
         'items' => [['id' => $producto->id, 'name' => $producto->name, 'price' => (float) $variants->min('price'), 'quantity' => 1]],
@@ -991,7 +997,8 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         'sizes' => $variants->pluck('talla')->filter()->unique()->values(),
         'mainImages' => $mainImages,
         'price' => (float) $variants->min('price') ?: (float) $producto->price,
-        'promo' => Promotions::best((string) $producto->name, $producto->marca, $producto->empresa_nombre, (float) $variants->min('price') ?: (float) $producto->price),
+        'priceMap' => $priceMap,
+        'promo' => $variants->map(fn (Producto $variant) => Promotions::forVariant($variant))->filter()->sortBy('price')->first(),
         'paymentMethods' => MetodoPago::active(),
         'recommendedProducts' => $recommendedProducts,
     ]);

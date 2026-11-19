@@ -6,6 +6,7 @@ const page = document.querySelector('[data-pdp]');
 
 if (page) {
     const stock = JSON.parse(page.dataset.pdpStock || '{}');
+    const prices = JSON.parse(page.dataset.pdpPrices || '{}');
     const $ = (sel) => page.querySelector(sel);
     const $$ = (sel) => [...page.querySelectorAll(sel)];
     const mainImage = page.querySelector('[data-product-card-image]');
@@ -64,6 +65,24 @@ if (page) {
 
     const available = (c, s) => (stock[c]?.[s] ?? 0) > 0;
 
+    // El precio mostrado es el de la variante elegida (color + talla): el mismo que se cobra en el carrito.
+    const money = (amount) => `S/ ${Number(amount).toFixed(2)}`;
+    const renderPrice = () => {
+        const price = prices[color]?.[size];
+        const now = $('[data-pdp-price-now]');
+        if (!price || !now) return;
+
+        const onSale = price.now < price.regular;
+        now.textContent = money(price.now);
+        now.classList.toggle('text-[#b42318]', onSale);
+        const regular = $('[data-pdp-price-regular]');
+        regular.textContent = money(price.regular);
+        regular.classList.toggle('hidden', !onSale);
+        const badge = $('[data-pdp-price-badge]');
+        badge.textContent = badge.dataset.label || `-${Math.round((1 - price.now / Math.max(price.regular, 0.01)) * 100)}%`;
+        badge.classList.toggle('hidden', !onSale);
+    };
+
     const render = () => {
         $$('[data-pdp-color]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.pdpColor === color)));
         $$('[data-pdp-color-name]').forEach((el) => { el.textContent = color; });
@@ -80,6 +99,7 @@ if (page) {
             b.title = ok ? '' : 'Agotado en este color';
         });
         $('[data-pdp-size-name]').textContent = size;
+        renderPrice();
 
         const units = stock[color]?.[size] ?? 0;
         qty = Math.max(1, Math.min(qty, units || 1));
