@@ -70,4 +70,24 @@ class ZazuInventorySyncTest extends TestCase
 
         $this->assertDatabaseHas('productos', ['name' => 'BABY TY', 'color' => 'NEGRO', 'price' => 17, 'stock' => 3]);
     }
+
+    public function test_the_product_price_wins_so_every_color_follows_a_price_change(): void
+    {
+        config(['services.zazu.base_url' => 'https://zazu.test', 'services.zazu.token' => 'token', 'services.zazu.companies' => ['OVERSHARK']]);
+
+        $variant = fn (int $id, string $color, ?string $own) => [
+            'zazu_product_id' => 143, 'zazu_variant_id' => $id, 'sku' => "CCW-{$color}", 'nombre' => 'CUELLO CHINO WAFFLE',
+            'talla' => 'L', 'color' => $color, 'disponible_venta' => 5, 'precio_venta' => $own,
+            'producto' => ['id' => 143, 'nombre' => 'CUELLO CHINO WAFFLE', 'precio_venta' => '3.00'],
+            'empresa' => ['id' => 1, 'nombre' => 'OVERSHARK PERU S.A.C'],
+        ];
+
+        // Dos colores sin precio propio y dos con un precio viejo de S/ 35: todos quedan al precio del producto.
+        Http::fake(['zazu.test/*' => Http::response(['data' => [$variant(1, 'AZUL', null), $variant(2, 'VINO', '0'), $variant(3, 'NEGRO', '35.00'), $variant(4, 'BOTELLA', '35')], 'last_page' => 1])]);
+
+        app(ZazuInventorySyncService::class)->sync();
+
+        $this->assertSame([3.0], Producto::query()->where('name', 'CUELLO CHINO WAFFLE')->pluck('price')->map(fn ($price) => (float) $price)->unique()->values()->all());
+        $this->assertSame(4, Producto::query()->where('name', 'CUELLO CHINO WAFFLE')->count());
+    }
 }

@@ -269,12 +269,13 @@ class ZazuInventorySyncService
     }
 
     /**
-     * Precio de venta de la variante; si la variante no tiene uno propio (vacío o 0), el del producto
-     * (en Zazu el precio suele estar solo en la ficha del producto, p. ej. BABY TY a S/ 17).
+     * Precio de venta del PRODUCTO: al cambiarlo en Zazu cambian todos sus colores y tallas. Solo si Zazu no envía el del
+     * producto (vacío o 0) se usa el precio propio de la variante. Así una variante con un precio viejo (p. ej. S/ 35 con el
+     * producto ya en S/ 3) no deja colores a otro precio.
      */
     private function price(array $item): float
     {
-        foreach ([$item['precio_venta'] ?? null, $item['precio_variante'] ?? null, data_get($item, 'producto.precio_venta'), $item['precio_producto'] ?? null, $item['precio'] ?? null] as $price) {
+        foreach ([data_get($item, 'producto.precio_venta'), $item['precio_producto'] ?? null, $item['precio_venta'] ?? null, $item['precio_variante'] ?? null, $item['precio'] ?? null] as $price) {
             if (is_numeric($price) && (float) $price > 0) {
                 return (float) $price;
             }
