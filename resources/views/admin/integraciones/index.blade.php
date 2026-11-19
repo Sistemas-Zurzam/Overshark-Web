@@ -75,7 +75,7 @@
                                 @if ($zazuManualSync['status'] === 'running')
                                     <p class="mt-1 text-xs font-bold text-slate-600">Sincronización manual en curso desde las {{ $manualAt }}. Recarga en un minuto.</p>
                                 @elseif ($zazuManualSync['status'] === 'ok')
-                                    <p class="mt-1 text-xs font-bold text-emerald-700">Sincronización manual del {{ $manualAt }}: {{ $zazuManualSync['result']['received'] }} productos recibidos, {{ $zazuManualSync['result']['synced'] }} actualizados, {{ $zazuManualSync['result']['stale_zeroed'] }} que Zazu ya no envía quedaron sin stock.</p>
+                                    <p class="mt-1 text-xs font-bold text-emerald-700">Sincronización manual del {{ $manualAt }}: {{ $zazuManualSync['result']['received'] }} productos recibidos, {{ $zazuManualSync['result']['synced'] }} actualizados, {{ $zazuManualSync['result']['stale_zeroed'] }} que Zazu ya no envía quedaron sin stock.@if (! empty($zazuManualSync['result']['companies'])) Empresas de las API keys: {{ implode(', ', $zazuManualSync['result']['companies']) }}.@endif</p>
                                 @else
                                     <p class="mt-1 text-xs font-bold text-red-700">La sincronización manual del {{ $manualAt }} falló: {{ $zazuManualSync['message'] }}</p>
                                 @endif
@@ -108,6 +108,11 @@
                             </span>
                             <input type="{{ $secret ? 'password' : 'text' }}" name="settings[{{ $key }}]" value="{{ $secret ? '' : old("settings.$key", $saved) }}" autocomplete="off"
                                 placeholder="{{ $secret ? ($saved ? 'Deja vacío para conservarla' : ($env ? 'Vacío = usa la del .env' : 'Pega aquí la credencial')) : ($env ? 'Vacío = '.$env : '') }}" class="{{ $input }}">
+                            @if ($provider === 'zazu' && $key === 'token')
+                                <span class="mt-1 block text-xs text-slate-500">API keys de Zazu (zazu_live_…): una por empresa, separadas por coma; se crean en Zazu → API Keys del mismo Zazu de la URL. El token del servidor de Zazu trae todas las empresas y las agencias Shalom; puedes pegarlo junto a las API keys.</span>
+                            @elseif ($provider === 'zazu' && $key === 'base_url')
+                                <span class="mt-1 block text-xs text-slate-500">La API, no la página web: https://zazu.com.pe (producción) o https://api-dev.zazu.com.pe (pruebas).</span>
+                            @endif
                         </label>
                     @endforeach
                     <label class="flex items-start gap-3 border border-admin-border bg-admin-canvas p-3 text-sm">

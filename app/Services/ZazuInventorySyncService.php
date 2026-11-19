@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Admin\Categoria;
 use App\Models\Admin\Producto;
+use App\Support\Integrations;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -15,25 +17,37 @@ class ZazuInventorySyncService
     public function sync(): array
     {
         $baseUrl = rtrim((string) config('services.zazu.base_url'), '/');
-        $token = trim((string) config('services.zazu.token'));
+        ['secret' => $secret, 'keys' => $keys] = Integrations::zazuCredentials();
 
-        if ($baseUrl === '' || $token === '') {
-            throw new RuntimeException('Faltan ZAZU_BASE_URL o ZAZU_INVENTORY_TOKEN en el archivo .env.');
+        if ($baseUrl === '' || ($secret === null && $keys === [])) {
+            throw new RuntimeException('Faltan la URL o el token de Zazu (Admin → Integraciones o ZAZU_BASE_URL / ZAZU_INVENTORY_TOKEN en el .env).');
         }
 
-        $items = $this->fetchAll($this->client($baseUrl, $token));
+        // Con API keys cada una trae solo el stock de su empresa; sin ellas, el token del servidor trae todas.
+        [$items, $keyCompanies] = $keys !== []
+            ? $this->fetchWithApiKeys($baseUrl, $keys)
+            : [$this->fetchAll($this->client($baseUrl)->withToken($secret)), null];
+
+        $mappedItems = array_values(array_filter(array_map(fn ($item) => $this->mapItem($item), $items)));
+
+        // Sin productos no se toca nada: poner en 0 «lo que Zazu ya no envía» dejaría agotada toda la tienda por una
+        // URL o un token equivocados.
+        if ($items === []) {
+            throw new RuntimeException('Zazu no devolvió productos; no se tocó el stock de la tienda. Revisa la URL y el token.');
+        }
+        if ($mappedItems === []) {
+            throw new RuntimeException('Ninguno de los '.count($items).' productos recibidos es de las empresas que vende la tienda ('
+                .implode(', ', (array) config('services.zazu.companies')).'); no se tocó el stock.'
+                .($keyCompanies ? ' Las API keys son de: '.implode(', ', $keyCompanies).'.' : ''));
+        }
+
         $seenKeys = [];
         $synced = 0;
         $staleZeroed = 0;
         $foreignRemoved = 0;
 
-        DB::transaction(function () use ($items, &$seenKeys, &$synced, &$staleZeroed, &$foreignRemoved): void {
-            foreach ($items as $item) {
-                $mapped = $this->mapItem($item);
-                if ($mapped === null) {
-                    continue;
-                }
-
+        DB::transaction(function () use ($mappedItems, $keyCompanies, &$seenKeys, &$synced, &$staleZeroed, &$foreignRemoved): void {
+            foreach ($mappedItems as $mapped) {
                 $seenKeys[] = $mapped['zazu_source_key'];
                 $this->upsertProduct($mapped);
                 $synced++;
@@ -41,7 +55,7 @@ class ZazuInventorySyncService
 
             // Lo de otras empresas (BOX PRIME) no se vende ni se muestra: se borra en vez de dejarlo con stock 0.
             $foreignRemoved = Producto::removeForeignCompanies();
-            $staleZeroed = $this->zeroStaleProducts($seenKeys);
+            $staleZeroed = $this->zeroStaleProducts($seenKeys, $keyCompanies);
         });
 
         return [
@@ -49,14 +63,14 @@ class ZazuInventorySyncService
             'synced' => $synced,
             'stale_zeroed' => $staleZeroed,
             'foreign_removed' => $foreignRemoved,
+            'companies' => $keyCompanies,
         ];
     }
 
-    private function client(string $baseUrl, string $token): PendingRequest
+    private function client(string $baseUrl): PendingRequest
     {
         return Http::baseUrl($baseUrl)
             ->acceptJson()
-            ->withToken($token)
             ->connectTimeout(10)
             ->timeout((int) config('services.zazu.timeout', 30));
     }
@@ -67,10 +81,10 @@ class ZazuInventorySyncService
         $page = 1;
 
         do {
-            $response = $client->get((string) config('services.zazu.inventory_path'), [
+            $response = $this->json($client->get((string) config('services.zazu.inventory_path'), [
                 'page' => $page,
                 'per_page' => 500,
-            ])->throw()->json();
+            ]), 'el token');
 
             $pageItems = $response['data'] ?? [];
             if (! is_array($pageItems)) {
@@ -83,6 +97,72 @@ class ZazuInventorySyncService
         } while ($page <= $lastPage);
 
         return $items;
+    }
+
+    /**
+     * Una API key por empresa (Zazu → API Keys): /api/v1/ping dice de qué empresa es y /api/v1/existencias trae su stock
+     * por SKU (producto o variante) con lo reservado ya descontado. Se pasa al mismo formato del inventario del servidor.
+     *
+     * @return array{0: list<array>, 1: list<string>} ítems y nombres de las empresas de las claves
+     */
+    private function fetchWithApiKeys(string $baseUrl, array $keys): array
+    {
+        $items = [];
+        $companies = [];
+
+        foreach ($keys as $key) {
+            $client = $this->client($baseUrl)->withHeaders(['X-Api-Key' => $key]);
+            $label = 'la API key '.Integrations::maskZazuApiKey($key);
+            $ping = $this->json($client->get('/api/v1/ping'), $label);
+            $company = ['id' => (int) data_get($ping, 'empresa.id'), 'nombre' => trim((string) data_get($ping, 'empresa.nombre'))];
+            $companies[] = $company['nombre'];
+
+            $page = 1;
+            do {
+                $response = $this->json($client->get('/api/v1/existencias', ['page' => $page, 'per_page' => 200]), $label);
+                $rows = $response['data'] ?? null;
+                if (! is_array($rows)) {
+                    throw new RuntimeException('Zazu devolvio un formato de existencias invalido.');
+                }
+
+                foreach ($rows as $row) {
+                    $items[] = is_array($row) ? [
+                        'zazu_product_id' => $row['producto_id'] ?? null,
+                        'zazu_variant_id' => $row['variante_id'] ?? null,
+                        'sku' => $row['sku'] ?? null,
+                        'nombre' => $row['nombre'] ?? null,
+                        'categoria' => $row['categoria'] ?? null,
+                        'talla' => $row['talla'] ?? null,
+                        'color' => $row['color'] ?? null,
+                        'precio_venta' => $row['precio_venta'] ?? null,
+                        'imagen' => $row['imagen_url'] ?? null,
+                        'disponible_venta' => $row['stock_disponible'] ?? 0,
+                        'empresa' => $company,
+                    ] : $row;
+                }
+
+                $lastPage = (int) data_get($response, 'meta.last_page', $page);
+                $page++;
+            } while ($page <= $lastPage);
+        }
+
+        return [$items, array_values(array_unique($companies))];
+    }
+
+    /** JSON de Zazu, o un error claro: credencial rechazada o URL que responde la página web en vez de la API. */
+    private function json(Response $response, string $credential): array
+    {
+        if (in_array($response->status(), [401, 403], true)) {
+            throw new RuntimeException("Zazu rechazó {$credential} (HTTP {$response->status()}).");
+        }
+        $response->throw();
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            throw new RuntimeException(Integrations::ZAZU_NOT_API);
+        }
+
+        return $json;
     }
 
     private function mapItem(mixed $item): ?array
@@ -139,10 +219,7 @@ class ZazuInventorySyncService
      */
     private function sellsCompany(string $name): bool
     {
-        $allowed = (array) config('services.zazu.companies', []);
-
-        return $allowed === [] || $name === ''
-            || collect($allowed)->contains(fn (string $part): bool => Str::contains(mb_strtoupper($name), mb_strtoupper($part)));
+        return Integrations::storeSellsCompany($name);
     }
 
     private function upsertProduct(array $mapped): void
@@ -160,8 +237,9 @@ class ZazuInventorySyncService
             'color' => $mapped['color'],
             'talla' => $mapped['talla'],
             'stock' => $mapped['stock'],
-            'price' => $mapped['price'],
-            'standard_price' => $mapped['standard_price'],
+            // Un precio 0 o un costo ausente nunca pisan los guardados: la tienda no debe vender a S/ 0.
+            'price' => $mapped['price'] > 0 ? $mapped['price'] : ($product->price ?: 0),
+            'standard_price' => $mapped['standard_price'] ?? $product->standard_price,
             'imagen' => $mapped['imagen'] ?: $product->imagen,
             'zazu_product_id' => $mapped['zazu_product_id'],
             'zazu_variant_id' => $mapped['zazu_variant_id'],
@@ -171,11 +249,19 @@ class ZazuInventorySyncService
         ])->save();
     }
 
-    private function zeroStaleProducts(array $seenKeys): int
+    /**
+     * Lo que Zazu ya no envía queda con stock 0. Con API keys solo se revisan las empresas de esas claves: sin la clave de
+     * Bravos no se sabe nada de su stock, y no por eso se agota.
+     */
+    private function zeroStaleProducts(array $seenKeys, ?array $companies): int
     {
         return Producto::query()
             ->whereNotNull('zazu_source_key')
-            ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('zazu_source_key', $seenKeys))
+            ->whereNotIn('zazu_source_key', $seenKeys)
+            ->when($companies !== null, fn ($query) => $query->whereIn(
+                DB::raw('UPPER(empresa_nombre)'),
+                array_map(fn (string $name): string => mb_strtoupper($name), $companies ?: ['']),
+            ))
             ->update([
                 'stock' => 0,
                 'zazu_synced_at' => now(),

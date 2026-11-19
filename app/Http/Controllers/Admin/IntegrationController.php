@@ -34,7 +34,7 @@ class IntegrationController extends Controller
     /** Campos de cada conexión de salida: [clave, etiqueta, ¿secreto?]. */
     public const FIELDS = [
         'crm' => [['base_url', 'URL del CRM', false], ['api_key', 'Clave API (permiso sales.write)', true]],
-        'zazu' => [['base_url', 'URL de Zazu', false], ['token', 'Token de inventario', true], ['companies', 'Empresas que vende la tienda (separadas por coma)', false]],
+        'zazu' => [['base_url', 'URL de Zazu', false], ['token', 'Token del servidor o API keys de Zazu', true], ['companies', 'Empresas que vende la tienda (separadas por coma)', false]],
         'pixels' => [['meta_pixel_id', 'ID del Meta Pixel', false], ['ga4_id', 'ID de Google Analytics 4 (G-…)', false], ['tiktok_pixel_id', 'ID del TikTok Pixel', false]],
     ];
 

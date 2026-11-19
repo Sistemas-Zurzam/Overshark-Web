@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Integrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -11,10 +12,14 @@ class ZazuAgencySyncService
     public function sync(): array
     {
         $baseUrl = rtrim((string) config('services.zazu.base_url'), '/');
-        $token = trim((string) config('services.zazu.token'));
+        ['secret' => $token, 'keys' => $keys] = Integrations::zazuCredentials();
 
-        if ($baseUrl === '' || $token === '') {
-            throw new RuntimeException('Faltan ZAZU_BASE_URL o ZAZU_INVENTORY_TOKEN en el archivo .env.');
+        if ($baseUrl === '' || ($token === null && $keys === [])) {
+            throw new RuntimeException('Faltan la URL o el token de Zazu (Admin → Integraciones o ZAZU_BASE_URL / ZAZU_INVENTORY_TOKEN en el .env).');
+        }
+        // Las API keys de Zazu son por empresa y no dan acceso a las sedes: hace falta el token del servidor de Zazu.
+        if ($token === null) {
+            throw new RuntimeException('Las sedes Shalom solo se traen con el token del servidor de Zazu (las API keys no sirven para eso); se conserva la lista actual.');
         }
 
         $response = Http::baseUrl($baseUrl)

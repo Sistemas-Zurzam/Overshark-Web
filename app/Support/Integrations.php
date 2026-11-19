@@ -53,6 +53,37 @@ class Integrations
         }
     }
 
+    /**
+     * El campo «Token» de Zazu admite dos credenciales, separadas por coma:
+     *  - el token del servidor de Zazu (CRM_WEBHOOK_SECRET): lee /api/external/inventario de todas las empresas y las sedes;
+     *  - API keys de Zazu (zazu_live_… / zazu_test_…, Zazu → API Keys): cada una lee /api/v1/existencias de SU empresa.
+     * Con API keys el inventario sale de ellas; las sedes Shalom solo se pueden traer con el token del servidor.
+     *
+     * @return array{secret: ?string, keys: list<string>}
+     */
+    public static function zazuCredentials(?string $token = null): array
+    {
+        $parts = preg_split('/[\s,;]+/', trim((string) ($token ?? config('services.zazu.token'))), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $keys = array_values(array_unique(array_filter($parts, fn (string $part): bool => self::isZazuApiKey($part))));
+        $secret = collect($parts)->first(fn (string $part): bool => ! self::isZazuApiKey($part));
+
+        return ['secret' => $secret, 'keys' => $keys];
+    }
+
+    public static function isZazuApiKey(string $value): bool
+    {
+        return str_starts_with($value, 'zazu_live_') || str_starts_with($value, 'zazu_test_');
+    }
+
+    /** Para mensajes: la clave sin su parte secreta (zazu_live_ITn0…). */
+    public static function maskZazuApiKey(string $key): string
+    {
+        return mb_substr($key, 0, 14).'…';
+    }
+
+    /** Respuesta de Zazu que no es JSON: la URL apunta a la página web (p. ej. dev.zazu.com.pe) y no a la API. */
+    public const ZAZU_NOT_API = 'La URL de Zazu respondió una página web, no la API. Usa https://zazu.com.pe (producción) o https://api-dev.zazu.com.pe (pruebas).';
+
     /** Las sincronizaciones programadas con Zazu corren salvo que se desactiven en el panel. */
     public static function zazuSyncEnabled(): bool
     {
@@ -123,13 +154,19 @@ class Integrations
     public static function testZazu(): array
     {
         $base = rtrim((string) config('services.zazu.base_url'), '/');
-        $token = trim((string) config('services.zazu.token'));
-        if ($base === '' || $token === '') {
+        ['secret' => $secret, 'keys' => $keys] = self::zazuCredentials();
+        if ($base === '' || ($secret === null && $keys === [])) {
             return ['ok' => false, 'message' => 'Falta la URL o el token de Zazu.'];
         }
 
+        return $keys !== [] ? self::testZazuApiKeys($base, $keys, $secret) : self::testZazuSecret($base, $secret);
+    }
+
+    /** Token del servidor de Zazu: se prueba con la lista de sedes, que es liviana. */
+    private static function testZazuSecret(string $base, string $secret): array
+    {
         try {
-            $response = Http::baseUrl($base)->withToken($token)->acceptJson()->connectTimeout(10)->timeout(20)
+            $response = Http::baseUrl($base)->withToken($secret)->acceptJson()->connectTimeout(10)->timeout(20)
                 ->get((string) config('services.zazu.agencies_path', '/api/external/sedes'));
         } catch (\Throwable $e) {
             return ['ok' => false, 'message' => 'No se pudo conectar con Zazu ('.$base.'): '.$e->getMessage()];
@@ -141,7 +178,55 @@ class Integrations
         if (! $response->successful()) {
             return ['ok' => false, 'message' => 'Zazu respondió HTTP '.$response->status().'.'];
         }
+        // La página web de Zazu responde 200 a cualquier ruta: sin JSON no es la API (antes salía «Conectado: 0 sedes»).
+        if (! is_array($response->json())) {
+            return ['ok' => false, 'message' => self::ZAZU_NOT_API];
+        }
 
         return ['ok' => true, 'message' => 'Conectado a Zazu: '.count((array) $response->json('data', [])).' sedes disponibles.'];
+    }
+
+    /** API keys de Zazu: /api/v1/ping dice de qué empresa es cada una; se avisa si esa empresa no la vende la tienda. */
+    private static function testZazuApiKeys(string $base, array $keys, ?string $secret): array
+    {
+        $companies = [];
+        foreach ($keys as $key) {
+            try {
+                $response = Http::baseUrl($base)->withHeaders(['X-Api-Key' => $key])->acceptJson()->connectTimeout(10)->timeout(20)
+                    ->get('/api/v1/ping');
+            } catch (\Throwable $e) {
+                return ['ok' => false, 'message' => 'No se pudo conectar con Zazu ('.$base.'): '.$e->getMessage()];
+            }
+
+            if (in_array($response->status(), [401, 403], true)) {
+                return ['ok' => false, 'message' => 'Zazu rechazó la API key '.self::maskZazuApiKey($key).': '.($response->json('message') ?? 'HTTP '.$response->status()).' ¿Es de este mismo Zazu (producción o pruebas)?'];
+            }
+            if (! $response->successful()) {
+                return ['ok' => false, 'message' => 'Zazu respondió HTTP '.$response->status().' a la API key '.self::maskZazuApiKey($key).'.'];
+            }
+            if (! is_array($response->json())) {
+                return ['ok' => false, 'message' => self::ZAZU_NOT_API];
+            }
+            $companies[] = trim((string) $response->json('empresa.nombre'));
+        }
+
+        $sold = array_filter($companies, fn (string $name): bool => self::storeSellsCompany($name));
+        $notSold = array_values(array_diff($companies, $sold));
+        if ($sold === []) {
+            return ['ok' => false, 'message' => 'Las API keys son de '.implode(', ', $companies).', que no está en «Empresas que vende la tienda»: no se traería ningún producto. Crea en Zazu una API key de cada empresa que vende la tienda.'];
+        }
+
+        return ['ok' => true, 'message' => 'Conectado a Zazu con '.count($keys).' API '.(count($keys) === 1 ? 'key' : 'keys').': '.implode(', ', $sold).'.'
+            .($notSold !== [] ? ' '.implode(', ', $notSold).' no está en «Empresas que vende la tienda»: sus productos no se traerán.' : '')
+            .($secret === null ? ' Las agencias Shalom solo se actualizan con el token del servidor de Zazu; mientras tanto se conservan las actuales.' : '')];
+    }
+
+    /** Misma regla que la sincronización: parte del nombre, sin importar mayúsculas; sin lista configurada, todas. */
+    public static function storeSellsCompany(string $name): bool
+    {
+        $allowed = (array) config('services.zazu.companies', []);
+
+        return $allowed === [] || $name === ''
+            || collect($allowed)->contains(fn (string $part): bool => str_contains(mb_strtoupper($name), mb_strtoupper($part)));
     }
 }
