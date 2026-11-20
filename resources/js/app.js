@@ -1551,3 +1551,31 @@ document.addEventListener('mouseover', (event) => {
     const swatch = event.target.closest('[data-card-swatch]');
     if (swatch) showCardSwatch(swatch);
 });
+
+// «Deslizar para explorar» (portada de Hombre): baja hasta la siguiente sección con una animación suave y sin saltos.
+document.querySelectorAll('[data-scroll-to]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+        const target = document.querySelector(link.dataset.scrollTo);
+        if (!target) return;
+        event.preventDefault();
+
+        const header = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0;
+        const start = window.scrollY;
+        const end = Math.max(0, target.getBoundingClientRect().top + start - header);
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || start === end) {
+            window.scrollTo(0, end);
+            return;
+        }
+
+        const duration = Math.min(1400, Math.max(700, Math.abs(end - start) * 0.9));
+        const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        const began = performance.now();
+        const step = (now) => {
+            const progress = Math.min(1, (now - began) / duration);
+            window.scrollTo(0, start + (end - start) * ease(progress));
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    });
+});

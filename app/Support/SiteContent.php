@@ -56,7 +56,7 @@ class SiteContent
             ],
             'hero' => [
                 'hombre' => [
-                    'eyebrow' => 'Colección hombre · 2027',
+                    'eyebrow' => 'Colección hombre ',
                     'title' => 'Nacido del',
                     'accent' => 'Océano.',
                     'copy' => 'Prendas esenciales con carácter, precisión y fuerza.',
@@ -64,7 +64,7 @@ class SiteContent
                     'cta1_url' => '',
                     'cta2_text' => 'Arma tu outfit',
                     'cta2_url' => '',
-                    'categories' => 'Camisas, Poleras, Polos, Joggers',
+                    'categories' => 'Camisas, Polos, Jeans',
                 ],
                 'mujer' => [
                     'eyebrow' => 'Colección mujer',
@@ -183,8 +183,7 @@ class SiteContent
         'promo_mujer' => ['images/home-mujer/promo.webp', 'Promo Wafflera', 'Promo Wafflera', 'overshark-girls'],
         'cat_h_polos' => ['images/home-hombre/categoria-polos.webp', 'Polos', 'Categorías de la home', 'overshark'],
         'cat_h_camisas' => ['images/home-hombre/categoria-camisas.webp', 'Camisas', 'Categorías de la home', 'overshark'],
-        'cat_h_poleras' => ['images/home-hombre/categoria-poleras.webp', 'Poleras', 'Categorías de la home', 'overshark'],
-        'cat_h_joggers' => ['images/home-hombre/categoria-joggers.webp', 'Joggers', 'Categorías de la home', 'overshark'],
+        'cat_h_jeans' => ['images/home-hombre/categoria-jeans.webp', 'Jeans (si no subes foto, se usa la de un jeans de la tienda)', 'Categorías de la home', 'overshark'],
         'cat_m_baby' => ['images/home-mujer/categoria-baby-tees.webp', 'Baby tees', 'Categorías de la home', 'overshark-girls'],
         'cat_m_tops' => ['images/home-mujer/categoria-tops.webp', 'Tops', 'Categorías de la home', 'overshark-girls'],
         'cat_m_poleras' => ['images/home-mujer/categoria-poleras.webp', 'Poleras', 'Categorías de la home', 'overshark-girls'],

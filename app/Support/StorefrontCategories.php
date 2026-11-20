@@ -19,10 +19,11 @@ class StorefrontCategories
                 'polos' => ['label' => 'Polos', 'terms' => ['polo', 'clasico', 'camisero', 'pike', 'pique', 'waffle', 'jersey', 'slim fit', 'cuello', 'baby ty', 'top rib', 'boxyfit', 'neru']],
                 'camisas' => ['label' => 'Camisas', 'terms' => ['camisa']],
                 'poleras' => ['label' => 'Poleras', 'terms' => ['polera', 'hoodie', 'casaca']],
+                'jeans' => ['label' => 'Jeans', 'terms' => ['jean']],
                 'pantalones' => ['label' => 'Pantalones', 'terms' => ['pantal', 'jogger', 'short', 'bermuda', 'cargo']],
                 'accesorios' => ['label' => 'Accesorios', 'terms' => ['accesorio', 'gorra', 'media', 'correa', 'cintur', 'mochila']],
             ],
-            'priority' => ['camisas', 'poleras', 'pantalones', 'accesorios', 'polos'],
+            'priority' => ['jeans', 'camisas', 'poleras', 'pantalones', 'accesorios', 'polos'],
         ],
         // Overshark Girls (diseño "02 · Tienda Mujer"). "Buzo" en Perú es el pantalón deportivo: va en joggers.
         'mujer' => [
@@ -40,6 +41,26 @@ class StorefrontCategories
     public static function all(?string $line = null): array
     {
         return self::config($line)['categories'];
+    }
+
+    /**
+     * Categorías que se muestran como filtro en la tienda. En Hombre solo Polos, Camisas y Jeans; las demás (Poleras,
+     * Pantalones, Accesorios) siguen existiendo para Bravos, «Arma tu outfit» y las promociones, y su enlace directo
+     * sigue funcionando.
+     */
+    private const SHOP_FILTER_HOMBRE = ['polos', 'camisas', 'jeans'];
+
+    /** Mujer: solo Baby tees y Tops (Poleras, Joggers y Sets siguen existiendo para promociones y enlaces directos). */
+    private const SHOP_FILTER_MUJER = ['baby-tees', 'tops'];
+
+    public static function shop(?string $line = null): array
+    {
+        $all = self::all($line);
+        $line ??= session('storefront.line');
+
+        $visible = $line === 'mujer' ? self::SHOP_FILTER_MUJER : self::SHOP_FILTER_HOMBRE;
+
+        return collect($visible)->filter(fn (string $slug) => isset($all[$slug]))->mapWithKeys(fn (string $slug) => [$slug => $all[$slug]])->all();
     }
 
     public static function find(?string $slug, ?string $line = null): ?array

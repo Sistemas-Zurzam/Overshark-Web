@@ -12,7 +12,7 @@
     $girls = session('storefront.line') === 'mujer' && $marca === '';
     $title = fn ($text) => \App\Support\ProductName::title((string) $text);
     $url = fn (array $changes = []) => route('web.products.search', array_filter([...$filters, ...$changes], fn ($value) => $value !== null && $value !== ''));
-    $categories = \App\Support\StorefrontCategories::all();
+    $categories = \App\Support\StorefrontCategories::shop();
     $talla = $filters['talla'] ?? '';
     $color = $filters['color'] ?? '';
     $min = $filters['min'] ?? $priceFloor;
@@ -43,7 +43,7 @@
         isset($filters['min']) || isset($filters['max']) ? ['label' => 'S/ '.$min.' — S/ '.$max, 'url' => $url(['min' => null, 'max' => null])] : null,
     ])->filter();
 
-    $chips = $girls ? ['baby-tees', 'tops', 'joggers'] : ['polos', 'camisas', 'poleras', 'pantalones'];
+    $chips = $girls ? ['baby-tees', 'tops'] : ['polos', 'camisas', 'jeans'];
     // Títulos: Big Shoulders en mayúsculas (hombre) o Josefin Sans (Overshark Girls).
     $display = $girls ? 'os-josefin' : 'os-hh-display';
     $sorts = ['' => 'Más vendidos', 'novedades' => 'Novedades', 'precio-asc' => 'Precio: menor a mayor', 'precio-desc' => 'Precio: mayor a menor'];

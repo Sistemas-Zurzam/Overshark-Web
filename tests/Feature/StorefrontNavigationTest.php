@@ -201,7 +201,7 @@ class StorefrontNavigationTest extends TestCase
             ->assertSessionHas('storefront.line', 'mujer')
             ->assertSee('os-hh--girls', false)
             ->assertSee('3 productos')
-            ->assertSeeInOrder(['Baby tees', '1', 'Tops', '1', 'Poleras', '0', 'Joggers', '1', 'Sets', '0'])
+            ->assertSeeInOrder(['Baby tees', '1', 'Tops', '1'])
             ->assertSeeText('9 prendas × S/ 99')
             ->assertDontSee('Polo Waffle');
 

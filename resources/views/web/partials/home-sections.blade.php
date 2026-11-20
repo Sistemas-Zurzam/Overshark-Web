@@ -9,18 +9,29 @@
     $shared = fn (string $file) => \App\Support\SiteContent::asset('images/home-hombre/'.$file);
     $img = fn (string $file) => \App\Support\SiteContent::asset('images/'.($girls ? 'home-mujer' : 'home-hombre').'/'.$file);
     $search = fn (array $query) => route('web.products.search', $query);
+    // Foto de «Jeans»: la que suba el admin en Banners; si no, la de un jeans a la venta; si no, la imagen por defecto.
+    $jeansPhoto = null;
+    if (! $girls && ! str_contains($img('categoria-jeans.webp'), '/storage/')) {
+        $jeansProduct = \App\Support\ProductCards::make(
+            \App\Models\Admin\Producto::query()
+                ->selectRaw('MIN(id) as id, zazu_company_id, name, MAX(imagen) as imagen')
+                ->where('price', '>', 0)->where('stock', '>', 0)->withColorPhoto()
+                ->whereRaw('UPPER(name) LIKE ?', ['%JEAN%'])
+                ->tap(fn ($query) => \App\Support\GirlsHome::exceptGirls($query)->exceptBrand('BRAVOS'))
+                ->groupBy('zazu_company_id', 'name')->orderByDesc(\Illuminate\Support\Facades\DB::raw('SUM(stock)'))->limit(1)->get(),
+            asset('images/default-hero-banner.png'),
+        )->first();
+        $jeansPhoto = $jeansProduct?->display_image;
+    }
     $categories = $girls
         ? [
             ['label' => 'Baby tees', 'image' => 'categoria-baby-tees.webp', 'url' => $search(['categoria' => 'baby-tees'])],
             ['label' => 'Tops', 'image' => 'categoria-tops.webp', 'url' => $search(['categoria' => 'tops'])],
-            ['label' => 'Poleras', 'image' => 'categoria-poleras.webp', 'url' => $search(['categoria' => 'poleras'])],
-            ['label' => 'Joggers', 'image' => 'categoria-joggers.webp', 'url' => $search(['categoria' => 'joggers'])],
         ]
         : [
             ['label' => 'Polos', 'image' => 'categoria-polos.webp', 'url' => $search(['categoria' => 'polos'])],
             ['label' => 'Camisas', 'image' => 'categoria-camisas.webp', 'url' => $search(['categoria' => 'camisas']), 'shade' => true],
-            ['label' => 'Poleras', 'image' => 'categoria-poleras.webp', 'url' => $search(['categoria' => 'poleras'])],
-            ['label' => 'Joggers', 'image' => 'categoria-joggers.webp', 'url' => $search(['categoria' => 'pantalones'])],
+            ['label' => 'Jeans', 'image' => 'categoria-jeans.webp', 'url' => $search(['categoria' => 'jeans']), 'photo' => $jeansPhoto],
         ];
     $home = fn (string $path) => \App\Support\SiteContent::text($path);
     $qualities = [
@@ -40,7 +51,7 @@
     ];
     $stores = [
         ['logo' => 'logo-overshark.png', 'logoClass' => 'h-[32px]', 'name' => 'Hombre', 'text' => 'Polos, camisas, joggers y básicos', 'cta' => 'Ver tienda hombre', 'url' => route('web.home', ['linea' => 'hombre'])],
-        ['logo' => 'logo-girls.png', 'logoClass' => 'h-[39px]', 'name' => 'Mujer', 'text' => 'Baby tees, tops, joggers y básicos', 'cta' => 'Ver tienda mujer', 'url' => route('web.home', ['linea' => 'mujer'])],
+        ['logo' => 'logo-girls.png', 'logoClass' => 'h-[39px]', 'name' => 'Mujer', 'text' => 'Baby tees, tops y básicos', 'cta' => 'Ver tienda mujer', 'url' => route('web.home', ['linea' => 'mujer'])],
         ['logo' => 'logo-bravos.svg', 'logoClass' => 'h-[42px]', 'name' => 'Urbano', 'text' => 'Casacas, poleras y ropa urbana', 'cta' => 'Ver tienda Bravos', 'url' => $bravosBrand ? route('web.brands.show', $bravosBrand) : $search(['q' => 'bravos'])],
     ];
 @endphp
@@ -49,7 +60,7 @@
     {{-- Ofertas relámpago: promociones por horas vigentes (panel → Promociones), con su cuenta regresiva --}}
     @if (! empty($flashDeals) && $flashDeals->isNotEmpty())
         @php($flashEnds = $flashDeals->map(fn ($product) => $product->promo['ends_at'])->min())
-        <section id="hh-main" class="os-hh-wrap pt-16 lg:pt-[88px]" aria-labelledby="hh-flash" data-hh-carousel>
+        <section class="os-hh-wrap pt-16 lg:pt-[88px]" aria-labelledby="hh-flash" data-hh-carousel>
             <header class="os-hh-head">
                 <div>
                     <p class="os-hh-eyebrow">Por tiempo limitado</p>
@@ -116,11 +127,11 @@
             </div>
             <a href="{{ $search(['orden' => 'populares']) }}" class="os-hh-link os-focus">Ver todas →</a>
         </header>
-        <ul class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <ul @class(['mt-8 grid grid-cols-2 gap-4', 'lg:grid-cols-2' => count($categories) === 2, 'lg:grid-cols-3' => count($categories) === 3, 'lg:grid-cols-4' => count($categories) > 3])>
             @foreach ($categories as $category)
-                <li>
+                <li @class(['col-span-2 lg:col-span-1' => count($categories) === 3 && $loop->last])>
                     <a href="{{ $category['url'] }}" class="os-focus group relative grid h-[260px] place-items-center overflow-hidden sm:h-[400px]">
-                        <img src="{{ $img($category['image']) }}" alt="" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                        <img src="{{ $category['photo'] ?? $img($category['image']) }}" alt="" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
                         <span @class(['absolute inset-0 transition group-hover:bg-[var(--hh-shade-hover)]', 'bg-[var(--hh-shade)]' => $category['shade'] ?? false]) aria-hidden="true"></span>
                         <span class="os-hh-display relative text-[32px] tracking-[1px] text-white sm:text-[44px]">{{ $category['label'] }}</span>
                     </a>
