@@ -30,6 +30,25 @@
     @endif
 
     <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+        <h2 class="text-lg font-black text-slate-950">Marcas del constructor «Construye tu look»</h2>
+        <p class="mt-1 text-sm text-slate-500">Elige de qué marcas puede escoger prendas la clienta. En la línea Hombre se ofrecen Overshark y Bravos; en la línea Mujer, Overshark Girls.</p>
+        <form action="{{ route('admin.outfits.brands') }}" method="POST" class="mt-4 space-y-4">
+            @csrf
+            @method('PUT')
+            @php($enabledBrands = \App\Support\OutfitSettings::brands())
+            <div class="flex flex-wrap gap-3">
+                @foreach (\App\Support\OutfitSettings::BRANDS as $brand)
+                    <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-50">
+                        <input type="checkbox" name="brands[]" value="{{ $brand }}" @checked(in_array($brand, old('brands', $enabledBrands), true)) class="h-4 w-4 rounded border-slate-300 text-cyan-600">
+                        {{ $brand }}
+                    </label>
+                @endforeach
+            </div>
+            <button type="submit" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-600">Guardar marcas</button>
+        </form>
+    </section>
+
+    <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
         <h2 class="text-lg font-black text-slate-950">Flyer de la página</h2>
         <p class="mt-1 text-sm text-slate-500">Es la imagen grande que aparece arriba en «Arma tu outfit». Recomendado: horizontal, unos 1600 × 900 px.</p>
         <div class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">

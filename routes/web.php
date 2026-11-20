@@ -817,9 +817,16 @@ Route::get('/combos', function (Request $request) {
 })->name('web.combos.index');
 
 // Arma tu outfit: combos de outfit (modalidad "Outfit" en Admin → Combos).
-Route::get('/arma-tu-outfit', fn (\App\Support\OutfitBuilder $builder) => view('web.outfit', [
-    'combos' => $builder->combos(),
-]))->name('web.outfit');
+Route::get('/arma-tu-outfit', function (\App\Support\OutfitBuilder $builder) {
+    $line = session('storefront.line') === 'mujer' ? 'mujer' : 'hombre';
+
+    return view('web.outfit', [
+        'combos' => $builder->combos(),
+        // Constructor libre: la clienta elige cualquier prenda de la tienda (también de Bravos), no un combo armado.
+        'catalog' => \App\Support\OutfitCatalog::models(null, $line, \App\Support\OutfitSettings::brands()),
+        'categories' => collect(\App\Support\StorefrontCategories::all($line))->map(fn (array $category) => $category['label'])->all(),
+    ]);
+})->name('web.outfit');
 
 // Nosotros: historia, ADN, proceso de fabricación, marcas y comunidad (textos y fotos en Admin → Página Nosotros).
 // Nosotros y Contacto: con ?marca=bravos se ven con la paleta de Bravos y el menú de Bravos.

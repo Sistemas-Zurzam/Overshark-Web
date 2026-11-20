@@ -88,6 +88,20 @@ class ComboController extends Controller
         ]);
     }
 
+    public function updateOutfitBrands(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'brands' => ['required', 'array', 'min:1'],
+            'brands.*' => ['string', 'in:'.implode(',', \App\Support\OutfitSettings::BRANDS)],
+        ], [
+            'brands.required' => 'Elige al menos una marca para el constructor.',
+            'brands.min' => 'Elige al menos una marca para el constructor.',
+        ]);
+        \App\Support\OutfitSettings::saveBrands($data['brands']);
+
+        return back()->with('status', 'Marcas del constructor actualizadas.');
+    }
+
     public function updateFlyer(Request $request): RedirectResponse
     {
         if ($request->boolean('reset')) {

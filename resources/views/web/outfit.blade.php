@@ -13,7 +13,7 @@
 @section('title', 'Arma tu outfit | Overshark')
 
 @push('head')
-    @vite('resources/js/outfit-builder.js')
+    @vite(['resources/js/outfit-builder.js', 'resources/js/outfit-free.js'])
 @endpush
 
 @php
@@ -50,54 +50,76 @@
             </div>
         </section>
 
-        @if ($combos->isEmpty())
-            {{-- Sin combos de outfit para esta línea: se muestran las secciones del diseño como vista previa,
-                 sin prendas ni precios inventados, hasta que se publiquen looks en Admin → Arma tu outfit. --}}
-            <section class="os-hh-wrap pb-16 pt-16 lg:pb-[88px] lg:pt-[88px]" aria-labelledby="ob-build">
-                <header class="os-hh-head">
-                    <div>
-                        <p class="os-hh-eyebrow">Paso 1 de 3</p>
-                        <h2 id="ob-build" @class(['os-hh-title', 'os-josefin' => $girls])>Construye tu look</h2>
-                        <p class="os-hh-sub">Elige una prenda por paso. Puedes cambiarla cuando quieras.</p>
+        {{-- Constructor libre: la clienta elige las prendas (de Overshark o Bravos) tocando cada cuadro --}}
+        <section id="constructor-libre" class="os-hh-wrap scroll-mt-[calc(var(--header-h)+16px)] pb-16 pt-16 lg:pb-[88px] lg:pt-[88px]" aria-labelledby="fl-title"
+            data-free-look data-catalog='@json($catalog)' data-categories='@json($categories)' data-slots='@json(['Top', 'Bottom', 'Extra'])' data-min="2">
+            <header class="os-hh-head">
+                <div>
+                    <p class="os-hh-eyebrow">Tú eliges</p>
+                    <h2 id="fl-title" @class(['os-hh-title', 'os-josefin' => $girls])>Construye tu look</h2>
+                    <p class="os-hh-sub">Toca cada cuadro y elige la prenda, el color y la talla. Puedes cambiarla cuando quieras.</p>
+                </div>
+            </header>
+
+            @if ($catalog === [])
+                <div class="mt-8 grid min-h-[240px] place-items-center border border-dashed border-[var(--shop-check-line)] bg-white px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <p class="max-w-[420px] text-[18px] font-extrabold">Estamos reponiendo las prendas.</p>
+                        <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus mt-2 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ver la tienda →</a>
                     </div>
-                </header>
-                <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[440px_minmax(0,1fr)]">
-                    <div class="order-2 flex flex-col gap-3 self-start bg-[var(--hh-soft)] p-5 sm:p-6 lg:order-none">
+                </div>
+            @else
+                <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+                    <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4" data-fl-slots></ul>
+
+                    <form method="POST" action="{{ route('web.cart.look') }}" class="flex flex-col gap-3 self-start bg-[var(--hh-soft)] p-5 sm:p-6" data-fl-form>
+                        @csrf
+                        <div data-fl-inputs></div>
                         <h3 @class(['leading-none', 'os-hh-display text-[32px]' => ! $girls, 'os-josefin text-[23px] uppercase' => $girls])>Tu look</h3>
-                        <ul class="flex flex-col gap-3">
-                            @foreach (['Top' => 'Elige tu top', 'Bottom' => 'Súmale un bottom', 'Extra' => 'Elige un básico extra'] as $slot => $hint)
-                                <li class="flex items-center gap-3.5 border-[1.5px] border-dashed border-[var(--shop-check-line)] p-3 pr-4">
-                                    <span class="h-[96px] w-[76px] shrink-0 bg-[var(--ob-empty)] sm:h-[120px] sm:w-[96px]" aria-hidden="true"></span>
-                                    <span class="flex flex-col gap-1">
-                                        <span class="text-[11px] font-extrabold uppercase tracking-[1.5px] text-[var(--hh-accent)]">{{ $slot }}</span>
-                                        <span class="text-[15px] font-bold text-[#888]">{{ $hint }}</span>
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
-                        <div class="flex items-baseline justify-between pt-3 font-extrabold">
-                            <span class="text-[18px]">Total del look</span>
-                            <span class="text-[24px]">—</span>
-                        </div>
-                        <button type="button" class="os-hh-btn w-full cursor-not-allowed bg-[#0b0f14] text-white opacity-40" disabled>Agregar look al carrito</button>
-                    </div>
-                    <div class="order-1 flex min-w-0 flex-col gap-5 lg:order-none">
-                        <div class="flex" aria-hidden="true">
-                            @foreach (['Top', 'Bottom', 'Extra'] as $tab)
-                                <span @class(['os-ob-tab text-center', 'is-active' => $loop->first])>{{ $loop->iteration }} · {{ $tab }}</span>
-                            @endforeach
-                        </div>
-                        <div class="grid min-h-[320px] flex-1 place-items-center border border-dashed border-[var(--shop-check-line)] bg-white px-6 py-12 text-center">
-                            <div class="flex flex-col items-center gap-3">
-                                <p class="text-[12px] font-extrabold uppercase tracking-[2px] text-[var(--hh-accent)]">Muy pronto</p>
-                                <p class="max-w-[420px] text-[18px] font-extrabold">Estamos preparando los looks {{ $girls ? 'de Overshark Girls' : 'para armar' }}.</p>
-                                <p class="max-w-[420px] text-[14px] font-medium text-[#545966]">Pronto podrás elegir tu top, tu bottom y un básico extra con precio de combo. Mientras tanto, mira todas las prendas de la tienda.</p>
-                                <a href="{{ route('web.products.search') }}" class="os-hh-btn os-focus mt-2 bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ver la tienda →</a>
+                        @if ($errors->has('items'))
+                            <p class="bg-white px-3 py-2 text-[13px] font-bold text-[#c0392b]" role="alert">{{ $errors->first('items') }}</p>
+                        @endif
+                        <dl class="flex flex-col gap-2 pt-2">
+                            <div class="flex justify-between text-[14px]">
+                                <dt class="font-medium text-[#545966]" data-fl-count>Subtotal (0 prendas)</dt>
                             </div>
+                            <div class="flex items-baseline justify-between font-extrabold">
+                                <dt class="text-[18px]">Total del look</dt>
+                                <dd class="text-[24px]" data-fl-total>S/ 0.00</dd>
+                            </div>
+                        </dl>
+                        <button type="submit" class="os-hh-btn os-focus w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] disabled:cursor-not-allowed disabled:opacity-40" data-fl-submit disabled>Agregar look al carrito</button>
+                        <p class="text-center text-[13px] font-bold text-[var(--hh-accent)]" data-fl-hint aria-live="polite"></p>
+                        <p class="text-center text-[12px] text-[#545966]">Precio de cada prenda. Los combos y promociones se aplican en sus propias secciones.</p>
+                    </form>
+                </div>
+
+                {{-- Modal de prendas --}}
+                <div class="fixed inset-0 z-[90] hidden" data-fl-modal role="dialog" aria-modal="true" aria-labelledby="fl-modal-title">
+                    <div class="absolute inset-0 bg-black/60"></div>
+                    <div class="absolute inset-x-0 bottom-0 flex max-h-[92vh] flex-col bg-white sm:inset-y-8 sm:mx-auto sm:max-h-none sm:w-[min(960px,calc(100%-32px))]">
+                        <div class="flex items-center justify-between gap-4 border-b border-[var(--shop-line)] px-5 py-4 sm:px-6">
+                            <h3 id="fl-modal-title" class="text-[20px] font-extrabold" data-fl-modal-title>Elige tu prenda</h3>
+                            <button type="button" class="os-focus grid h-10 w-10 place-items-center text-[26px] leading-none" data-fl-close aria-label="Cerrar">×</button>
+                        </div>
+                        <div class="flex flex-col gap-2 border-b border-[var(--shop-line)] px-5 py-3 sm:px-6">
+                            <div class="flex flex-wrap gap-2" data-fl-brands></div>
+                            <div class="flex flex-wrap gap-2" data-fl-categories></div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+                            <p class="hidden py-10 text-center text-[15px] font-bold text-[#545966]" data-fl-empty>No hay prendas con ese filtro.</p>
+                            <ul class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3" data-fl-models></ul>
+                        </div>
+                        <div class="border-t border-[var(--shop-line)] px-5 py-4 sm:px-6">
+                            <button type="button" class="os-hh-btn os-focus w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] disabled:cursor-not-allowed disabled:opacity-40" data-fl-confirm disabled>Añadir al look</button>
                         </div>
                     </div>
                 </div>
-            </section>
+            @endif
+        </section>
+
+        @if ($combos->isEmpty())
+            {{-- Sin looks armados por el equipo: el constructor libre de arriba ya permite armar uno. --}}
 
             @if ($girls)
                 <section class="os-hh-wrap pb-16 lg:pb-[88px]" aria-labelledby="ob-looks">
@@ -133,8 +155,8 @@
                 <header class="os-hh-head">
                     <div>
                         <p class="os-hh-eyebrow" data-ob-progress>Paso 1 de {{ count($firstAvailable['steps'] ?? []) ?: 1 }}</p>
-                        <h2 id="ob-build" @class(['os-hh-title', 'os-josefin' => $girls])>Construye tu look</h2>
-                        <p class="os-hh-sub">Elige una prenda por paso. Puedes cambiarla cuando quieras.</p>
+                        <h2 id="ob-build" @class(['os-hh-title', 'os-josefin' => $girls])>Arma un look listo</h2>
+                        <p class="os-hh-sub">Elige una prenda por paso a precio de combo. Puedes cambiarla cuando quieras.</p>
                     </div>
                     <button type="button" class="os-hh-link os-focus" data-ob-reset>Reiniciar look ↺</button>
                 </header>

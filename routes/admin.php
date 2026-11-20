@@ -142,6 +142,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::delete('/promociones/{promocion}', [PromocionController::class, 'destroy'])->name('promociones.destroy');
     Route::get('/arma-tu-outfit', [ComboController::class, 'outfits'])->name('outfits.index');
     Route::post('/arma-tu-outfit/flyer', [ComboController::class, 'updateFlyer'])->name('outfits.flyer');
+    Route::put('/arma-tu-outfit/marcas', [ComboController::class, 'updateOutfitBrands'])->name('outfits.brands');
     Route::get('/contenido-tienda', [SiteContentController::class, 'edit'])->name('contenido.edit');
     Route::put('/contenido-tienda', [SiteContentController::class, 'update'])->name('contenido.update');
     Route::post('/contenido-tienda/restaurar', [SiteContentController::class, 'reset'])->name('contenido.reset');
