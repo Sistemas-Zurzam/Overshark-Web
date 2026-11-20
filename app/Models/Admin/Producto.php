@@ -159,7 +159,7 @@ class Producto extends Model
             ->whereRaw('UPPER(TRIM(marca)) = ?', [$name])
             ->orWhere(fn (Builder $companyQuery) => $companyQuery
                 ->where(fn (Builder $empty) => $empty->whereNull('marca')->orWhere('marca', ''))
-                ->whereRaw('UPPER(TRIM(empresa_nombre)) = ?', [$name])));
+                ->whereRaw('UPPER(empresa_nombre) LIKE ?', ['%'.$name.'%'])));
     }
 
     /**
@@ -174,7 +174,7 @@ class Producto extends Model
             ->whereRaw("UPPER(TRIM(COALESCE(productos.marca, ''))) <> ?", [$name])
             ->where(fn (Builder $inner) => $inner
                 ->whereRaw("TRIM(COALESCE(productos.marca, '')) <> ''")
-                ->orWhereRaw("UPPER(TRIM(COALESCE(productos.empresa_nombre, ''))) <> ?", [$name]));
+                ->orWhereRaw("UPPER(COALESCE(productos.empresa_nombre, '')) NOT LIKE ?", ['%'.$name.'%']));
     }
 
     public function categoria()

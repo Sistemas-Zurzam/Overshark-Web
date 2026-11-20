@@ -178,7 +178,7 @@ class ProductoController extends Controller
                 });
             })
             ->when($filters['empresa'] !== '', fn ($query) => $query->where('empresa_nombre', $filters['empresa']))
-            ->when($filters['marca'] !== '', fn ($query) => $query->where('marca', $filters['marca']));
+            ->when($filters['marca'] !== '', fn ($query) => $query->ofBrand($filters['marca']));
 
         return $productosQuery
             ->selectRaw('MIN(id) as id, zazu_company_id, MAX(empresa_nombre) as empresa_nombre, MAX(marca) as marca, name, COUNT(*) as variant_count, SUM(stock) as total_stock, MIN(price) as min_price, MAX(price) as max_price, MAX(updated_at) as updated_at, MAX(imagen) as imagen, MAX(oculto) as oculto')

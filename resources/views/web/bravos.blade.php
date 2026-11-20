@@ -92,7 +92,7 @@
                         <div class="flex flex-col items-start gap-4 p-6 sm:p-8">
                             <h3 class="text-[28px] font-extrabold leading-[1.3] text-[#0a0a0a] sm:text-[32px]">{{ $pantName }}</h3>
                             <p class="text-[17px] leading-[1.3] text-[#0a0a0a]">{{ $pantText }}</p>
-                            <a href="{{ route('web.products.search', ['q' => $pantSearch]) }}" class="{{ $btn }} w-full bg-[#0a0a0a] text-white hover:bg-[#333] sm:w-[250px]">VER PANTALONES →</a>
+                            <a href="{{ $shop(['categoria' => 'pantalones']) }}" class="{{ $btn }} w-full bg-[#0a0a0a] text-white hover:bg-[#333] sm:w-[250px]">VER PANTALONES →</a>
                         </div>
                     </article>
                 @endforeach
