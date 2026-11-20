@@ -73,6 +73,27 @@
 </label>
 @endif
 
+@unless ($forceOutfit)
+    @php
+        $mode = old('selection_mode', $combo?->selection_mode === 'choice' ? 'choice' : 'fixed');
+    @endphp
+    <div data-combo-mode-box class="grid gap-4 md:grid-cols-[1fr_240px]">
+        <label class="block">
+            <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Tipo de combo</span>
+            <select name="selection_mode" data-combo-mode class="{{ $input }}">
+                <option value="fixed" @selected($mode !== 'choice')>Prendas fijas: cada producto de la lista es una prenda del combo</option>
+                <option value="choice" @selected($mode === 'choice')>El cliente elige: escoge N prendas entre los productos de la lista</option>
+            </select>
+            @error('selection_mode') <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $message }}</span> @enderror
+        </label>
+        <label data-combo-limit @class(['block', 'hidden' => $mode !== 'choice'])>
+            <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Prendas que elige el cliente</span>
+            <input type="number" name="selection_limit" value="{{ old('selection_limit', $combo?->selection_mode === 'choice' ? $combo?->selection_limit : null) }}" min="1" max="99" class="{{ $input }}" placeholder="Ej. 9">
+            @error('selection_limit') <span class="mt-1 block text-xs font-semibold text-admin-danger">{{ $message }}</span> @enderror
+        </label>
+    </div>
+@endunless
+
 <fieldset class="rounded-sm border border-admin-border bg-admin-subtle p-4">
     <legend class="px-2 text-sm font-black text-admin-text">Productos y cantidades</legend>
     <div class="mb-2 hidden gap-3 px-1 text-xs font-bold uppercase tracking-wide text-admin-text-muted sm:grid sm:grid-cols-[1fr_170px_110px_auto]">
@@ -112,6 +133,7 @@
     <button type="button" data-combo-product-add class="mt-4 border border-admin-accent bg-admin-surface px-4 py-2.5 text-sm font-bold text-admin-accent">+ Agregar producto</button>
     <div data-combo-summary class="mt-4 border border-admin-border bg-admin-surface p-3 text-sm text-admin-text-secondary" aria-live="polite"></div>
     <p class="mt-3 text-xs leading-5 text-admin-text-secondary"><b>Cantidad</b> es cuántas unidades de ese producto lleva el combo (Cuello Chino ×2, Clásico ×2, Camisero ×1 = 5 prendas); deja <b>Prenda</b> vacía. Usa <b>Prenda</b> solo para ofrecer alternativas de un mismo lugar (por ejemplo «Polo» con Clásico o Slim Fit: el cliente elige uno) y escribe un nombre, no un número.</p>
+    <p class="mt-3 text-xs leading-5 text-admin-text-secondary"><b>Tipo «El cliente elige»</b>: los productos de la lista son las opciones y el cliente escoge tantas prendas como indiques arriba (por ejemplo, 9 prendas entre Baby tee, Top y Polera). La columna Cantidad no cuenta en ese tipo.</p>
     <p class="mt-3 text-xs leading-5 text-admin-text-secondary">Los productos «sin stock/precio» se pueden agregar, pero en «Arma tu outfit» el combo saldrá como «Muy pronto» mientras alguna prenda no tenga nada disponible.</p>
 </fieldset>
 

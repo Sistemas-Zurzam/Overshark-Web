@@ -244,4 +244,54 @@ class ComboManagementTest extends TestCase
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
     }
+
+    public function test_a_choice_combo_can_be_created_and_edited_from_the_panel_for_any_brand(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
+        Storage::fake('public');
+        $top = Producto::query()->create(['name' => 'BABY TY', 'default_code' => 'BT-S', 'talla' => 'S', 'color' => 'NEGRO', 'stock' => 20, 'price' => 17]);
+        $tee = Producto::query()->create(['name' => 'TOP RIB', 'default_code' => 'TR-S', 'talla' => 'S', 'color' => 'ROSA', 'stock' => 20, 'price' => 17]);
+        $girls = Brand::query()->where('slug', 'overshark-girls')->firstOrFail();
+
+        $this->post('/admin/combos', [
+            'brand_id' => $girls->id,
+            'name' => 'Elige 9 Girls',
+            'price' => 99,
+            'selection_mode' => 'choice',
+            'selection_limit' => 9,
+            'products' => [['producto_id' => $top->id, 'cantidad' => 1], ['producto_id' => $tee->id, 'cantidad' => 1]],
+            'status' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $combo = Combo::query()->where('name', 'Elige 9 Girls')->firstOrFail();
+        $this->assertSame('choice', $combo->selection_mode);
+        $this->assertSame(9, $combo->selection_limit);
+        $this->assertSame(9, $combo->units());
+
+        // El formulario de edición muestra el tipo y el límite guardados.
+        $this->get(route('admin.combos.edit', $combo))->assertOk()->assertSee('value="choice" selected', false)->assertSee('value="9"', false);
+
+        // Volver a prendas fijas borra el límite de elección.
+        $this->put(route('admin.combos.update', $combo), [
+            'brand_id' => $girls->id, 'name' => 'Elige 9 Girls', 'price' => 99, 'selection_mode' => 'fixed', 'status' => 1,
+            'products' => [['producto_id' => $top->id, 'cantidad' => 2]],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('fixed', $combo->fresh()->selection_mode);
+        $this->assertNull($combo->fresh()->selection_limit);
+    }
+
+    public function test_a_choice_combo_needs_a_limit_and_products_to_choose_from(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class)->actingAs(User::factory()->create());
+        Storage::fake('public');
+        $product = Producto::query()->create(['name' => 'CLASICO', 'default_code' => 'CL-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 20, 'price' => 17]);
+        $bravos = Brand::query()->where('slug', 'bravos')->firstOrFail();
+
+        $this->post('/admin/combos', ['brand_id' => $bravos->id, 'name' => 'Sin limite', 'selection_mode' => 'choice', 'products' => [['producto_id' => $product->id]]])
+            ->assertSessionHasErrors('selection_limit');
+        $this->post('/admin/combos', ['brand_id' => $bravos->id, 'name' => 'Sin productos', 'selection_mode' => 'choice', 'selection_limit' => 3])
+            ->assertSessionHasErrors('products');
+        $this->assertSame(0, Combo::query()->whereIn('name', ['Sin limite', 'Sin productos'])->count());
+    }
+
 }

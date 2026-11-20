@@ -78,4 +78,52 @@ class PromoCombosTest extends TestCase
         $this->get(route('web.combos.index', ['marca' => 'Bravos']))->assertOk()->assertSee('Poleras neru')->assertSee('3 × S/ 99')->assertDontSee('Comfort pants');
         $this->get(route('web.combos.index', ['marca' => 'Overshark']))->assertOk()->assertDontSee('Poleras neru')->assertDontSee('Mom jeans');
     }
+
+    public function test_the_bravos_shop_lists_the_bravos_combos_and_links_to_them(): void
+    {
+        $this->product('POLERA NERU', 'BRAVOS');
+        PromoCombos::create();
+
+        $this->get(route('web.products.search', ['marca' => 'BRAVOS']))
+            ->assertOk()
+            ->assertSee('TIENDA BRAVOS')
+            ->assertSee('COMBOS BRAVOS')
+            ->assertSee('Poleras neru')
+            ->assertSee(route('web.combos.index', ['marca' => 'Bravos']), false)
+            ->assertDontSee('Comfort pants');
+
+        // Con un filtro activo la tienda vuelve a mostrar solo productos.
+        $this->get(route('web.products.search', ['marca' => 'BRAVOS', 'q' => 'neru']))->assertOk()->assertDontSee('COMBOS BRAVOS');
+    }
+
+    public function test_the_bravos_combos_page_keeps_the_bravos_brand_active_even_with_a_girls_session(): void
+    {
+        $this->product('POLERA NERU', 'BRAVOS');
+        PromoCombos::create();
+
+        $html = $this->withSession(['storefront.line' => 'mujer'])->get(route('web.combos.index', ['marca' => 'Bravos']))->assertOk()
+            ->assertSee('data-line="bravos"', false)
+            ->getContent();
+
+        // La marca activa de la barra es Bravos, no Overshark Girls.
+        $this->assertMatchesRegularExpression('/os-brands__item[^"]*is-active[^>]*aria-label="Bravos, urban clothing"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/os-brands__item[^"]*is-active[^>]*aria-label="Overshark Girls/', $html);
+    }
+
+    public function test_the_bravos_home_has_one_combos_banner_that_links_to_the_bravos_combos(): void
+    {
+        $bravos = \App\Models\Brand::query()->where('slug', 'bravos')->firstOrFail();
+
+        // Sin combos para comprar no hay banner (llevaría a una página vacía).
+        $this->get(route('web.brands.show', $bravos))->assertOk()->assertDontSee('promo-combos.webp', false);
+
+        $this->product('POLERA NERU', 'BRAVOS');
+        PromoCombos::create();
+
+        $this->get(route('web.brands.show', $bravos))
+            ->assertOk()
+            ->assertSee('promo-combos.webp', false)
+            ->assertSee(e(route('web.combos.index', ['marca' => $bravos->name])), false)
+            ->assertDontSee('data-flyer-carousel', false);
+    }
 }

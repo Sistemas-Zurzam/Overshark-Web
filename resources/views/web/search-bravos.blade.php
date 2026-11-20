@@ -16,6 +16,9 @@
     $sorts = ['' => 'Destacados', 'novedades' => 'Novedades', 'precio-asc' => 'Precio: menor a mayor', 'precio-desc' => 'Precio: mayor a menor'];
     $filtered = $search !== '' || isset($filters['talla']) || isset($filters['color']) || isset($filters['min']) || isset($filters['max']);
     $option = fn (bool $on) => $on ? '●' : '○';
+    // Combos de la marca (Admin → Combos, marca Bravos): los mismos que en /combos?marca=Bravos.
+    $bravosCombos = \App\Support\ComboCatalog::forStore('Bravos');
+    $combosUrl = route('web.combos.index', ['marca' => 'Bravos']);
 @endphp
 
 @section('content')
@@ -61,6 +64,14 @@
                                 </a>
                             </li>
                         @endforeach
+                        @if ($bravosCombos->isNotEmpty())
+                            <li>
+                                <a href="{{ $combosUrl }}" class="os-focus flex items-baseline justify-between gap-3 leading-[1.4] hover:underline lg:w-[224px]">
+                                    <span class="whitespace-pre text-[14px] text-[#0a0a0a]">○  Combos</span>
+                                    <span class="text-[12px] text-[#737373]">{{ $bravosCombos->count() }}</span>
+                                </a>
+                            </li>
+                        @endif
                     </ul>
                 </section>
 
@@ -71,6 +82,37 @@
             </aside>
 
             <section aria-label="Resultados" class="flex min-w-0 flex-col gap-7">
+                @if ($bravosCombos->isNotEmpty() && $categoria === '' && ! $filtered)
+                    <div id="combos-bravos" class="flex flex-col gap-4">
+                        <div class="flex items-baseline justify-between gap-3 leading-[1.4]">
+                            <h2 class="text-[22px] font-extrabold text-[#0a0a0a]">COMBOS BRAVOS</h2>
+                            <a href="{{ $combosUrl }}" class="os-focus text-[13px] font-bold text-[#595959] underline hover:text-[#0a0a0a]">Ver todos →</a>
+                        </div>
+                        <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                            @foreach ($bravosCombos as $combo)
+                                <li>
+                                    <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col border-2 border-[#ffdb00] bg-[#f6f6f4]">
+                                        @if (! empty($combo['images']))
+                                            <span class="block aspect-[4/3] overflow-hidden bg-[#e9e9e9]">
+                                                <img src="{{ $combo['images'][0] }}" alt="" loading="lazy" @class(['h-full w-full', 'object-contain' => $combo['flyer'], 'object-cover transition duration-500 group-hover:scale-105' => ! $combo['flyer']])>
+                                            </span>
+                                        @endif
+                                        <span class="flex flex-1 flex-col gap-2 p-4 leading-[1.3]">
+                                            <span class="text-[17px] font-extrabold uppercase text-[#0a0a0a]">{{ $combo['title'] }}</span>
+                                            <span class="text-[13px] text-[#595959]">{{ $combo['detail'] }}</span>
+                                            <span class="mt-auto flex items-baseline gap-2 pt-1">
+                                                <span class="text-[22px] font-extrabold text-[#0a0a0a]">S/ {{ number_format($combo['price'], 2) }}</span>
+                                                <span class="text-[12px] text-[#737373]">S/ {{ number_format($combo['unit_price'], 2) }} c/u</span>
+                                            </span>
+                                            <span class="mt-1 inline-flex items-center justify-center bg-[#0a0a0a] px-4 py-3 text-[13px] font-bold uppercase text-white transition group-hover:bg-[#ffdb00] group-hover:text-[#0a0a0a]">Ver combo →</span>
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="flex flex-wrap items-center justify-between gap-3 leading-[1.4]">
                     <p class="text-[16px] font-bold text-[#0a0a0a]">
                         {{ $products->total() }} {{ $products->total() === 1 ? 'modelo' : 'modelos' }}

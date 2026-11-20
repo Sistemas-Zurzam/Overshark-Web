@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ComboController extends Controller
@@ -190,6 +191,9 @@ class ComboController extends Controller
             'url' => ['nullable', 'string', 'max:2048', 'regex:/^(https?:\/\/|\/)/i'],
             'status' => ['nullable', 'boolean'],
             'is_draft' => ['nullable', 'boolean'],
+            // Tipo: «fixed» = cada producto de la lista es una prenda del combo; «choice» = el cliente elige N prendas entre ellos.
+            'selection_mode' => ['nullable', 'in:fixed,choice'],
+            'selection_limit' => ['nullable', 'integer', 'min:1', 'max:99', 'required_if:selection_mode,choice'],
             'products' => ['nullable', 'array'],
             'products.*.producto_id' => ['nullable', 'integer', 'exists:productos,id'],
             // Un número como «2» es una cantidad, no el nombre de una prenda (la cantidad va en su propia columna).
@@ -199,7 +203,15 @@ class ComboController extends Controller
             'url.regex' => 'La URL debe comenzar con http://, https:// o /.',
             'products.*.grupo.not_regex' => 'La columna Prenda es un nombre (Polo, Pantalón…), no un número. Para llevar varias unidades usa la columna Cantidad.',
             'compare_at_price.gte' => 'El precio regular debe ser mayor o igual al precio del combo.',
+            'selection_limit.required_if' => 'Indica cuántas prendas elige el cliente.',
+            'selection_limit.min' => 'El cliente debe elegir al menos 1 prenda.',
         ]);
+
+        // «Arma tu outfit» solo lee combos de prendas fijas; un combo de elección necesita al menos un producto para elegir.
+        $mode = ! $request->boolean('outfit') && ($validated['selection_mode'] ?? 'fixed') === 'choice' ? 'choice' : 'fixed';
+        if ($mode === 'choice' && collect($validated['products'] ?? [])->filter(fn (array $row) => filled($row['producto_id'] ?? null))->isEmpty()) {
+            throw ValidationException::withMessages(['products' => 'Agrega los productos entre los que el cliente podrá elegir.']);
+        }
 
         // "Mostrar en Arma tu outfit" equivale a la modalidad "Outfit", que es la que lee esa página.
         $modality = $validated['modality'] ?? null;
@@ -212,7 +224,7 @@ class ComboController extends Controller
         $isDraft = $request->boolean('is_draft');
         $brand = Brand::query()->findOrFail($validated['brand_id']);
 
-        DB::transaction(function () use ($request, $validated, $combo, $modality, $isDraft, $brand): void {
+        DB::transaction(function () use ($request, $validated, $combo, $modality, $isDraft, $brand, $mode): void {
             $oldImage = $combo->imagen;
             $newImage = $request->file('image') ? ImageOptimizer::storeUploaded($request->file('image'), 'combos') : null;
 
@@ -228,6 +240,9 @@ class ComboController extends Controller
                 // Un borrador nunca se muestra en la tienda, sin importar lo que diga el checkbox de estado.
                 'is_draft' => $isDraft,
                 'status' => $isDraft ? false : $request->boolean('status'),
+                'selection_mode' => $mode,
+                // En «elegir» el límite manda; en prendas fijas se conserva el que traía el catálogo base (solo se borra al pasar de «elegir» a fijo).
+                'selection_limit' => $mode === 'choice' ? (int) $validated['selection_limit'] : ($combo->selection_mode === 'choice' ? null : $combo->selection_limit),
             ])->save();
 
             if ($newImage && $oldImage && ! str_starts_with($oldImage, 'images/') && ! filter_var($oldImage, FILTER_VALIDATE_URL)) {

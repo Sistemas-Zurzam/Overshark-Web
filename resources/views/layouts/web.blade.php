@@ -21,7 +21,13 @@
     $homeUrl = route('web.home');
     $onSearch = request()->routeIs('web.products.search');
     // En Bravos (portada, tienda, ficha y outfit), Inicio, Tienda y Arma tu outfit llevan a las páginas de Bravos.
-    $bravosContext = $brandPageContext?->slug === 'bravos' || ($onSearch && mb_strtoupper(trim((string) request('marca'))) === 'BRAVOS');
+    // La página de combos de Bravos (/combos?marca=Bravos) también es de Bravos: sin esto la barra marcaba la colección de la sesión (Girls).
+    $onCombos = request()->routeIs('web.combos.index');
+    $bravosContext = $brandPageContext?->slug === 'bravos' || (($onSearch || $onCombos) && mb_strtoupper(trim((string) request('marca'))) === 'BRAVOS');
+    if ($bravosContext && ! $brandPageContext) {
+        $brandPageContext = $menuBrands->firstWhere('slug', 'bravos');
+        $combosUrl = $brandPageContext ? route('web.combos.index', ['marca' => $brandPageContext->name]) : $combosUrl;
+    }
     $storeMenu = [
         $bravosContext && ($bravosNavBrand = $menuBrands->firstWhere('slug', 'bravos'))
             ? ['label' => 'Inicio', 'url' => route('web.brands.show', $bravosNavBrand), 'active' => request()->routeIs('web.brands.show')]

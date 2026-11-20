@@ -218,9 +218,14 @@ class SiteContentTest extends TestCase
             ->assertSee('Arma tu combo →')
             ->assertSee('after:absolute after:inset-0', false);
 
-        // Con «solo imagen» la imagen subida ya trae su texto: no se encima nada y el banner entero es un enlace.
+        // «Solo imagen» sin haber subido una imagen propia no hace nada: la original es solo el fondo, sin texto.
         $this->save(['promos' => ['wafflera_image_only' => '1']])->assertRedirect();
         $this->assertTrue((bool) SiteContent::get('promos.wafflera_image_only'));
+        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertOk()->assertSee('Arma tu combo →');
+
+        // Con una imagen propia que ya trae su texto: no se encima nada y el banner entero es un enlace.
+        Storage::fake('public');
+        $this->admin()->post(route('admin.banners.images', 'promo_hombre'), ['image' => UploadedFile::fake()->image('promo.png', 1400, 467)])->assertRedirect();
         $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertOk()
             ->assertDontSee('Arma tu combo →')
             ->assertDontSee('Elige color y talla de cada prenda')

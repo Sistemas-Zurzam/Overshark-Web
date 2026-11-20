@@ -1579,3 +1579,11 @@ document.querySelectorAll('[data-scroll-to]').forEach((link) => {
         requestAnimationFrame(step);
     });
 });
+
+// Formulario de combos: el límite «Prendas que elige el cliente» solo aplica al tipo «El cliente elige».
+document.querySelectorAll('[data-combo-mode]').forEach((select) => {
+    const limit = select.closest('[data-combo-mode-box]')?.querySelector('[data-combo-limit]');
+    const sync = () => limit?.classList.toggle('hidden', select.value !== 'choice');
+    select.addEventListener('change', sync);
+    sync();
+});

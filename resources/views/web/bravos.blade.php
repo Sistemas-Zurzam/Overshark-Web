@@ -66,6 +66,17 @@
             @endif
         </section>
 
+        {{-- Banner de combos: una sola imagen que lleva a la página de combos de Bravos, como la promo de Overshark.
+             La imagen se cambia en Admin → Banners → Imágenes (Bravos · Banner de combos). Solo se muestra si hay combos para comprar. --}}
+        @if (\App\Support\ComboCatalog::forStore('Bravos')->isNotEmpty())
+            <section class="os-bravos-wrap py-8 lg:py-11" aria-labelledby="bravos-combos">
+                <h2 id="bravos-combos" class="sr-only">Combos Bravos: arma tu combo</h2>
+                <a href="{{ route('web.combos.index', ['marca' => $brandPage->name]) }}" class="os-focus relative block overflow-hidden bg-[#ffdb00]" aria-labelledby="bravos-combos">
+                    <img src="{{ $img('promo-combos.webp') }}" alt="" class="block h-auto w-full" loading="lazy">
+                </a>
+            </section>
+        @endif
+
         {{-- Editorial · siluetas oversize --}}
         <section class="grid bg-[#0a0a0a] lg:grid-cols-2" aria-labelledby="bravos-fit">
             <div class="flex flex-col items-start justify-center gap-7 px-4 py-14 sm:px-8 lg:p-[72px]">
