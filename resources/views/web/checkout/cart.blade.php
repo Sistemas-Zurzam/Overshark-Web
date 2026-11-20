@@ -33,7 +33,13 @@
                             <div class="flex min-w-0 flex-1 flex-col gap-2 leading-[1.45] text-[#0b1015]">
                                 <p class="text-[17px] font-bold">{{ $isCombo ? ($item['producto'] ?? 'Combo') : $title($item['producto'] ?? 'Producto') }}</p>
                                 @if ($isCombo)
-                                    <p class="text-[13px] text-[#65717c]">Combo · {{ collect($item['selections'] ?? [])->map(fn ($selection) => $title($selection['producto'] ?? '').' '.$title($selection['color'] ?? '').' '.($selection['talla'] ?? ''))->implode(' · ') }}</p>
+                                    @php($selections = collect($item['selections'] ?? []))
+                                    <p class="text-[13px] font-bold uppercase tracking-[0.5px] text-[#65717c]">Combo · {{ $selections->count() }} {{ $selections->count() === 1 ? 'prenda' : 'prendas' }}</p>
+                                    <ul class="flex flex-col gap-0.5 text-[13px] text-[#65717c]">
+                                        @foreach ($selections as $selection)
+                                            <li>{{ $title($selection['producto'] ?? '') }} · {{ $title($selection['color'] ?? '') }} · Talla {{ $selection['talla'] ?? '-' }}</li>
+                                        @endforeach
+                                    </ul>
                                 @else
                                     <p class="text-[13px] text-[#65717c]">{{ $title($item['color'] ?? '') }} · Talla {{ $item['talla'] ?? '-' }}</p>
                                 @endif
