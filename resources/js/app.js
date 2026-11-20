@@ -355,6 +355,53 @@ comboProductAdd?.addEventListener('click', () => {
     clone.querySelector('select')?.focus();
 });
 
+// Resumen en vivo del combo: lo que verá el cliente (prendas a elegir y cuántas unidades en total).
+// Las filas con la misma "prenda" son alternativas (cuenta la mayor cantidad); sin prenda, cada producto suma.
+const comboSummaryRows = document.querySelector('[data-combo-product-rows]');
+const comboSummary = document.querySelector('[data-combo-summary]');
+
+const renderComboSummary = () => {
+    if (!comboSummaryRows || !comboSummary) {
+        return;
+    }
+
+    const groups = new Map();
+    let warning = '';
+
+    comboSummaryRows.querySelectorAll('[data-combo-product-row]').forEach((row) => {
+        const select = row.querySelector('select');
+        const product = select?.value ? select.selectedOptions[0].textContent.split(' · ')[0].trim() : '';
+        const group = (row.querySelector('input[type="text"]')?.value ?? '').trim();
+        const quantity = Math.max(1, Number(row.querySelector('input[type="number"]')?.value) || 1);
+
+        if (!product) {
+            return;
+        }
+        if (/^\d+$/.test(group)) {
+            warning = `«${group}» parece una cantidad, no el nombre de una prenda. La cantidad va en la columna Cantidad.`;
+        }
+
+        const key = group !== '' ? `g:${group.toLowerCase()}` : `p:${product.toLowerCase()}`;
+        const entry = groups.get(key) ?? { label: group || product, products: [], quantity: 0, alternatives: group !== '' };
+        entry.products.push(product);
+        entry.quantity = entry.alternatives ? Math.max(entry.quantity, quantity) : entry.quantity + quantity;
+        groups.set(key, entry);
+    });
+
+    const total = [...groups.values()].reduce((sum, entry) => sum + entry.quantity, 0);
+    const lines = [...groups.values()].map((entry) => `<li><b>${entry.quantity} × ${entry.label.replace(/[&<>]/g, '')}</b>${entry.products.length > 1 ? `: el cliente elige entre ${entry.products.map((p) => p.replace(/[&<>]/g, '')).join(' / ')}` : ''}</li>`);
+
+    comboSummary.innerHTML = total === 0
+        ? 'Agrega productos para ver cómo lo verá el cliente.'
+        : `<b class="text-admin-text">El cliente armará ${total} ${total === 1 ? 'prenda' : 'prendas'}:</b><ul class="mt-1 list-disc pl-5">${lines.join('')}</ul>${warning ? `<p class="mt-2 font-bold text-red-600">${warning}</p>` : ''}`;
+};
+
+comboSummaryRows?.addEventListener('input', renderComboSummary);
+comboSummaryRows?.addEventListener('change', renderComboSummary);
+comboSummaryRows?.addEventListener('click', () => setTimeout(renderComboSummary));
+comboProductAdd?.addEventListener('click', () => setTimeout(renderComboSummary));
+renderComboSummary();
+
 document.querySelectorAll('[data-combo-delete-form]').forEach((form) => {
     form.addEventListener('submit', (event) => {
         if (!comboDeleteDialog?.showModal) {

@@ -110,6 +110,8 @@
         @endforeach
     </datalist>
     <button type="button" data-combo-product-add class="mt-4 border border-admin-accent bg-admin-surface px-4 py-2.5 text-sm font-bold text-admin-accent">+ Agregar producto</button>
+    <div data-combo-summary class="mt-4 border border-admin-border bg-admin-surface p-3 text-sm text-admin-text-secondary" aria-live="polite"></div>
+    <p class="mt-3 text-xs leading-5 text-admin-text-secondary"><b>Prenda</b> es el nombre de lo que elige el cliente (Polo, Pantalón…), no un número. Para llevar 2 polos, escribe Prenda «Polo» y Cantidad 2. Los productos de una misma prenda son alternativas.</p>
     <p class="mt-3 text-xs leading-5 text-admin-text-secondary">Los productos «sin stock/precio» se pueden agregar, pero en «Arma tu outfit» el combo saldrá como «Muy pronto» mientras alguna prenda no tenga nada disponible.</p>
 </fieldset>
 

@@ -192,10 +192,12 @@ class ComboController extends Controller
             'is_draft' => ['nullable', 'boolean'],
             'products' => ['nullable', 'array'],
             'products.*.producto_id' => ['nullable', 'integer', 'exists:productos,id'],
-            'products.*.grupo' => ['nullable', 'string', 'max:40'],
+            // Un número como «2» es una cantidad, no el nombre de una prenda (la cantidad va en su propia columna).
+            'products.*.grupo' => ['nullable', 'string', 'max:40', 'not_regex:/^\s*\d+\s*$/'],
             'products.*.cantidad' => ['nullable', 'integer', 'min:1', 'max:99'],
         ], [
             'url.regex' => 'La URL debe comenzar con http://, https:// o /.',
+            'products.*.grupo.not_regex' => 'La columna Prenda es un nombre (Polo, Pantalón…), no un número. Para llevar varias unidades usa la columna Cantidad.',
             'compare_at_price.gte' => 'El precio regular debe ser mayor o igual al precio del combo.',
         ]);
 

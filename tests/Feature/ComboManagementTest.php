@@ -216,6 +216,30 @@ class ComboManagementTest extends TestCase
         $this->get(route('admin.combos.index'))->assertOk()->assertDontSee('Combo Polo');
     }
 
+    public function test_a_numeric_garment_name_is_rejected_because_quantity_has_its_own_column(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class);
+        $this->actingAs(User::factory()->create());
+
+        $polo = Producto::query()->create([
+            'name' => 'CLASICO', 'default_code' => 'CLASICO-NEGRO-M', 'color' => 'NEGRO', 'talla' => 'M', 'stock' => 5, 'price' => 49.9, 'zazu_company_id' => 1,
+        ]);
+        $combo = Combo::query()->create(['name' => 'Borrador', 'items' => [], 'status' => false, 'selection_mode' => 'fixed']);
+
+        $this->put(route('admin.combos.update', $combo), [
+            'name' => 'Combito', 'brand_id' => Brand::query()->where('slug', 'overshark')->firstOrFail()->id, 'price' => 89,
+            'products' => [['producto_id' => $polo->id, 'grupo' => '2', 'cantidad' => 1]],
+        ])->assertSessionHasErrors('products.0.grupo');
+
+        // Con el nombre de la prenda y la cantidad en su columna, el cliente arma 2 unidades.
+        $this->put(route('admin.combos.update', $combo), [
+            'name' => 'Combito', 'brand_id' => Brand::query()->where('slug', 'overshark')->firstOrFail()->id, 'price' => 89,
+            'products' => [['producto_id' => $polo->id, 'grupo' => 'Polo', 'cantidad' => 2]],
+        ])->assertSessionHasNoErrors();
+        $slots = app(\App\Services\ComboSelectionService::class)->slots($combo->refresh());
+        $this->assertSame(2, $slots[0]['quantity']);
+    }
+
     private function png(): string
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
