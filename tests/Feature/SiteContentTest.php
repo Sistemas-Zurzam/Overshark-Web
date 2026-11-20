@@ -167,7 +167,7 @@ class SiteContentTest extends TestCase
             ['images' => ['hero_mujer' => UploadedFile::fake()->image('hero.jpg', 1440, 482)]],
         )->assertSessionHasNoErrors();
 
-        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertSee('Salvaje por naturaleza')->assertDontSee('Nacido del océano');
+        $this->withSession(['storefront.line' => 'hombre'])->get('/')->assertSee('Salvaje por naturaleza')->assertDontSee('Nacido del');
 
         $uploaded = PageContent::contentFor(SiteContent::SLUG)['images']['hero_mujer'];
         Storage::disk('public')->assertExists($uploaded);

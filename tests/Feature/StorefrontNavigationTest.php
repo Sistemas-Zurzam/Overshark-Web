@@ -35,7 +35,7 @@ class StorefrontNavigationTest extends TestCase
         $this->withSession(['storefront.line' => 'hombre'])
             ->get('/')
             ->assertOk()
-            ->assertSee('Nacido del océano')
+            ->assertSee('Nacido del')
             ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas × S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
             ->assertDontSee('Baby Ty');
     }

@@ -49,7 +49,7 @@
     {{-- Ofertas relámpago: promociones por horas vigentes (panel → Promociones), con su cuenta regresiva --}}
     @if (! empty($flashDeals) && $flashDeals->isNotEmpty())
         @php($flashEnds = $flashDeals->map(fn ($product) => $product->promo['ends_at'])->min())
-        <section class="os-hh-wrap pt-16 lg:pt-[88px]" aria-labelledby="hh-flash" data-hh-carousel>
+        <section id="hh-main" class="os-hh-wrap pt-16 lg:pt-[88px]" aria-labelledby="hh-flash" data-hh-carousel>
             <header class="os-hh-head">
                 <div>
                     <p class="os-hh-eyebrow">Por tiempo limitado</p>
