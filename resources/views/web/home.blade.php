@@ -32,7 +32,9 @@
 @endphp
 
 @section('content')
+    {{-- Celular: portada del diseño móvil (web/partials/home-mobile). Con banners propios, el carrusel de banners hace de hero. --}}
     @if ($storeLine === 'hombre' && $banners->isEmpty())
+    <div class="hidden md:block">
         {{-- Hero Hombre · Figma "F · Full-bleed Depredador / Hero imponente" (nodo 672:41266). Escena de 1440 × 880 con medidas en %. --}}
         @php
             $oceanImg = fn (string $file) => \App\Support\SiteContent::asset('images/hero-oceano/'.$file);
@@ -124,6 +126,7 @@
                 </div>
             </div>
         </section>
+    </div>
     @else
     <div class="os-ocean">
         <section id="home-carousel" class="relative isolate mt-[calc(var(--header-h)*-1)] flex min-h-[100svh] flex-col overflow-hidden pb-6 lg:pb-8" data-carousel="slide" aria-labelledby="home-hero-title">
@@ -208,7 +211,11 @@
     </div>
     @endif
 
-    {{-- Destino de «Deslizar para explorar» (la primera sección de abajo puede no mostrarse). --}}
-    <span id="hh-main" class="block scroll-mt-[var(--header-h)]"></span>
-    @include('web.partials.home-sections', ['line' => 'hombre'])
+    @include('web.partials.home-mobile', ['showHero' => $storeLine === 'hombre' && $banners->isEmpty()])
+
+    <div class="hidden md:block">
+        {{-- Destino de «Deslizar para explorar» (la primera sección de abajo puede no mostrarse). --}}
+        <span id="hh-main" class="block scroll-mt-[var(--header-h)]"></span>
+        @include('web.partials.home-sections', ['line' => 'hombre'])
+    </div>
 @endsection

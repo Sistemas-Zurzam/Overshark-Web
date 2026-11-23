@@ -50,7 +50,9 @@ if (cartDrawer?.dataset.open === 'true') {
 }
 
 const webMenu = document.querySelector('[data-web-menu]');
-const webMenuToggle = document.querySelector('[data-web-menu-toggle]');
+// Hay un botón de menú en la barra móvil (izquierda) y otro en la de tablet (derecha); se manejan juntos.
+const webMenuToggles = document.querySelectorAll('[data-web-menu-toggle]');
+const visibleMenuToggle = () => Array.from(webMenuToggles).find((button) => button.offsetParent !== null) ?? webMenuToggles[0];
 
 const siteHeader = document.querySelector('.os-header');
 
@@ -65,29 +67,31 @@ if (siteHeader) {
 
 const setWebMenuOpen = (open) => {
     webMenu?.classList.toggle('hidden', !open);
-    webMenuToggle?.setAttribute('aria-expanded', String(open));
-    webMenuToggle?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
-    webMenuToggle?.querySelector('[data-menu-icon-open]')?.classList.toggle('hidden', open);
-    webMenuToggle?.querySelector('[data-menu-icon-close]')?.classList.toggle('hidden', !open);
+    webMenuToggles.forEach((button) => {
+        button.setAttribute('aria-expanded', String(open));
+        button.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+        button.querySelector('[data-menu-icon-open]')?.classList.toggle('hidden', open);
+        button.querySelector('[data-menu-icon-close]')?.classList.toggle('hidden', !open);
+    });
 };
 
-webMenuToggle?.addEventListener('click', () => {
-    const open = webMenuToggle.getAttribute('aria-expanded') !== 'true';
+webMenuToggles.forEach((button) => button.addEventListener('click', () => {
+    const open = button.getAttribute('aria-expanded') !== 'true';
     setWebMenuOpen(open);
 
     if (open) {
-        webMenu?.querySelector('a, button')?.focus();
+        Array.from(webMenu?.querySelectorAll('a, button') ?? []).find((item) => item.offsetParent !== null)?.focus();
     }
-});
+}));
 
 webMenu?.querySelectorAll('a').forEach((link) => {
     link.addEventListener('click', () => setWebMenuOpen(false));
 });
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && webMenuToggle?.getAttribute('aria-expanded') === 'true') {
+    if (event.key === 'Escape' && webMenuToggles[0]?.getAttribute('aria-expanded') === 'true') {
         setWebMenuOpen(false);
-        webMenuToggle.focus();
+        visibleMenuToggle()?.focus();
     }
 });
 
@@ -1344,17 +1348,17 @@ document.querySelectorAll('[data-payment-edit-toggle]').forEach((button) => {
     });
 });
 
-const searchToggle = document.querySelector('[data-search-toggle]');
+const searchToggles = document.querySelectorAll('[data-search-toggle]');
 const searchPanel = document.querySelector('[data-search-panel]');
 
-searchToggle?.addEventListener('click', () => {
+searchToggles.forEach((searchToggle) => searchToggle.addEventListener('click', () => {
     const isHidden = searchPanel?.classList.toggle('hidden');
-    searchToggle.setAttribute('aria-expanded', String(!isHidden));
+    searchToggles.forEach((button) => button.setAttribute('aria-expanded', String(!isHidden)));
 
     if (!isHidden) {
         searchPanel?.querySelector('input')?.focus();
     }
-});
+}));
 
 const brandsToggles = document.querySelectorAll('[data-brands-toggle]');
 const brandsMenus = document.querySelectorAll('[data-brands-menu]');
@@ -1421,15 +1425,20 @@ document.querySelectorAll('[data-hh-carousel]').forEach((section) => {
 });
 
 // Tienda: mostrar/ocultar filtros en celular, ordenar al elegir y rango de precio.
+// Panel de filtros de la tienda: lo abren «FILTRAR» (celular) o «Filtros» (tablet) y lo cierran la X o «Aplicar filtros».
+// En celular es una capa a pantalla completa, así que la página de atrás no se desplaza mientras está abierto.
 document.querySelectorAll('[data-shop-filters-toggle]').forEach((button) => {
-    const panel = document.getElementById(button.getAttribute('aria-controls'));
+    const panelId = button.getAttribute('aria-controls');
+    const panel = document.getElementById(panelId);
+    const toggles = document.querySelectorAll(`[data-shop-filters-toggle][aria-controls="${panelId}"]`);
 
     button.addEventListener('click', () => {
-        const open = button.getAttribute('aria-expanded') !== 'true';
+        const open = panel?.classList.contains('hidden') ?? false;
 
         panel?.classList.toggle('hidden', !open);
         panel?.classList.toggle('flex', open);
-        button.setAttribute('aria-expanded', String(open));
+        toggles.forEach((toggle) => toggle.hasAttribute('aria-expanded') && toggle.setAttribute('aria-expanded', String(open)));
+        document.body.classList.toggle('overflow-hidden', open && window.matchMedia('(max-width: 767px)').matches);
     });
 });
 
@@ -1585,5 +1594,53 @@ document.querySelectorAll('[data-combo-mode]').forEach((select) => {
     const limit = select.closest('[data-combo-mode-box]')?.querySelector('[data-combo-limit]');
     const sync = () => limit?.classList.toggle('hidden', select.value !== 'choice');
     select.addEventListener('change', sync);
+    sync();
+});
+
+// Carrusel de combos en el inicio móvil (web/partials/home-mobile.blade.php): se desliza con el dedo (scroll-snap)
+// y con las flechas; la barra muestra la posición, como en el diseño "Combos / Carrusel mobile".
+document.querySelectorAll('[data-m-carousel]').forEach((carousel) => {
+    const track = carousel.querySelector('[data-m-track]');
+    const slides = track ? Array.from(track.children) : [];
+    const previous = carousel.querySelector('[data-m-prev]');
+    const next = carousel.querySelector('[data-m-next]');
+    const progress = carousel.querySelector('[data-m-progress]');
+
+    if (!track || slides.length === 0) {
+        return;
+    }
+
+    const current = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    // Diapositiva a la que se va: con las flechas se actualiza al instante (aunque el desplazamiento siga animándose);
+    // al deslizar con el dedo se toma de la posición cuando el desplazamiento se detiene.
+    let target = current();
+    let settle;
+    const sync = (index = target) => {
+        if (progress) {
+            progress.style.width = `${((index + 1) / slides.length) * 100}%`;
+        }
+        if (previous) {
+            previous.disabled = index <= 0;
+        }
+        if (next) {
+            next.disabled = index >= slides.length - 1;
+        }
+    };
+    const goTo = (index) => {
+        target = Math.max(0, Math.min(slides.length - 1, index));
+        sync();
+        const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        track.scrollTo({ left: target * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    };
+
+    previous?.addEventListener('click', () => goTo(target - 1));
+    next?.addEventListener('click', () => goTo(target + 1));
+    track.addEventListener('scroll', () => {
+        window.clearTimeout(settle);
+        settle = window.setTimeout(() => {
+            target = current();
+            sync();
+        }, 150);
+    }, { passive: true });
     sync();
 });

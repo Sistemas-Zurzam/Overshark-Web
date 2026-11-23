@@ -52,6 +52,23 @@
         'url' => route('web.products.search', ['categoria' => $slug]),
         'active' => $onSearch && request('categoria') === $slug,
     ])->values());
+    // Marca activa y logos del nav (también los usan el menú y el pie en celular, aunque la página traiga su propia cabecera).
+    $navBravos = $menuBrands->first(fn ($menuBrand) => $menuBrand->slug === 'bravos');
+    $activeBrand = $bravosContext ? 'bravos' : ($storeLine === 'mujer' && ! $brandPageContext ? 'girls' : 'overshark');
+    $navBrandList = collect([
+        'overshark' => ['url' => route('web.home', ['linea' => 'hombre']), 'label' => 'Overshark, colección hombre', 'logo' => 'logo-overshark.svg', 'w' => 95, 'h' => 16.1, 'class' => 'h-[22px]'],
+        'girls' => ['url' => route('web.home', ['linea' => 'mujer']), 'label' => 'Overshark Girls, colección mujer', 'logo' => 'logo-girls.svg', 'w' => 88.3, 'h' => 26, 'class' => 'h-[26px]'],
+        'bravos' => $navBravos ? ['url' => route('web.brands.show', $navBravos), 'label' => 'Bravos, urban clothing', 'logo' => 'logo-bravos.svg', 'w' => 80.2, 'h' => 25.6, 'class' => 'h-[25px]'] : null,
+    ])->filter();
+    if ($activeBrand === 'bravos') {
+        $navBrandList = $navBrandList->sortBy(fn ($brandItem, $key) => $key === 'bravos' ? 0 : 1);
+    }
+    $mobileBrands = collect([
+        'overshark' => ['url' => route('web.home', ['linea' => 'hombre']), 'label' => 'Overshark Hombre', 'logo' => 'logo-overshark.svg', 'w' => 120, 'h' => 20.34],
+        'girls' => ['url' => route('web.home', ['linea' => 'mujer']), 'label' => 'Overshark Girls', 'logo' => 'logo-girls.svg', 'w' => 81.51, 'h' => 24],
+        'bravos' => $navBravos ? ['url' => route('web.brands.show', $navBravos), 'label' => 'Bravos', 'logo' => 'logo-bravos.svg', 'w' => 75.22, 'h' => 24] : null,
+    ])->filter();
+    $mobileActive = $mobileBrands->get($activeBrand) ?? $mobileBrands->first();
 @endphp
 <!DOCTYPE html>
 <html lang="es" data-line="{{ $bravosContext ? 'bravos' : $storeLine }}" data-bravos-logo="{{ asset('images/bravos/logo-bravos-full-white.svg') }}" data-overshark-logo="{{ asset('images/nav/logo-overshark-full-light.svg') }}" data-girls-logo="{{ asset('images/girls/logo-girls-full-light.svg') }}">
@@ -81,23 +98,49 @@
         @hasSection('header-bar')
             @yield('header-bar')
         @else
+        {{-- Celular (Figma "02 · MOBILE" → "Nav Mobile"): barra blanca de 56 px (menú y búsqueda · logo de la marca · cuenta y bolsa)
+             y debajo la franja "Cambiar marca" con los logos de las otras marcas. Desde tablet se usa la barra oscura de abajo. --}}
+        <div class="os-mnav md:hidden" data-brand="{{ $activeBrand }}">
+            <div class="os-mnav__bar">
+                <div class="flex w-[88px] items-center">
+                    <button type="button" data-web-menu-toggle class="os-mnav__btn os-focus" aria-label="Abrir menú" aria-expanded="false" aria-controls="web-menu">
+                        <img data-menu-icon-open src="{{ asset('images/nav/mobile/menu.svg') }}" alt="" width="20" height="20">
+                        <svg data-menu-icon-close class="hidden h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15"/></svg>
+                    </button>
+                    <button type="button" data-search-toggle class="os-mnav__btn os-focus" aria-label="Buscar productos" aria-expanded="false" aria-controls="search-panel">
+                        <img src="{{ asset('images/nav/mobile/buscar.svg') }}" alt="" width="20" height="20">
+                    </button>
+                </div>
+                <a href="{{ $mobileActive['url'] }}" class="os-focus flex h-8 items-center justify-center" aria-label="{{ $mobileActive['label'] }}, inicio">
+                    <img src="{{ asset('images/nav/mobile/'.$mobileActive['logo']) }}" alt="" width="{{ $mobileActive['w'] }}" height="{{ $mobileActive['h'] }}">
+                </a>
+                <div class="flex w-[88px] items-center justify-end">
+                    <a href="{{ $customerAccount ? route('customer.account') : route('login') }}" class="os-mnav__btn os-focus" aria-label="{{ $customerAccount ? 'Mi cuenta, '.$customerAccount->name : 'Iniciar sesión' }}">
+                        <img src="{{ asset('images/nav/mobile/cuenta.svg') }}" alt="" width="20" height="20">
+                        @if ($customerAccount)<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#2fb37f] ring-2 ring-white" aria-hidden="true"></span>@endif
+                    </a>
+                    <button type="button" data-cart-open class="os-mnav__btn os-mnav__btn--bag os-focus" aria-label="Carrito de compras, {{ $cartCount }} {{ $cartCount === 1 ? 'producto' : 'productos' }}, total S/{{ number_format($cartTotal, 2) }}">
+                        <img src="{{ asset('images/nav/mobile/bolsa.svg') }}" alt="" width="24" height="24">
+                        @if ($cartCount > 0)
+                            <span class="os-mnav__count" aria-hidden="true">{{ $cartCount }}</span>
+                        @endif
+                    </button>
+                </div>
+            </div>
+            <nav class="os-mnav__brands" aria-label="Cambiar de marca">
+                @foreach ($mobileBrands->except($activeBrand) as $brandItem)
+                    <a href="{{ $brandItem['url'] }}" class="os-focus" aria-label="Ir a {{ $brandItem['label'] }}">
+                        <img src="{{ asset('images/nav/mobile/'.$brandItem['logo']) }}" alt="" width="{{ $brandItem['w'] }}" height="{{ $brandItem['h'] }}">
+                    </a>
+                @endforeach
+            </nav>
+        </div>
+
         {{-- Barra principal (diseño Figma "Nav Principal / Overshark"): logos de marca · menú central · búsqueda, cuenta y bolsa. Debajo, franja de anuncios. --}}
-        <div class="os-nav-bar">
+        <div class="os-nav-bar hidden md:block">
             <div class="mx-auto grid h-[72px] max-w-[1440px] grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[auto_1fr_auto] xl:gap-8 xl:px-[100px]">
                 {{-- Marcas (Figma "Nav Principal"): logos blancos a la misma altura; la marca activa va resaltada
                      (y primero en Bravos, como en "Nav Principal / Bravos"). En celular solo se ve la activa. --}}
-                @php
-                    $navBravos = $menuBrands->first(fn ($menuBrand) => $menuBrand->slug === 'bravos');
-                    $activeBrand = $bravosContext ? 'bravos' : ($storeLine === 'mujer' && ! $brandPageContext ? 'girls' : 'overshark');
-                    $navBrandList = collect([
-                        'overshark' => ['url' => route('web.home', ['linea' => 'hombre']), 'label' => 'Overshark, colección hombre', 'logo' => 'logo-overshark.svg', 'w' => 95, 'h' => 16.1, 'class' => 'h-[22px]'],
-                        'girls' => ['url' => route('web.home', ['linea' => 'mujer']), 'label' => 'Overshark Girls, colección mujer', 'logo' => 'logo-girls.svg', 'w' => 88.3, 'h' => 26, 'class' => 'h-[26px]'],
-                        'bravos' => $navBravos ? ['url' => route('web.brands.show', $navBravos), 'label' => 'Bravos, urban clothing', 'logo' => 'logo-bravos.svg', 'w' => 80.2, 'h' => 25.6, 'class' => 'h-[25px]'] : null,
-                    ])->filter();
-                    if ($activeBrand === 'bravos') {
-                        $navBrandList = $navBrandList->sortBy(fn ($brandItem, $key) => $key === 'bravos' ? 0 : 1);
-                    }
-                @endphp
                 <nav class="os-brands flex min-w-0 items-center" aria-label="Nuestras marcas">
                     @foreach ($navBrandList as $key => $brandItem)
                         @unless ($loop->first)
@@ -181,8 +224,31 @@
             </form>
         </div>
 
-        <nav id="web-menu" data-web-menu class="hidden max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-edge/60 bg-abyss px-4 py-4 text-sm font-semibold sm:px-6 xl:hidden" aria-label="Navegación móvil">
-            <div class="mx-auto flex max-w-[1440px] flex-col gap-1">
+        <nav id="web-menu" data-web-menu class="os-mmenu hidden overflow-y-auto text-sm font-semibold xl:hidden" aria-label="Navegación móvil">
+            {{-- Celular (Figma "Menú / Mobile / Overshark"): pantalla blanca con los enlaces grandes y "Cambiar de marca". --}}
+            <div class="os-mmenu__panel md:hidden">
+                <p class="os-mmenu__title">Tu estilo, a un toque.</p>
+                @foreach ($storeMenu as $item)
+                    <a href="{{ $item['url'] }}" class="os-mmenu__link os-focus" @if ($item['active']) aria-current="page" @endif>{{ str_replace('¡Arma tu Outfit!', 'Arma tu Outfit', $item['label']) }} →</a>
+                    @if ($loop->index === 2)
+                        <a href="{{ $combosUrl }}" class="os-mmenu__link os-focus" @if (request()->routeIs('web.combos.index')) aria-current="page" @endif>Combos →</a>
+                    @endif
+                @endforeach
+                <p class="os-mmenu__label">Cambiar de marca</p>
+                @foreach ($mobileBrands as $key => $brandItem)
+                    <a href="{{ $brandItem['url'] }}" class="os-mmenu__brand os-focus" @if ($key === $activeBrand) aria-current="true" @endif>{{ $brandItem['label'] }}</a>
+                @endforeach
+                @if ($customerAccount)
+                    <p class="os-mmenu__label">Mi cuenta</p>
+                    <a href="{{ route('customer.orders') }}" class="os-mmenu__brand os-focus">Mis pedidos</a>
+                    <a href="{{ route('customer.addresses') }}" class="os-mmenu__brand os-focus">Mis direcciones</a>
+                    <form method="POST" action="{{ route('customer.logout') }}">
+                        @csrf
+                        <button type="submit" class="os-mmenu__brand os-focus text-left">Cerrar sesión</button>
+                    </form>
+                @endif
+            </div>
+            <div class="mx-auto hidden max-w-[1440px] flex-col gap-1 px-4 py-4 sm:px-6 md:flex">
                 @foreach ($storeMenu as $item)
                     <a href="{{ $item['url'] }}" class="os-focus rounded-lg px-3 py-3 uppercase tracking-wide hover:bg-white/5 {{ $item['active'] ? 'text-electric-soft' : '' }}" @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                 @endforeach
@@ -370,7 +436,32 @@
         $footerLink = 'transition hover:text-[var(--ft-accent)]';
     @endphp
     <span id="nosotros" aria-hidden="true"></span>
-    <footer id="contacto" @class(['os-footer', 'os-footer--girls' => $footerGirls])>
+    {{-- Celular (Figma "02 · MOBILE" → "Footer / Overshark"): fondo azul noche, logo blanco de la marca, enlaces y legales. --}}
+    @php
+        $mobileFooterLogo = [
+            'girls' => ['images/girls/logo-girls-full-light.svg', 'h-[26px]'],
+            'bravos' => ['images/bravos/logo-bravos-full-white.svg', 'h-[26px]'],
+        ][$activeBrand] ?? ['images/nav/mobile/logo-overshark-white.svg', 'h-[20.34px]'];
+    @endphp
+    <footer class="os-m-footer md:hidden" aria-label="Pie de página">
+        <a href="{{ $mobileActive['url'] }}" class="os-focus" aria-label="{{ $mobileActive['label'] }}, inicio">
+            <img src="{{ asset($mobileFooterLogo[0]) }}" alt="" class="{{ $mobileFooterLogo[1] }} w-auto max-w-[160px]">
+        </a>
+        <nav class="os-m-footer__links" aria-label="Enlaces del pie">
+            @foreach ($storeMenu as $item)
+                <a href="{{ $item['url'] }}" class="os-focus">{{ str_replace('¡Arma tu Outfit!', 'Arma tu Outfit', $item['label']) }}</a>
+                @if ($loop->index === 2)
+                    <a href="{{ $combosUrl }}" class="os-focus">Combos</a>
+                @endif
+            @endforeach
+        </nav>
+        <p class="os-m-footer__small leading-[1.35]">© {{ date('Y') }} Overshark · Todos los derechos reservados.</p>
+        <a href="{{ route('web.terms') }}" data-legal-open="terms" class="os-m-footer__small os-focus">Términos y condiciones</a>
+        <a href="{{ route('web.privacy') }}" data-legal-open="privacy" class="os-m-footer__small os-focus">Política de privacidad</a>
+        <a href="{{ route('web.claims.create') }}" class="os-m-footer__small os-focus">Libro de Reclamaciones</a>
+    </footer>
+
+    <footer id="contacto" @class(['os-footer hidden md:block', 'os-footer--girls' => $footerGirls])>
         <div class="flex justify-center border-b border-[#e5e7eb] py-3">
             <a href="{{ $homeUrl }}" class="os-focus flex h-16 w-[216px] items-center justify-center" aria-label="{{ $brandPageContext?->name ?: ($footerGirls ? 'Overshark Girls' : 'Overshark') }}, inicio">
                 <img src="{{ $footerLogo }}" alt="" class="max-h-[42px] max-w-[190px] object-contain">

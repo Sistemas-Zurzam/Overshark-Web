@@ -14,7 +14,7 @@
             <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-focus w-full sm:w-[280px]">IR A LA TIENDA</a>
         </section>
     @else
-        <h1 class="text-[30px] font-extrabold leading-[1.45] text-[#0b1015] sm:text-[36px]">TU CARRITO</h1>
+        <h1 class="text-[28px] font-extrabold leading-[1.45] text-[#0b1015] md:text-[36px]">TU CARRITO</h1>
 
         @if ($errors->any())
             <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
@@ -22,14 +22,14 @@
             <p class="bg-[#fff6e0] px-4 py-3 text-[14px] font-bold text-[#8a5a00]" role="status">{{ session('cart_notice') }}</p>
         @endif
 
-        <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
+        <div class="grid gap-6 md:gap-10 lg:grid-cols-[minmax(0,1fr)_448px] lg:gap-12">
             <section class="flex flex-col gap-6" aria-labelledby="cart-items">
-                <h2 id="cart-items" class="text-[18px] font-bold leading-[1.45] text-[#0b1015]">{{ $count }} {{ $count === 1 ? 'prenda' : 'prendas' }} para tu próximo look</h2>
+                <h2 id="cart-items" class="text-[18px] font-bold leading-[1.45] text-[#0b1015] max-md:sr-only">{{ $count }} {{ $count === 1 ? 'prenda' : 'prendas' }} para tu próximo look</h2>
                 <ul class="flex flex-col">
                     @foreach ($items as $key => $item)
                         @php($isCombo = ($item['kind'] ?? null) === 'combo')
-                        <li class="flex gap-4 border-b border-[#dae0e5] py-6 first:pt-0 last:border-b-0 sm:gap-5">
-                            <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="" class="h-[112px] w-[88px] shrink-0 bg-[#f5f7f9] object-cover sm:h-[132px] sm:w-[104px]">
+                        <li class="flex gap-5 border-b border-[#dae0e5] py-6 first:pt-0 max-md:last:pb-6 md:last:border-b-0">
+                            <img src="{{ $item['image'] ?? asset('images/default-hero-banner.png') }}" alt="" class="h-[132px] w-[104px] shrink-0 bg-[#e8e8e8] object-cover md:bg-[#f5f7f9]">
                             <div class="flex min-w-0 flex-1 flex-col gap-2 leading-[1.45] text-[#0b1015]">
                                 <p class="text-[17px] font-bold">{{ $isCombo ? ($item['producto'] ?? 'Combo') : $title($item['producto'] ?? 'Producto') }}</p>
                                 @if ($isCombo)
@@ -72,7 +72,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <a href="{{ route('web.products.search') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full sm:w-[280px]">SEGUIR COMPRANDO</a>
+                <div class="hidden md:block"><a href="{{ route('web.products.search') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-[280px]">SEGUIR COMPRANDO</a></div>
             </section>
 
             {{-- En el carrito aún no se eligió la entrega: sin fila de envío y el total es el subtotal. --}}
@@ -80,6 +80,9 @@
                 <a href="{{ route('web.checkout.personal') }}" class="os-checkout-btn os-focus w-full">CONTINUAR CON MI COMPRA</a>
                 <p class="text-[12px] leading-[1.45] text-[#65717c]">{{ \App\Support\SiteContent::t('El envío se suma al elegir la entrega: {lima} a domicilio en Lima, {agencia} en agencia Shalom o gratis si recoges en almacén.') }}</p>
             @endcomponent
+
+            {{-- Celular: «Seguir comprando» va debajo del resumen (Figma "CARRITO · PRODUCTOS SUELTOS"). --}}
+            <div class="md:hidden"><a href="{{ route('web.products.search') }}" class="os-checkout-btn os-checkout-btn--ghost os-focus w-full">SEGUIR COMPRANDO</a></div>
         </div>
 
         {{-- Te puede interesar: reglas del panel (Sugerencias). Se suma sin recargar el flujo (quiet=1). --}}

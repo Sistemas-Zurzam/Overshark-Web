@@ -25,8 +25,14 @@
 
 @section('content')
     <div @class(['os-hh', 'os-hh--girls' => $girls]) data-outfit-builder data-combos='@json($combos)'>
+        {{-- Celular (Figma "03 · Outfit / Mobile / Overshark"): cabecera blanca con el título y el constructor justo debajo. --}}
+        <header class="os-m flex flex-col items-start gap-3 px-6 pt-9 md:hidden">
+            <h1 class="text-[32px] font-extrabold uppercase leading-[1.35]">Arma tu outfit</h1>
+            <p class="text-[14px] leading-[1.35]">Elige una prenda de arriba y una de abajo; súmale un extra si quieres.</p>
+        </header>
+
         {{-- Hero --}}
-        <section class="grid bg-[var(--shop-deep)] text-white lg:grid-cols-[minmax(0,760fr)_minmax(0,680fr)]" aria-labelledby="ob-title">
+        <section class="hidden bg-[var(--shop-deep)] text-white md:grid lg:grid-cols-[minmax(0,760fr)_minmax(0,680fr)]" aria-labelledby="ob-title">
             <div class="flex flex-col items-start justify-center gap-5 px-4 py-12 sm:px-8 lg:min-h-[520px] lg:py-10 lg:pl-[max(2rem,calc(50vw-620px))] lg:pr-14">
                 <p class="text-[13px] font-extrabold uppercase tracking-[3px] text-[var(--hh-bright)]">Estilista online · Gratis</p>
                 <h1 id="ob-title" @class([
@@ -51,7 +57,7 @@
         </section>
 
         {{-- Constructor libre: la clienta elige las prendas (de Overshark o Bravos) tocando cada cuadro --}}
-        <section id="constructor-libre" class="os-hh-wrap scroll-mt-[calc(var(--header-h)+16px)] pb-16 pt-16 lg:pb-[88px] lg:pt-[88px]" aria-labelledby="fl-title"
+        <section id="constructor-libre" class="os-hh-wrap scroll-mt-[calc(var(--header-h)+16px)] pb-9 pt-6 max-md:!px-6 md:pb-16 md:pt-16 lg:pb-[88px] lg:pt-[88px]" aria-labelledby="fl-title"
             data-free-look data-catalog='@json($catalog)' data-categories='@json($categories)' data-slots='@json(['Top', 'Bottom', 'Extra'])' data-min="2">
             <header class="os-hh-head">
                 <div>
@@ -70,7 +76,7 @@
                 </div>
             @else
                 <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-                    <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4" data-fl-slots></ul>
+                    <ul class="grid grid-cols-3 gap-2 sm:gap-4" data-fl-slots></ul>
 
                     <form method="POST" action="{{ route('web.cart.look') }}" class="flex flex-col gap-3 self-start bg-[var(--hh-soft)] p-5 sm:p-6" data-fl-form>
                         @csrf

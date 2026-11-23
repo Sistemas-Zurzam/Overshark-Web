@@ -6,7 +6,7 @@
     Con $shippingCosts (Datos y entrega: costo por entrega), checkout.js recalcula envío y total al cambiar la entrega.
 --}}
 @php($title = fn ($text) => \App\Support\ProductName::title((string) $text))
-<aside class="flex flex-col gap-5 bg-[#f5f7f9] p-6 text-[#0b1015] lg:sticky lg:top-[112px] lg:self-start" aria-labelledby="checkout-summary"
+<aside class="os-ck-summary flex flex-col gap-5 bg-[#f5f7f9] p-6 text-[#0b1015] lg:sticky lg:top-[112px] lg:self-start" aria-labelledby="checkout-summary"
     @isset($shippingCosts) data-ck-summary data-subtotal="{{ $subtotal }}" data-shipping-costs='@json($shippingCosts)' @endisset>
     <h2 id="checkout-summary" class="text-[20px] font-extrabold leading-[1.45]">TU PEDIDO</h2>
     @if (! empty($priceChanges))

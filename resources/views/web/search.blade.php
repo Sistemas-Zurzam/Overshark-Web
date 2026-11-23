@@ -57,8 +57,15 @@
 
 @section('content')
     <div @class(['os-hh', 'os-hh--girls' => $girls])>
+        {{-- Celular (Figma "02 · Tienda / Mobile / Overshark"): cabecera blanca con marca, título y cantidad. --}}
+        <header class="os-m flex flex-col items-start gap-5 px-6 pt-9 md:hidden">
+            <p class="text-[12px] font-extrabold uppercase leading-[1.35]">{{ $girls ? 'Overshark Girls' : ($marca !== '' ? $marca : 'Overshark') }}</p>
+            <h1 class="text-[32px] font-extrabold uppercase leading-[1.35]">{{ $heading }}</h1>
+            <p class="text-[14px] leading-[1.35]">{{ $products->total() }} {{ $products->total() === 1 ? 'producto' : 'productos' }} en esta selección</p>
+        </header>
+
         {{-- Cabecera de página --}}
-        <header class="pb-10 pt-10 text-white [background:var(--shop-head)] lg:pt-12">
+        <header class="hidden pb-10 pt-10 text-white [background:var(--shop-head)] md:block lg:pt-12">
             <div class="os-hh-wrap flex flex-col items-start gap-3.5">
                 <nav aria-label="Ruta" class="text-[13px] font-semibold text-[var(--shop-crumb)]">
                     <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
@@ -89,20 +96,69 @@
         </header>
 
         {{-- Contenido: filtros + resultados --}}
-        <div class="os-hh-wrap grid gap-8 pb-16 pt-8 lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-10 lg:pb-[88px] lg:pt-12">
-            <button type="button" class="os-focus flex h-11 items-center justify-center gap-2 border border-[#0b0f14] text-[14px] font-extrabold uppercase tracking-[1px] lg:hidden" data-shop-filters-toggle aria-controls="shop-filters" aria-expanded="false">
+        <div class="os-hh-wrap grid gap-5 pb-9 pt-5 max-md:!px-6 md:gap-8 md:pb-16 md:pt-8 lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-10 lg:pb-[88px] lg:pt-12">
+            {{-- Celular: «FILTRAR» + orden, y debajo los filtros activos («CAMISAS × · Limpiar filtros»). --}}
+            <div class="os-m flex flex-col gap-5 md:hidden">
+                <div class="grid grid-cols-2 items-center gap-3">
+                    <button type="button" class="os-m-btn os-m-btn--dark os-focus" data-shop-filters-toggle aria-controls="shop-filters" aria-expanded="false">
+                        Filtrar @if ($active->isNotEmpty()) ({{ $active->count() }}) @endif
+                    </button>
+                    <form action="{{ route('web.products.search') }}" method="GET">
+                        @foreach (\Illuminate\Support\Arr::except($filters, ['orden']) as $name => $value)
+                            <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                        @endforeach
+                        <label class="flex items-center gap-1 text-[12px] leading-[1.35]">
+                            <span class="shrink-0">Orden:</span>
+                            <select name="orden" class="os-m-sort os-focus" data-auto-submit>
+                                @foreach ($sorts as $value => $label)
+                                    <option value="{{ $value }}" @selected($orden === $value || ($value === '' && $orden === 'populares'))>{{ \Illuminate\Support\Str::lower($label) }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <noscript><button type="submit" class="mt-1 text-[12px] font-bold underline">Ordenar</button></noscript>
+                    </form>
+                </div>
+                @if ($active->isNotEmpty())
+                    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-extrabold uppercase leading-[1.35]">
+                        @foreach ($active as $filter)
+                            <a href="{{ $filter['url'] }}" class="os-focus hover:text-[#2d69b5]" aria-label="Quitar filtro {{ $filter['label'] }}">{{ $filter['label'] }} ×</a>
+                            <span aria-hidden="true">·</span>
+                        @endforeach
+                        <a href="{{ route('web.products.search') }}" class="os-focus normal-case hover:text-[#2d69b5]">Limpiar filtros</a>
+                    </p>
+                @endif
+            </div>
+
+            <button type="button" class="os-focus hidden h-11 items-center justify-center gap-2 border border-[#0b0f14] text-[14px] font-extrabold uppercase tracking-[1px] md:flex lg:hidden" data-shop-filters-toggle aria-controls="shop-filters" aria-expanded="false">
                 Filtros @if ($active->isNotEmpty()) ({{ $active->count() }}) @endif
             </button>
 
-            <aside id="shop-filters" class="hidden flex-col gap-7 lg:flex" aria-label="Filtros">
-                <div class="flex items-center justify-between border-b-2 border-[#0b0f14] pb-3.5">
+            <aside id="shop-filters" class="os-shop-filters hidden flex-col gap-7 lg:flex" aria-label="Filtros">
+                {{-- Celular (Figma "02 · Filtros / Mobile / Overshark"): panel a pantalla completa bajo la barra. --}}
+                <div class="flex items-start justify-between gap-4 md:hidden">
+                    <h2 class="text-[26px] font-extrabold uppercase leading-[1.35]">Filtrar productos</h2>
+                    <button type="button" class="os-mnav__btn os-focus -mr-2" data-shop-filters-toggle aria-controls="shop-filters" aria-label="Cerrar filtros">
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15"/></svg>
+                    </button>
+                </div>
+                <div class="hidden items-center justify-between border-b-2 border-[#0b0f14] pb-3.5 md:flex">
                     <h2 @class([$display, 'uppercase leading-none', 'text-[28px]' => ! $girls, 'text-[19px] !font-bold' => $girls])>Filtros</h2>
                     <a href="{{ route('web.products.search') }}" class="os-focus text-[13px] font-bold text-[var(--hh-accent)] hover:underline">Limpiar</a>
                 </div>
 
-                <section class="flex flex-col gap-3" aria-labelledby="f-cat">
+                <section class="flex flex-col gap-3 max-md:gap-5" aria-labelledby="f-cat">
                     <h3 id="f-cat" class="os-shop-label">Categoría</h3>
-                    <ul class="flex flex-col gap-3">
+                    <ul class="flex flex-col gap-5 md:hidden">
+                        @foreach ($categories as $slug => $category)
+                            <li>
+                                <a href="{{ $url(['categoria' => $categoria === $slug ? null : $slug]) }}" class="os-focus flex items-center gap-3 leading-[1.35]" role="radio" aria-checked="{{ $categoria === $slug ? 'true' : 'false' }}">
+                                    <span class="w-4 text-[18px] font-extrabold" aria-hidden="true">{{ $categoria === $slug ? '●' : '○' }}</span>
+                                    <span class="text-[15px] uppercase">{{ $category['label'] }} ({{ $categoryCounts[$slug] }})</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <ul class="hidden flex-col gap-3 md:flex">
                         @foreach ($categories as $slug => $category)
                             <li>
                                 <a href="{{ $url(['categoria' => $categoria === $slug ? null : $slug]) }}" class="os-focus group flex items-center gap-2.5" role="checkbox" aria-checked="{{ $categoria === $slug ? 'true' : 'false' }}">
@@ -140,7 +196,7 @@
                 @endif
 
                 @if ($priceCeil > $priceFloor)
-                    <form action="{{ route('web.products.search') }}" method="GET" class="flex flex-col gap-3" aria-labelledby="f-price" data-shop-price>
+                    <form id="shop-price-form" action="{{ route('web.products.search') }}" method="GET" class="flex flex-col gap-3 max-md:gap-5" aria-labelledby="f-price" data-shop-price>
                         <h3 id="f-price" class="os-shop-label">Precio</h3>
                         @foreach (\Illuminate\Support\Arr::except($filters, ['min', 'max']) as $name => $value)
                             <input type="hidden" name="{{ $name }}" value="{{ $value }}">
@@ -154,7 +210,16 @@
                     </form>
                 @endif
 
-                <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="os-focus group flex flex-col items-start gap-2.5 bg-[var(--shop-deep)] px-5 py-[22px]">
+                <div class="flex flex-col gap-5 md:hidden">
+                    @if ($priceCeil > $priceFloor)
+                        <button type="submit" form="shop-price-form" class="os-m-btn os-m-btn--dark os-focus">Aplicar filtros</button>
+                    @else
+                        <button type="button" class="os-m-btn os-m-btn--dark os-focus" data-shop-filters-toggle aria-controls="shop-filters">Aplicar filtros</button>
+                    @endif
+                    <a href="{{ route('web.products.search') }}" class="os-m-btn os-m-btn--dark os-focus">Limpiar y ver todo</a>
+                </div>
+
+                <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="os-focus group hidden flex-col items-start gap-2.5 bg-[var(--shop-deep)] px-5 py-[22px] md:flex">
                     <span class="text-[12px] font-extrabold uppercase tracking-[2px] text-[var(--hh-bright)]">Combo</span>
                     <span @class([$display, 'text-white', 'text-[52px] leading-[50px]' => ! $girls, 'text-[36px] leading-[39px]' => $girls])>{{ \App\Support\SiteContent::t('{combo}') }}</span>
                     <span class="max-w-[220px] text-[13px] font-medium leading-[19px] text-[var(--shop-deep-muted)]">Mezcla cualquier básico de la tienda.</span>
@@ -163,7 +228,7 @@
             </aside>
 
             <section aria-label="Resultados" class="min-w-0">
-                <div class="flex flex-col gap-3 border-b-2 border-[#0b0f14] pb-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div class="hidden flex-col gap-3 border-b-2 border-[#0b0f14] pb-3.5 sm:flex-row sm:items-center sm:justify-between md:flex">
                     <div class="flex flex-wrap items-center gap-2">
                         <p class="text-[14px] font-bold">
                             @if ($products->total() > 0)
@@ -193,7 +258,7 @@
                 </div>
 
                 @if ($products->isEmpty())
-                    <div class="mt-6 grid min-h-64 place-items-center border border-dashed border-[#d9d9d9] px-5 text-center">
+                    <div class="grid min-h-64 place-items-center border border-dashed md:mt-6 border-[#d9d9d9] px-5 text-center">
                         <div>
                             <p class="text-[18px] font-extrabold">No encontramos productos con esos filtros</p>
                             <p class="mt-1 text-[14px] font-medium text-[#545966]">Quita algún filtro o mira toda la tienda.</p>
@@ -201,14 +266,20 @@
                         </div>
                     </div>
                 @else
-                    <ul class="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
+                    {{-- Celular: tarjeta móvil a 2 columnas (Figma "Catálogo / 2 columnas"). --}}
+                    <ul class="os-m-grid md:hidden">
+                        @foreach ($products as $product)
+                            <li>@include('web.partials.m-product-card')</li>
+                        @endforeach
+                    </ul>
+                    <ul class="mt-6 hidden grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid xl:grid-cols-4">
                         @foreach ($products as $product)
                             <li>@include('web.partials.hh-product-card', ['photoClass' => 'aspect-[222/314]'])</li>
                         @endforeach
                     </ul>
 
                     @if ($products->hasPages())
-                        <nav class="flex justify-center gap-2 pt-12" aria-label="Paginación">
+                        <nav class="flex flex-wrap justify-center gap-2 pt-9 md:pt-12" aria-label="Paginación">
                             @if ($products->onFirstPage())
                                 <span class="os-shop-page is-disabled" aria-hidden="true">‹</span>
                             @else
@@ -225,18 +296,20 @@
                         </nav>
                     @endif
                 @endif
+
+                <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : ($marca !== '' ? ['marca' => $marca] : [])) }}" class="os-m-btn os-m-btn--dark os-focus mt-9 md:hidden">Ver combos</a>
             </section>
         </div>
 
         @if ($marca === '')
             {{-- Banner · Promo Wafflera (diseños Tienda Hombre y Tienda Mujer; no en la vista de una marca) --}}
-            <section class="os-hh-wrap pb-16 lg:pb-[88px]" aria-labelledby="hh-promo">
+            <section class="os-hh-wrap hidden pb-16 md:block lg:pb-[88px]" aria-labelledby="hh-promo">
                 @include('web.partials.promo-wafflera')
             </section>
         @endif
 
         {{-- Franja de confianza --}}
-        <section class="bg-[var(--shop-deep)] py-7 text-white" aria-label="Beneficios de comprar en Overshark">
+        <section class="hidden bg-[var(--shop-deep)] py-7 text-white md:block" aria-label="Beneficios de comprar en Overshark">
             <ul class="os-hh-wrap grid grid-cols-2 gap-6 lg:flex lg:justify-between">
                 @foreach ($perks as $perk)
                     <li class="flex flex-col gap-1">

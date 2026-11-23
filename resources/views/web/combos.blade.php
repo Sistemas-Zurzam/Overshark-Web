@@ -47,7 +47,23 @@
 
 @section('content')
     <div @class(['os-hh', 'os-hh--girls' => $girls, 'os-hh--bravos' => $bravos])>
-        <header class="pb-10 pt-10 text-white [background:var(--shop-head)] lg:pt-12">
+        {{-- Celular (Figma "Overshark / Mobile / Elige un combo"): cabecera blanca y, si hay varios tipos, los filtros en botones. --}}
+        <header class="os-m flex flex-col items-start gap-3 px-6 pt-9 md:hidden">
+            <h1 class="text-[28px] font-extrabold leading-[1.35]">Combos de {{ $brandLabel }}</h1>
+            <p class="text-[14px] leading-[1.35]">Una promoción, tus colores y tallas.</p>
+            @if ($grouped->count() > 1 || $tipo !== '')
+                <ul class="-mx-6 flex w-[calc(100%+3rem)] gap-2 overflow-x-auto px-6 pt-2 [scrollbar-width:none]">
+                    <li class="shrink-0"><a href="{{ $url(['tipo' => null]) }}" @class(['os-m-btn os-focus min-h-10 px-4 text-[12px]', 'os-m-btn--dark' => $tipo === '', 'os-m-btn--soft' => $tipo !== '']) @if ($tipo === '') aria-current="page" @endif>Todos</a></li>
+                    @foreach ($sections as $kind => $section)
+                        @if ($combos->where('kind', $kind)->isNotEmpty())
+                            <li class="shrink-0"><a href="{{ $url(['tipo' => $kind]) }}" @class(['os-m-btn os-focus min-h-10 px-4 text-[12px]', 'os-m-btn--dark' => $tipo === $kind, 'os-m-btn--soft' => $tipo !== $kind]) @if ($tipo === $kind) aria-current="page" @endif>{{ $section['title'] }}</a></li>
+                        @endif
+                    @endforeach
+                </ul>
+            @endif
+        </header>
+
+        <header class="hidden pb-10 pt-10 text-white [background:var(--shop-head)] md:block lg:pt-12">
             <div class="os-hh-wrap flex flex-col items-start gap-3.5">
                 <nav aria-label="Ruta" class="text-[13px] font-semibold text-[var(--shop-crumb)]">
                     <a href="{{ route('web.home') }}" class="hover:text-white">Inicio</a>
@@ -73,7 +89,7 @@
         </header>
 
         {{-- Cómo funciona --}}
-        <section class="border-b border-[var(--shop-line)] bg-[var(--hh-soft)]" aria-label="Cómo funciona">
+        <section class="hidden border-b border-[var(--shop-line)] bg-[var(--hh-soft)] md:block" aria-label="Cómo funciona">
             <ol class="os-hh-wrap grid gap-4 py-6 sm:grid-cols-3 sm:gap-8">
                 @foreach (['Elige tu combo' => 'Combina modelos o lleva tu favorito en varios colores.', 'Escoge talla y color' => 'De cada prenda, entre lo que hay en stock.', 'Recíbelo en casa' => \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú. Pago contraentrega o Yape / Plin.')] as $step => $text)
                     <li class="flex items-start gap-3">
@@ -87,7 +103,7 @@
             </ol>
         </section>
 
-        <div class="os-hh-wrap pb-16 pt-8 lg:pb-[88px] lg:pt-12">
+        <div class="os-hh-wrap pb-9 pt-6 max-md:!px-6 md:pb-16 md:pt-8 lg:pb-[88px] lg:pt-12">
             @if ($combos->isEmpty())
                 <div class="flex flex-col items-start gap-4 bg-[var(--hh-soft)] p-8">
                     <p class="text-[20px] font-extrabold">Muy pronto publicaremos nuevos combos.</p>

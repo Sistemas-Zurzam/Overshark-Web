@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './mobile.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -964,6 +965,204 @@ html.line-wipe-in[data-line-wipe="bravos"]::after {
 
 .theme-girls .os-line-badge {
     background: #d63a78;
+}
+
+/* Nav en celular (Figma "02 · MOBILE" → "Nav Mobile", layouts/web.blade.php): barra blanca + franja "Cambiar marca".
+   El contador de la bolsa usa el color de la marca activa (Overshark #2D69B5 · Girls #A9456B · Bravos #9A5404). */
+.os-mnav {
+    --mnav-accent: #2d69b5;
+    background: #ffffff;
+    color: #0d0f14;
+}
+
+.os-mnav[data-brand='girls'] { --mnav-accent: #a9456b; }
+.os-mnav[data-brand='bravos'] { --mnav-accent: #9a5404; }
+
+.os-mnav__bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    height: 56px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 8px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 5%);
+}
+
+.os-mnav__btn {
+    position: relative;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 8px;
+    transition: background-color 160ms ease;
+}
+
+.os-mnav__btn:hover {
+    background: #f0f7ff;
+}
+
+.os-mnav__btn--bag {
+    width: 48px;
+    height: 48px;
+}
+
+.os-mnav__count {
+    position: absolute;
+    top: 6px;
+    right: 4px;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 5px;
+    border-radius: 9px;
+    background: var(--mnav-accent);
+    color: #ffffff;
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+}
+
+.os-mnav__brands {
+    display: flex;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-inline: 24px;
+    background: #f0f7ff;
+}
+
+.os-mnav__brands a {
+    display: block;
+    opacity: .5;
+    transition: opacity 160ms ease;
+}
+
+.os-mnav__brands a:hover,
+.os-mnav__brands a:focus-visible {
+    opacity: 1;
+}
+
+.os-mnav__brands {
+    overflow: hidden;
+    transition: height 200ms ease;
+}
+
+/* Con el menú abierto (Figma "Menú / Mobile") o al bajar (estado "Scrolled" del Nav Mobile) solo queda la barra principal. */
+.os-header:has([data-web-menu]:not(.hidden)) .os-mnav__brands,
+.os-header[data-scrolled='true'] .os-mnav__brands {
+    height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .os-mnav__brands {
+        transition: none;
+    }
+}
+
+@media (max-width: 767px) {
+    /* En celular la cabecera es la barra blanca: sin el degradado oscuro ni la franja de anuncios. */
+    .os-header,
+    .os-header[data-scrolled='true'],
+    .os-header:has([data-web-menu]:not(.hidden)),
+    .os-header:has([data-search-panel]:not(.hidden)),
+    .theme-girls .os-header,
+    .theme-girls .os-header[data-scrolled='true'],
+    .theme-girls .os-header:has([data-web-menu]:not(.hidden)),
+    .theme-girls .os-header:has([data-search-panel]:not(.hidden)) {
+        background: #ffffff;
+        border-bottom: 0;
+        backdrop-filter: none;
+    }
+
+    .os-header .os-announce {
+        display: none;
+    }
+
+    .os-header [data-search-panel] {
+        border-top: 1px solid #e6edf5;
+        background: #ffffff;
+    }
+
+    .os-header [data-search-panel] input {
+        border-color: #d5dde7;
+        background: #f0f7ff;
+        color: #0d0f14;
+    }
+}
+
+.os-mmenu {
+    max-height: calc(100dvh - 56px);
+    background: #ffffff;
+}
+
+@media (min-width: 768px) {
+    .os-mmenu {
+        max-height: calc(100dvh - 3.5rem);
+        border-top: 1px solid rgb(31 58 96 / 60%);
+        background: var(--color-abyss, #020713);
+    }
+}
+
+.os-mmenu__panel {
+    display: flex;
+    min-height: calc(100dvh - 56px);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 36px 24px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.os-mmenu__title {
+    color: #0d0f14;
+    font-size: 26px;
+    text-transform: uppercase;
+}
+
+.os-mmenu__link {
+    color: #071226;
+    font-size: 22px;
+}
+
+.os-mmenu__link[aria-current='page'],
+.os-mmenu__brand[aria-current='true'] {
+    color: #2d69b5;
+}
+
+.os-mmenu__label {
+    color: #0d0f14;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.os-mmenu__brand {
+    color: #0d0f14;
+    font-size: 18px;
+}
+
+.os-mmenu__link:hover,
+.os-mmenu__brand:hover {
+    color: #2d69b5;
+}
+
+/* Desde tablet el menú es el oscuro de siempre (el panel blanco es solo de celular). */
+@media (min-width: 768px) {
+    .os-mmenu__panel {
+        display: none;
+    }
+}
+
+/* El carrito lateral cerrado queda fuera de pantalla: sin esto su sombra asomaba por el borde derecho. */
+.cart-drawer.translate-x-full {
+    box-shadow: none;
 }
 
 /* Navbar de la tienda (diseño Figma "Nav Principal / Overshark", layouts/web.blade.php), sobre .os-header. */
@@ -2253,3 +2452,107 @@ button.os-nav-icon:hover {
     outline-color: #0b0f14;
 }
 
+
+/* Filtros de la tienda en celular (Figma "02 · Filtros / Mobile / Overshark", web/search.blade.php):
+   capa blanca a pantalla completa bajo la barra de 56 px, títulos Manrope 18, tallas de 60 × 48 y precio en texto. */
+@media (max-width: 767px) {
+    .os-shop-filters {
+        position: fixed;
+        inset: 56px 0 0;
+        z-index: 55;
+        gap: 20px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 36px 24px;
+        background: #ffffff;
+        color: #0d0f14;
+        font-family: 'Manrope', sans-serif;
+    }
+
+    .os-shop-filters .os-shop-label {
+        font-size: 18px;
+        letter-spacing: 0;
+        line-height: 1.35;
+        text-transform: none;
+    }
+
+    .os-shop-filters .os-shop-size {
+        width: 60px;
+        height: 48px;
+        border: 0;
+        background: #f0f7ff;
+        color: #071226;
+        font-weight: 800;
+    }
+
+    .os-shop-filters .os-shop-size.is-active {
+        background: #071226;
+        color: #ffffff;
+    }
+
+    .os-shop-filters ul:has(> li > .os-shop-size) {
+        gap: 12px;
+    }
+
+    .os-shop-filters [data-shop-price-label] {
+        font-size: 15px;
+        font-weight: 400;
+    }
+}
+
+/* Ficha de producto en celular (Figma "Producto / … / Mobile"): tallas de 60 × 48 en #f0f7ff, la elegida #071226;
+   el color elegido se escribe «Vino» aunque venga en mayúsculas de ZAZU (el JS solo cambia el texto). */
+@media (max-width: 767px) {
+    .os-bpdp-size {
+        min-width: 60px;
+        border: 0;
+        background: #f0f7ff;
+        color: #071226;
+        font-family: 'Manrope', sans-serif;
+        font-weight: 800;
+    }
+
+    .os-bpdp-size[aria-checked='true'] {
+        background: #071226;
+        color: #ffffff;
+    }
+
+    .os-bpdp-size:disabled {
+        background: #f5f6f8;
+    }
+
+    .os-m-cap {
+        display: inline-block;
+        text-transform: lowercase;
+    }
+
+    .os-m-cap::first-letter {
+        text-transform: uppercase;
+    }
+}
+
+/* Checkout en celular (Figma "02 · MOBILE" → carrito y checkout): botones #071226 ExtraBold 14 y resumen con borde y radio 8. */
+@media (max-width: 767px) {
+    .os-checkout-btn {
+        background: #071226;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: .28px;
+    }
+
+    .os-checkout-btn--ghost {
+        border-color: #071226;
+        background: #ffffff;
+        color: #071226;
+    }
+
+    .os-checkout h1 {
+        font-size: 28px;
+    }
+
+    .os-ck-summary {
+        border: 1px solid #d4deeb;
+        border-radius: 8px;
+        background: #f2f2f2;
+    }
+}

@@ -28,12 +28,16 @@
     $brandLabel = match ($line) { 'bravos' => 'Bravos', 'girls' => 'Overshark Girls', default => 'Overshark' };
     $homeUrl = $line === 'bravos' ? route('web.brands.show', $brandPage) : route('web.home', ['linea' => $line === 'girls' ? 'mujer' : 'hombre']);
     $shopUrl = $line === 'bravos' ? route('web.products.search', ['marca' => $brandPage->name]) : route('web.products.search', ['linea' => $line === 'girls' ? 'mujer' : 'hombre']);
+    $categorySlug = \App\Support\StorefrontCategories::slugFor($producto->name);
+    $combosUrl = route('web.combos.index', match ($line) { 'bravos' => ['marca' => 'Bravos'], 'girls' => ['marca' => 'Girls'], default => [] });
 @endphp
 
 @section('content')
     <div @class(['os-hh os-bpdp', 'os-hh--girls' => $line === 'girls', 'os-hh--bravos' => $line === 'bravos']) data-pdp data-pdp-stock='@json($stockByColor)' data-pdp-prices='@json($priceMap)'>
-        <div class="os-bravos-wrap flex flex-col gap-8 py-10 lg:py-16">
-            <nav aria-label="Ruta" class="text-[13px] leading-[1.45] text-[#65717c]">
+        <div class="os-bravos-wrap flex flex-col gap-5 py-9 max-md:!px-6 md:gap-8 md:py-10 lg:py-16">
+            {{-- Celular (Figma "Producto / … / Mobile"): «← Volver a la tienda» en lugar de la ruta. --}}
+            <a href="{{ $shopUrl }}" class="os-focus self-start text-[13px] font-extrabold leading-[1.35] text-[#0d0f14] md:hidden">← Volver a la tienda</a>
+            <nav aria-label="Ruta" class="hidden text-[13px] leading-[1.45] text-[#65717c] md:block">
                 <a href="{{ $homeUrl }}" class="hover:text-[#0b1015]">Inicio</a>
                 <span class="mx-1.5" aria-hidden="true">/</span>
                 <a href="{{ $shopUrl }}" class="hover:text-[#0b1015]">Tienda</a>
@@ -49,11 +53,11 @@
                 <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
             @endif
 
-            <div class="grid gap-10 lg:grid-cols-2 lg:gap-16">
+            <div class="grid gap-5 md:gap-10 lg:grid-cols-2 lg:gap-16">
                 {{-- Galería --}}
-                <div class="flex flex-col gap-4 self-start bg-[#f5f7f9] p-4 sm:p-6">
-                    <div class="relative aspect-[576/540]">
-                        <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $title($producto->name) }}" class="h-full w-full object-contain" fetchpriority="high">
+                <div class="flex flex-col gap-3 self-start md:gap-4 md:bg-[#f5f7f9] md:p-6">
+                    <div class="relative aspect-[342/420] bg-[#e8e8e8] md:aspect-[576/540] md:bg-transparent">
+                        <img data-product-card-image src="{{ $mainImages[0] }}" alt="{{ $title($producto->name) }}" class="h-full w-full object-cover md:object-contain" fetchpriority="high">
                         <button type="button" data-pdp-step="-1" class="os-bpdp-arrow left-0" aria-label="Foto anterior">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
                         </button>
@@ -61,8 +65,8 @@
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
                         </button>
                     </div>
-                    <div class="flex items-center justify-between gap-4">
-                        <p class="text-[12px] font-bold uppercase leading-[1.45] text-[#65717c]">{{ \App\Support\ProductName::display($producto->name) }} / Color <span data-pdp-color-name>{{ $firstColor }}</span></p>
+                    <div class="flex items-center justify-center gap-4 md:justify-between">
+                        <p class="hidden text-[12px] font-bold uppercase leading-[1.45] text-[#65717c] md:block">{{ \App\Support\ProductName::display($producto->name) }} / Color <span data-pdp-color-name>{{ $firstColor }}</span></p>
                         <div data-pdp-thumbs class="flex gap-2">
                             @foreach (array_slice($mainImages, 0, 5) as $image)
                                 <button type="button" data-pdp-thumb data-image="{{ $image }}" @class(['os-pdp-dot', 'is-active' => $loop->first]) aria-label="Ver foto {{ $loop->iteration }}"></button>
@@ -72,13 +76,19 @@
                 </div>
 
                 {{-- Información y compra --}}
-                <div class="flex flex-col gap-5 text-[#0b1015]">
-                    <p class="text-[12px] font-bold uppercase leading-[1.45] text-[var(--hh-accent)]">{{ $brandLabel }}</p>
-                    <h1 class="text-[30px] font-extrabold uppercase leading-[1.45] sm:text-[38px]">{{ \App\Support\ProductName::display($producto->name) }}</h1>
+                <div class="flex flex-col gap-5 text-[#0b1015] max-md:font-['Manrope'] max-md:text-[#0d0f14]">
+                    @if ($categorySlug)
+                        <p class="text-[11px] font-extrabold uppercase leading-[1.35] md:hidden">{{ \App\Support\StorefrontCategories::label($categorySlug) }}</p>
+                    @endif
+                    <p class="hidden text-[12px] font-bold uppercase leading-[1.45] text-[var(--hh-accent)] md:block">{{ $brandLabel }}</p>
+                    <h1 class="text-[27px] font-extrabold leading-[1.35] md:text-[38px] md:uppercase md:leading-[1.45]">
+                        <span class="md:hidden">{{ $title($producto->name) }}@if ($firstColor) · <span data-pdp-color-name class="os-m-cap">{{ $firstColor }}</span>@endif</span>
+                        <span class="hidden md:inline">{{ \App\Support\ProductName::display($producto->name) }}</span>
+                    </h1>
                     <div class="flex flex-col gap-1">
                         <p class="flex flex-wrap items-baseline gap-3 leading-[1.45]">
-                            <span data-pdp-price-now @class(['text-[30px] font-extrabold', 'text-[#b42318]' => $onSale])>S/ {{ number_format($shown['now'], 2) }}</span>
-                            <span data-pdp-price-regular @class(['text-[18px] text-[#65717c] line-through', 'hidden' => ! $onSale])>S/ {{ number_format($shown['regular'], 2) }}</span>
+                            <span data-pdp-price-now @class(['text-[23px] font-extrabold md:text-[30px]', 'text-[#b42318]' => $onSale])>S/ {{ number_format($shown['now'], 2) }}</span>
+                            <span data-pdp-price-regular @class(['text-[14px] text-[#65717c] line-through md:text-[18px]', 'hidden' => ! $onSale])>S/ {{ number_format($shown['regular'], 2) }}</span>
                             <span data-pdp-price-badge data-label="{{ $promo['label'] ?? '' }}" @class(['bg-[#b42318] px-2 py-1 text-[13px] font-extrabold leading-none text-white', 'hidden' => ! $onSale])>{{ ($promo['label'] ?? '') ?: '-'.round((1 - $shown['now'] / max($shown['regular'], 0.01)) * 100).'%' }}</span>
                         </p>
                         @if ($promo)
@@ -87,7 +97,7 @@
                     </div>
 
                     <div class="flex flex-col gap-3">
-                        <p class="text-[15px] font-bold leading-[1.45]">Color: <span data-pdp-color-name class="uppercase">{{ $firstColor ?? 'Elige un color' }}</span></p>
+                        <p class="text-[14px] leading-[1.35] md:text-[15px] md:font-bold md:leading-[1.45]"><span class="md:hidden">Color seleccionado:</span><span class="hidden md:inline">Color:</span> <span data-pdp-color-name class="os-m-cap md:uppercase">{{ $firstColor ?? 'Elige un color' }}</span></p>
                         <div class="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Color">
                             @foreach ($colorOptions as $color)
                                 <button type="button" role="radio" aria-checked="{{ $loop->first ? 'true' : 'false' }}"
@@ -99,7 +109,7 @@
                     </div>
 
                     <div class="flex flex-col gap-3">
-                        <p class="text-[15px] font-bold leading-[1.45]">Talla: <span data-pdp-size-name>{{ $firstSize }}</span></p>
+                        <p class="text-[16px] font-extrabold leading-[1.35] md:text-[15px] md:font-bold md:leading-[1.45]"><span class="md:hidden">Selecciona tu talla</span><span class="hidden md:inline">Talla: <span data-pdp-size-name>{{ $firstSize }}</span></span></p>
                         <div class="flex flex-wrap gap-3" role="radiogroup" aria-label="Talla">
                             @foreach ($allSizes as $size)
                                 <button type="button" role="radio" aria-checked="{{ $size === $firstSize ? 'true' : 'false' }}" data-pdp-size="{{ $size }}" class="os-bpdp-size os-focus">{{ $size }}</button>
@@ -126,11 +136,14 @@
                             <button type="button" data-pdp-qty="1" class="os-focus grid h-9 w-9 place-items-center text-[18px] hover:bg-[#f5f7f9]" aria-label="Agregar una unidad">+</button>
                         </div>
 
-                        <button type="submit" data-pdp-submit class="os-focus h-12 w-full bg-[var(--shop-deep)] text-[13px] font-bold uppercase text-white transition hover:bg-[var(--hh-accent)] disabled:cursor-not-allowed disabled:opacity-40">Agregar al carrito</button>
+                        <button type="submit" data-pdp-submit class="os-focus h-12 w-full bg-[#071226] text-[14px] font-extrabold uppercase text-white md:bg-[var(--shop-deep)] md:text-[13px] md:font-bold transition hover:bg-[var(--hh-accent)] disabled:cursor-not-allowed disabled:opacity-40">Agregar al carrito</button>
                         <button type="submit" name="checkout" value="1" data-pdp-submit class="os-focus h-12 w-full border border-[#dae0e5] bg-white text-[13px] font-bold uppercase text-[#0b1015] transition hover:border-[var(--shop-deep)] disabled:cursor-not-allowed disabled:opacity-40">Comprar ahora</button>
                     </form>
 
-                    <div class="flex flex-col gap-2 leading-[1.45]">
+                    {{-- Celular: envío en una línea y «ARMA UN COMBO». --}}
+                    <p class="text-[14px] leading-[1.35] md:hidden">{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú. Impuestos incluidos.') }}</p>
+                    <a href="{{ $combosUrl }}" class="os-m-btn os-m-btn--dark os-focus md:hidden">Arma un combo</a>
+                    <div class="hidden flex-col gap-2 leading-[1.45] md:flex">
                         <p class="text-[14px] font-bold">{{ \App\Support\SiteContent::t('Envío a todo el Perú desde {desde}') }}</p>
                         <p class="text-[13px] text-[#65717c]">{{ \App\Support\SiteContent::t('Lima: delivery {lima} · Agencia Shalom {agencia} · Almacén gratis') }}</p>
                         <p class="text-[14px] font-bold">Pago con {{ $payments->isNotEmpty() ? $payments->join(', ', ' y ') : 'Yape y Plin' }} · También contraentrega</p>
@@ -165,7 +178,12 @@
             @if ($recommendedProducts->isNotEmpty())
                 <section class="flex flex-col gap-8 pt-4" aria-labelledby="bpdp-look">
                     <h2 id="bpdp-look" class="text-[26px] font-extrabold leading-[1.45] text-[#0b1015]">COMPLETA TU LOOK</h2>
-                    <ul class="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-8">
+                    <ul class="os-m-grid md:hidden">
+                        @foreach ($recommendedProducts as $product)
+                            <li>@include('web.partials.m-product-card')</li>
+                        @endforeach
+                    </ul>
+                    <ul class="hidden grid-cols-2 gap-x-4 gap-y-8 md:grid lg:grid-cols-3 lg:gap-8">
                         @foreach ($recommendedProducts as $product)
                             <li>@include('web.partials.hh-product-card', ['photoClass' => 'aspect-[416/314]'])</li>
                         @endforeach

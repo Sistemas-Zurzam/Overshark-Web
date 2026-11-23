@@ -11,7 +11,7 @@
 
 @section('header-bar')
     <div class="bg-[#061c2d]">
-        <div class="os-bravos-wrap flex h-[88px] items-center justify-between">
+        <div class="os-bravos-wrap flex h-[88px] items-center justify-between max-md:!px-6">
             <a href="{{ route('web.home') }}" class="os-focus text-[20px] text-white [font-family:'Archivo_Black',sans-serif] sm:text-[23px]" aria-label="Overshark, volver a la tienda">OVERSHARK</a>
             <p class="flex items-center gap-2 text-[12px] font-bold text-[#afc5d7]">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
@@ -37,9 +37,24 @@
 
 @section('content')
     <div class="os-hh os-checkout">
-        <div class="os-bravos-wrap flex flex-col gap-6 py-10 lg:py-16">
+        <div class="os-bravos-wrap flex flex-col gap-6 py-6 max-md:!px-6 md:py-10 lg:py-16">
             @isset($step)
-                <nav aria-label="Pasos de la compra" class="text-[12px] font-bold leading-[1.45] text-[#2467cf]">
+                {{-- Celular (Figma "02 · MOBILE" → checkout): «CARRITO / ENTREGA / PAGO» en texto, el paso actual subrayado. --}}
+                <nav aria-label="Pasos de la compra" class="text-[12px] font-bold leading-[1.45] text-[#071226] md:hidden">
+                    <ol class="flex flex-wrap items-center gap-x-1">
+                        @foreach ([1 => ['CARRITO', route('web.cart.index')], 2 => ['ENTREGA', route('web.checkout.personal')], 3 => ['PAGO', null]] as $number => [$label, $url])
+                            <li class="flex items-center gap-1">
+                                @if ($url && $number < $step)
+                                    <a href="{{ $url }}" class="os-focus hover:underline">{{ $label }}</a>
+                                @else
+                                    <span @class(['underline underline-offset-4' => $number === $step]) @if ($number === $step) aria-current="step" @endif>{{ $label }}</span>
+                                @endif
+                                @unless ($loop->last)<span aria-hidden="true">/</span>@endunless
+                            </li>
+                        @endforeach
+                    </ol>
+                </nav>
+                <nav aria-label="Pasos de la compra" class="hidden text-[12px] font-bold leading-[1.45] text-[#2467cf] md:block">
                     <ol class="flex flex-wrap items-center gap-x-4 gap-y-1">
                         @foreach ([1 => ['CARRITO', route('web.cart.index')], 2 => ['DATOS Y ENTREGA', route('web.checkout.personal')], 3 => ['PAGO', null]] as $number => [$label, $url])
                             <li class="flex items-center gap-4">
