@@ -19,6 +19,27 @@ class ComboCatalog
 {
     private const PLACEHOLDER = 'images/default-hero-banner.png';
 
+    /**
+     * Texto corto del combo más conveniente que la marca tiene a la venta (el de menor precio por prenda), p. ej.
+     * «5 × S/ 89». Lo usan la cinta superior y la marca {combo} de los textos. null si la marca no tiene combos
+     * para comprar (entonces se usa el texto del panel). Se recalcula cada 10 minutos.
+     */
+    public static function headline(string $brand): ?string
+    {
+        $key = 'combo-headline:'.mb_strtoupper(trim($brand));
+        $cached = \Illuminate\Support\Facades\Cache::get($key);
+
+        if ($cached !== null) {
+            return $cached === '' ? null : $cached;
+        }
+
+        $best = self::forStore($brand)->sortBy('unit_price')->first();
+        $text = $best ? $best['quantity'].' × '.SiteContent::money((float) $best['price']) : '';
+        \Illuminate\Support\Facades\Cache::put($key, $text, now()->addMinutes(10));
+
+        return $text === '' ? null : $text;
+    }
+
     /** @return Collection<int, array> */
     public static function forStore(string $brand): Collection
     {
@@ -101,6 +122,7 @@ class ComboCatalog
             'kind' => $single ? 'pack' : 'mix',
             'quantity' => $quantity,
             'price' => (float) $combo->price,
+            'compare_at' => $combo->compareAtPriceToShow(),
             'unit_price' => (float) $combo->price / $quantity,
             'detail' => match (true) {
                 $isChoice => 'Elige '.$quantity.' entre '.$items->pluck('key')->map($label)->implode(', '),

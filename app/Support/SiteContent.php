@@ -131,8 +131,19 @@ class SiteContent
             '{desde}' => self::money(Shipping::cheapest()),
             '{separo}' => self::money(Checkout::depositFor('agencia')),
             '{separo_lima}' => self::money(Checkout::depositFor('domicilio')),
-            '{combo}' => (string) self::get('promos.combo'),
+            '{combo}' => str_contains($text, '{combo}') ? self::combo() : '',
         ]);
+    }
+
+    /**
+     * Combo que se anuncia ({combo}, cinta superior): el más conveniente que la marca tiene a la venta; si no tiene
+     * ninguno, el texto «Precio del combo» del panel. $brand: Overshark, Girls o Bravos (por defecto, la línea de la sesión).
+     */
+    public static function combo(?string $brand = null): string
+    {
+        $brand ??= session('storefront.line') === 'mujer' ? 'Girls' : 'Overshark';
+
+        return ComboCatalog::headline($brand) ?? (string) self::get('promos.combo');
     }
 
     /** «S/ 15» (sin decimales si es entero) o «S/ 15.50». */

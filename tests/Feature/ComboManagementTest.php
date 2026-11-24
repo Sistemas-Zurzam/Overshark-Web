@@ -290,6 +290,44 @@ class ComboManagementTest extends TestCase
             ->assertSee(route('web.brands.show', $bravos), false);
     }
 
+    public function test_the_top_bar_announces_the_best_real_combo_of_the_brand_and_links_to_its_combos(): void
+    {
+        // Sin combos a la venta, la cinta usa el texto del panel («Precio del combo»).
+        $this->assertSame(\App\Support\SiteContent::get('promos.combo'), \App\Support\SiteContent::combo('Bravos'));
+
+        Producto::query()->create(['name' => 'POLERA NERU', 'default_code' => 'PN-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 20, 'price' => 40, 'zazu_company_id' => 1]);
+        $make = fn (int $units, float $price) => Combo::query()->create([
+            'name' => "{$units}x{$price}", 'brand' => 'Bravos', 'price' => $price, 'imagen' => 'images/default-hero-banner.png',
+            'items' => [['zazu' => 'POLERA NERU', 'cantidad' => $units]], 'status' => true,
+        ]);
+        $make(2, 70);
+        $make(3, 99); // S/ 33 por prenda: el más conveniente.
+
+        $this->assertSame('3 × S/ 99', \App\Support\SiteContent::combo('Bravos'));
+        $this->get(route('web.combos.index', ['marca' => 'Bravos']))->assertOk()
+            ->assertSee('<span>Combos 3 × S/ 99</span>', false)
+            ->assertSee('href="'.route('web.combos.index', ['marca' => 'Bravos']).'" class="os-announce"', false);
+    }
+
+    public function test_the_home_combo_carousel_shows_only_the_active_combos_of_the_store(): void
+    {
+        Producto::query()->create(['name' => 'POLO SLIM FIT', 'default_code' => 'PS-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 20, 'price' => 30, 'zazu_company_id' => 1]);
+        $make = fn (string $name, bool $active) => Combo::query()->create([
+            'name' => $name, 'brand' => 'Overshark', 'price' => 99, 'compare_at_price' => 150, 'imagen' => 'images/default-hero-banner.png',
+            'items' => [['zazu' => 'POLO SLIM FIT', 'cantidad' => 5]], 'status' => $active,
+        ]);
+        $active = $make('Cinco slim fit', true);
+        $make('Combito oculto', false);
+
+        $this->get('/?linea=hombre')->assertOk()
+            ->assertSee('class="lh-combos"', false)
+            ->assertSee('Cinco slim fit')
+            ->assertSee('href="'.route('web.combos.show', $active).'"', false)
+            ->assertSee('<s>'.\App\Support\SiteContent::money(150).'</s>', false)
+            ->assertDontSee('Combito oculto')
+            ->assertDontSee('banner-combito-combina.jpg');
+    }
+
     private function png(): string
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');

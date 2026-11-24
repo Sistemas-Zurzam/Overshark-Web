@@ -136,6 +136,23 @@
 .lh-slide { flex: 0 0 100%; aspect-ratio: 3 / 1; overflow: hidden; border-radius: 16px; background: var(--deep); scroll-snap-align: start; transition: transform .6s var(--ease-out), opacity .6s; }
 .lh-slide img { width: 100%; height: 100%; object-fit: cover; }
 .lh-slide:not(.is-active) { opacity: .55; transform: scale(.97); }
+.lh-slide picture { display: contents; }
+/* Combo con imagen cuadrada/vertical (o sin imagen): texto a la izquierda y la imagen a la derecha, sobre el océano. */
+.lh-slide--card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); align-items: center; gap: clamp(20px, 4vw, 56px);
+    padding: clamp(20px, 3vw, 40px) clamp(24px, 4vw, 56px); color: #ffffff; text-decoration: none;
+    background: linear-gradient(100deg, rgb(5 13 26 / 92%) 25%, rgb(5 13 26 / 45%)), var(--ocean) center / cover, var(--deep); }
+.lh-slide__copy { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 10px; }
+.lh-slide__tag { padding: 5px 12px; border-radius: 99px; background: var(--cyan); color: var(--abyss); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.lh-slide__title { font-family: var(--display); font-size: clamp(28px, 3.4vw, 48px); font-weight: 800; line-height: .95; text-transform: uppercase; }
+.lh-slide__price { display: flex; align-items: baseline; gap: 12px; color: var(--cyan-2); font-family: var(--display); font-size: clamp(36px, 4.6vw, 68px); font-weight: 800; line-height: 1; }
+.lh-slide__price s { color: rgb(255 255 255 / 60%); font-family: var(--sans); font-size: 16px; font-weight: 500; }
+.lh-slide__detail { max-width: 46ch; color: rgb(255 255 255 / 80%); font-size: 14px; line-height: 1.4; }
+.lh-slide__cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; padding: 12px 22px; border-radius: 99px; background: #ffffff; color: var(--ink); font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; transition: background .2s, color .2s; }
+.lh-slide__cta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.lh-slide--card:hover .lh-slide__cta { background: var(--cyan); }
+.lh-slide__media { display: flex; height: 100%; min-height: 0; align-self: stretch; align-items: center; gap: 12px; }
+.lh-slide__media.is-flyer img { height: 100%; width: auto; max-width: none; aspect-ratio: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 18px 40px rgb(0 0 0 / 35%); }
+.lh-slide__media.is-products img { width: clamp(90px, 11vw, 150px); height: 88%; object-fit: cover; border-radius: 12px; background: #ffffff; }
 .lh-slider__ui { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 18px; }
 .lh-dots { display: flex; gap: 8px; }
 .lh-dots button { position: relative; width: 8px; height: 8px; overflow: hidden; border-radius: 4px; background: #c9d4e2; transition: width .4s var(--ease-out); }
@@ -230,6 +247,20 @@
     .lh-card__add { height: 38px; transform: none; }
     .lh-slide { aspect-ratio: 4 / 3; }
     .lh-slide img { object-position: 0 50%; }
+    .lh-slide.has-mobile img { object-fit: contain; object-position: 50% 50%; }
+    .lh-slide--card { grid-template-columns: minmax(0, 1fr) 46%; gap: 12px; padding: 16px; }
+    .lh-slide__copy { gap: 7px; }
+    .lh-slide__tag { padding: 4px 9px; font-size: 10px; letter-spacing: .04em; white-space: nowrap; }
+    .lh-slide__title { font-size: 22px; }
+    .lh-slide__price { flex-wrap: wrap; gap: 2px 8px; font-size: 32px; }
+    .lh-slide__price s { font-size: 12px; }
+    .lh-slide__detail { display: none; }
+    .lh-slide__cta { margin-top: 2px; padding: 9px 13px; font-size: 10.5px; letter-spacing: .03em; white-space: nowrap; }
+    .lh-slide__cta svg { width: 13px; height: 13px; }
+    .lh-slide__media { justify-content: center; }
+    .lh-slide__media.is-flyer img { width: 100%; height: auto; max-height: 100%; object-position: 50% 50%; }
+    .lh-slide__media.is-products { flex-wrap: wrap; align-content: center; gap: 6px; }
+    .lh-slide__media.is-products img { width: calc(50% - 3px); height: auto; aspect-ratio: 3 / 4; }
     .lh-editorial { min-height: 0; grid-template-columns: 1fr; }
     .lh-editorial__copy { padding: 56px 24px; }
     .lh-editorial__media { height: 440px; }

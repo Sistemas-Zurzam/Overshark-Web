@@ -202,8 +202,14 @@
             </div>
         </div>
 
-        <a href="{{ route('web.combos.index') }}" class="os-announce" aria-label="{{ \App\Support\SiteContent::t('Combos {combo}, envío desde {desde} a todo el Perú, ') }}{{ \Illuminate\Support\Str::lower(\App\Support\SiteContent::get('promos.anuncio_pago')) }}. Ver combos">
-            <span>Combos {{ \App\Support\SiteContent::t('{combo}') }}</span>
+        {{-- Cinta: el combo más conveniente de la marca en la que se está (Overshark, Girls o Bravos) y sus combos. --}}
+        @php
+            $announceBrand = match ($activeBrand) { 'bravos' => 'Bravos', 'girls' => 'Girls', default => 'Overshark' };
+            $announceCombo = \App\Support\SiteContent::combo($announceBrand);
+            $announceUrl = route('web.combos.index', ['marca' => $announceBrand]);
+        @endphp
+        <a href="{{ $announceUrl }}" class="os-announce" aria-label="Combos {{ $announceCombo }}, {{ \App\Support\SiteContent::t('envío desde {desde} a todo el Perú, ') }}{{ \Illuminate\Support\Str::lower(\App\Support\SiteContent::get('promos.anuncio_pago')) }}. Ver combos">
+            <span>Combos {{ $announceCombo }}</span>
             <span class="hidden sm:inline" aria-hidden="true">·</span>
             <span class="hidden sm:inline">{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú') }}</span>
             <span class="hidden md:inline" aria-hidden="true">·</span>

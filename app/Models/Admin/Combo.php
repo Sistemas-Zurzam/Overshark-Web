@@ -31,8 +31,15 @@ class Combo extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::ACTIVE_CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::ACTIVE_CACHE_KEY));
+        // Al cambiar un combo se recalculan la lista activa y el combo que anuncia cada marca (ComboCatalog::headline).
+        $forget = function (): void {
+            Cache::forget(self::ACTIVE_CACHE_KEY);
+            foreach (['OVERSHARK', 'GIRLS', 'BRAVOS'] as $brand) {
+                Cache::forget('combo-headline:'.$brand);
+            }
+        };
+        static::saved($forget);
+        static::deleted($forget);
     }
 
     protected function casts(): array

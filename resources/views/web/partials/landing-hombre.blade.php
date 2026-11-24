@@ -14,7 +14,6 @@
     $lhText = fn (string $path, string $fallback) => \App\Support\SiteContent::get($path) ?: $fallback;
     $home = fn (string $path) => \App\Support\SiteContent::text($path);
     $lhCatalog = route('web.products.search', ['orden' => 'populares']);
-    $lhCombos = route('web.combos.index');
     $lhSearch = fn (string $category) => route('web.products.search', ['categoria' => $category]);
     $lhMoney = fn (float $amount) => 'S/ '.number_format($amount, 2);
     $lhTitle = fn ($text) => \App\Support\ProductName::title((string) $text);
@@ -43,17 +42,14 @@
         ['class' => 'lh-tag--waffle', 'depth' => 26, 'image' => 'thumb-camisa-waffle-vino.jpg', 'title' => 'Camisa Waffle', 'detail' => 'Vino · Tejido en relieve', 'product' => $lhProduct('CAMISA WAFFLE', 'VINO'), 'fallback' => $lhSearch('camisas'), 'delay' => '-2.5s'],
     ];
 
-    $lhBanners = [
-        ['banner-combito-combina.jpg', 'Combito Combina: 4 prendas por S/ 79.90'],
-        ['banner-combito-match.jpg', 'Combito Match: 3 prendas por S/ 39.90'],
-        ['banner-combito-waflera.jpg', 'Combito Waflera: 5 prendas por S/ 89'],
-        ['banner-combo-extra.jpg', 'Combo Extra: 3 prendas por S/ 89'],
-        ['banner-catania-3x99.jpg', 'Pantalones Catania: 3 por S/ 99'],
-        ['banner-catania-4x120.jpg', 'Pantalones Catania: 4 por S/ 120'],
-        ['banner-neru-2x70.jpg', 'Polera Neru: 2 por S/ 70'],
-        ['banner-neru-3x99.jpg', 'Polera Neru: 3 por S/ 99'],
-        ['banner-neru-4x120.jpg', 'Polera Neru: 4 por S/ 120'],
-    ];
+    // Carrusel: los combos de Overshark que están activos y se pueden comprar (Admin → Combos), primero los que tienen
+    // imagen propia. Un banner horizontal se muestra completo (con su versión para celular si la tiene); una imagen
+    // cuadrada o vertical va dentro de una diapositiva con el nombre, el precio y el botón.
+    $lhCombosList = \App\Support\ComboCatalog::forStore('Overshark')
+        ->sortByDesc(fn (array $card) => $card['flyer'] ? 1 : 0)
+        ->take(12)
+        ->map(fn (array $card) => $card + ['label' => $card['title'].': '.$card['quantity'].' prendas por '.\App\Support\SiteContent::money($card['price'])])
+        ->values();
 
     // «Jeans»: la foto que suba el admin; si no, la de un jeans a la venta; si no, la de polos.
     $lhJeans = \App\Support\SiteContent::asset('images/home-hombre/categoria-jeans.webp');
@@ -235,13 +231,45 @@
         </section>
     @endif
 
-    {{-- COMBOS --}}
+    {{-- COMBOS (los activos del panel) --}}
+    @if ($lhCombosList->isNotEmpty())
     <section class="lh-combos" id="combos" aria-label="Combos">
         <div class="lh-wrap">
             <div class="lh-slider rv" data-lh-slider aria-roledescription="carrusel">
                 <div class="lh-slides" data-lh-slides tabindex="0">
-                    @foreach ($lhBanners as [$file, $label])
-                        <a class="lh-slide" href="{{ $lhCombos }}" aria-label="{{ $label }}"><img src="{{ $lh($file) }}" alt="{{ $label }}" @unless ($loop->first) loading="lazy" @endunless></a>
+                    @foreach ($lhCombosList as $lhCombo)
+                        @if ($lhCombo['flyer_wide'])
+                            <a class="lh-slide {{ $lhCombo['flyer_mobile'] ? 'has-mobile' : '' }}" href="{{ $lhCombo['url'] }}" aria-label="{{ $lhCombo['label'] }}">
+                                <picture>
+                                    @if ($lhCombo['flyer_mobile'])<source media="(max-width: 900px)" srcset="{{ $lhCombo['flyer_mobile'] }}">@endif
+                                    <img src="{{ $lhCombo['flyer'] }}" alt="{{ $lhCombo['label'] }}" @unless ($loop->first) loading="lazy" @endunless>
+                                </picture>
+                            </a>
+                        @else
+                            <a class="lh-slide lh-slide--card" href="{{ $lhCombo['url'] }}" aria-label="{{ $lhCombo['label'] }}">
+                                <span class="lh-slide__copy">
+                                    <span class="lh-slide__tag">Combo · {{ $lhCombo['quantity'] }} prendas</span>
+                                    <span class="lh-slide__title">{{ $lhCombo['title'] }}</span>
+                                    <span class="lh-slide__price">{{ \App\Support\SiteContent::money($lhCombo['price']) }}
+                                        @if ($lhCombo['compare_at'])<s>{{ \App\Support\SiteContent::money($lhCombo['compare_at']) }}</s>@endif
+                                    </span>
+                                    <span class="lh-slide__detail">{{ $lhCombo['detail'] }}</span>
+                                    <span class="lh-slide__cta">Arma tu combo <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+                                </span>
+                                <span class="lh-slide__media {{ $lhCombo['flyer'] ? 'is-flyer' : 'is-products' }}">
+                                    @if ($lhCombo['flyer'])
+                                        <picture>
+                                            @if ($lhCombo['flyer_mobile'])<source media="(max-width: 900px)" srcset="{{ $lhCombo['flyer_mobile'] }}">@endif
+                                            <img src="{{ $lhCombo['flyer'] }}" alt="" @unless ($loop->first) loading="lazy" @endunless>
+                                        </picture>
+                                    @else
+                                        @foreach ($lhCombo['images'] as $lhImage)
+                                            <img src="{{ $lhImage }}" alt="" @unless ($loop->first) loading="lazy" @endunless>
+                                        @endforeach
+                                    @endif
+                                </span>
+                            </a>
+                        @endif
                     @endforeach
                 </div>
                 <div class="lh-slider__ui">
@@ -252,6 +280,7 @@
             </div>
         </div>
     </section>
+    @endif
 
     {{-- CATEGORÍAS: elige tu básico --}}
     <section class="lh-sec lh-sec--top0" aria-labelledby="lh-picks">
