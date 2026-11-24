@@ -72,7 +72,12 @@
             <section class="os-bravos-wrap py-8 lg:py-11" aria-labelledby="bravos-combos">
                 <h2 id="bravos-combos" class="sr-only">Combos Bravos: arma tu combo</h2>
                 <a href="{{ route('web.combos.index', ['marca' => $brandPage->name]) }}" class="os-focus relative block overflow-hidden bg-[#ffdb00]" aria-labelledby="bravos-combos">
-                    <img src="{{ $img('promo-combos.webp') }}" alt="" class="block h-auto w-full" loading="lazy">
+                    <picture class="block">
+                        @if ($promoMobile = \App\Support\SiteContent::imageUrl('promo_bravos_movil'))
+                            <source media="(max-width: 767px)" srcset="{{ $promoMobile }}">
+                        @endif
+                        <img src="{{ $img('promo-combos.webp') }}" alt="" class="block h-auto w-full" loading="lazy">
+                    </picture>
                 </a>
             </section>
         @endif

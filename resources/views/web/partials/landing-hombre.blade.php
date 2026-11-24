@@ -132,8 +132,8 @@
                 <p class="lh-sub" data-in>Hecho para<br>dominar</p>
                 <p class="lh-text" data-in>{{ $lhText('hero.hombre.copy', 'Prendas esenciales con carácter, precisión y fuerza.') }}</p>
                 <div class="lh-actions" data-in>
-                    <a class="lh-btn" href="{{ $lhCta1[1] }}">{{ $lhCta1[0] }}</a>
-                    <a class="lh-link-arrow" href="{{ $lhCta2[1] }}">{{ $lhCta2[0] }} <span aria-hidden="true">→</span></a>
+                    <a class="lh-btn" href="{{ $lhCta1[1] }}">{{ $lhCta1[0] }} <svg class="lh-btn__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+                    <a class="lh-btn lh-btn--ghost" href="{{ $lhCta2[1] }}">{{ $lhCta2[0] }} <svg class="lh-btn__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
                 </div>
             </div>
 

@@ -47,21 +47,27 @@
 @keyframes lh-rays { from { transform: translateX(-3%) skewX(-2deg); opacity: .6; } to { transform: translateX(3%) skewX(2deg); opacity: 1; } }
 @keyframes lh-rise { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(var(--dx, 20px), -110vh); opacity: 0; } }
 
-.lh-hero__copy { position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 40px 64px 48px var(--gutter); }
+.lh-hero__copy { position: relative; z-index: 6; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 40px 64px 48px var(--gutter); }
 .lh-kicker { color: #bcd9f5; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
 .lh-title { color: #f2f7ff; font-family: var(--display); font-size: clamp(76px, 10.4vw, 150px); font-weight: 900; letter-spacing: -.01em; line-height: .88; text-transform: uppercase; }
-.lh-title .ln { display: block; overflow: hidden; padding-top: .04em; }
+/* Cada línea recorta su texto (para la entrada desde abajo): el aire de arriba deja ver las tildes (OCÉANO) completas
+   y separa un poco la segunda línea de la primera. */
+.lh-title .ln { display: block; overflow: hidden; padding-top: .14em; }
+.lh-title .ln:first-child { padding-top: .04em; }
 .lh-title .ln > span { display: block; transform: translateY(110%); }
 .lh-sub { color: var(--cyan); font-family: var(--display); font-size: clamp(38px, 4.2vw, 60px); font-weight: 900; line-height: .92; text-transform: uppercase; }
 .lh-text { max-width: 420px; color: #cddcec; font-size: 18px; line-height: 1.5; }
-.lh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding-top: 12px; }
-.lh-btn { position: relative; display: inline-flex; height: 51px; align-items: center; gap: 10px; overflow: hidden; padding: 0 28px; border-radius: 999px; background: var(--cyan); color: var(--ink); font-size: 14px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; transition: transform .3s var(--ease-out), box-shadow .3s; }
+/* Botones del hero: dos píldoras de la misma altura con flecha; la principal celeste y la secundaria en contorno. */
+.lh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding-top: 14px; }
+.lh-btn { position: relative; display: inline-flex; height: 54px; align-items: center; justify-content: center; gap: 12px; overflow: hidden; padding: 0 26px 0 30px; border: 1.5px solid var(--cyan); border-radius: 999px; background: var(--cyan); color: var(--ink); font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; box-shadow: 0 10px 28px rgb(63 169 245 / 32%); transition: transform .3s var(--ease-out), box-shadow .3s, background-color .25s, color .25s, border-color .25s; }
 .lh-btn::before { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 55%) 50%, transparent 70%); transform: translateX(-120%); transition: transform .7s var(--ease-out); }
-.lh-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgb(63 169 245 / 45%); }
+.lh-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgb(63 169 245 / 50%); }
 .lh-btn:hover::before { transform: translateX(120%); }
-.lh-link-arrow { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; }
-.lh-link-arrow span { transition: transform .3s var(--ease-out); }
-.lh-link-arrow:hover span { transform: translateX(5px); }
+.lh-btn__arrow { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .3s var(--ease-out); }
+.lh-btn:hover .lh-btn__arrow { transform: translateX(4px); }
+.lh-btn--ghost { border-color: rgb(255 255 255 / 45%); background: rgb(255 255 255 / 6%); color: #ffffff; box-shadow: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.lh-btn--ghost::before { display: none; }
+.lh-btn--ghost:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); box-shadow: 0 14px 34px rgb(0 0 0 / 30%); }
 .lh-hero [data-in] { opacity: 0; transform: translateY(18px); }
 
 .lh-hero__visual { position: relative; min-height: 520px; }
@@ -202,7 +208,9 @@
     .lh-hero { min-height: 0; grid-template-columns: 1fr; }
     .lh-hero__copy { gap: 16px; padding: 36px 24px 8px; }
     .lh-text { font-size: 15px; }
-    .lh-actions { gap: 20px; padding-top: 6px; }
+    .lh-actions { display: grid; width: 100%; max-width: 420px; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 6px; }
+    .lh-btn { height: 50px; gap: 8px; padding: 0 14px; font-size: 12px; letter-spacing: .04em; }
+    .lh-btn__arrow { width: 14px; height: 14px; }
     .lh-hero__visual { height: clamp(440px, 118vw, 560px); min-height: 0; }
     .lh-pill { top: 12px; right: 16px; }
     .lh-model--denim { left: -4%; width: 62%; }

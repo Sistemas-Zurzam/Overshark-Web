@@ -188,6 +188,9 @@ class ComboController extends Controller
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'min:0', 'max:999999.99', 'gte:price'],
             'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+            // Imagen para celular (opcional): se usa por debajo de 768 px en lugar de la de escritorio.
+            'image_mobile' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
+            'remove_image_mobile' => ['nullable', 'boolean'],
             'url' => ['nullable', 'string', 'max:2048', 'regex:/^(https?:\/\/|\/)/i'],
             'status' => ['nullable', 'boolean'],
             'is_draft' => ['nullable', 'boolean'],
@@ -227,6 +230,9 @@ class ComboController extends Controller
         DB::transaction(function () use ($request, $validated, $combo, $modality, $isDraft, $brand, $mode): void {
             $oldImage = $combo->imagen;
             $newImage = $request->file('image') ? ImageOptimizer::storeUploaded($request->file('image'), 'combos') : null;
+            $oldMobile = $combo->imagen_movil;
+            $newMobile = $request->file('image_mobile') ? ImageOptimizer::storeUploaded($request->file('image_mobile'), 'combos') : null;
+            $mobile = $newMobile ?: ($request->boolean('remove_image_mobile') ? null : $oldMobile);
 
             $combo->fill([
                 'name' => $validated['name'],
@@ -237,6 +243,7 @@ class ComboController extends Controller
                 'price' => $validated['price'] ?? null,
                 'compare_at_price' => $validated['compare_at_price'] ?? null,
                 'imagen' => $newImage ?: ($oldImage ?: 'images/default-hero-banner.png'),
+                'imagen_movil' => $mobile,
                 // Un borrador nunca se muestra en la tienda, sin importar lo que diga el checkbox de estado.
                 'is_draft' => $isDraft,
                 'status' => $isDraft ? false : $request->boolean('status'),
@@ -247,6 +254,10 @@ class ComboController extends Controller
 
             if ($newImage && $oldImage && ! str_starts_with($oldImage, 'images/') && ! filter_var($oldImage, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($oldImage);
+            }
+
+            if ($oldMobile && $mobile !== $oldMobile && ! str_starts_with($oldMobile, 'images/')) {
+                Storage::disk('public')->delete($oldMobile);
             }
 
             $pivot = [];
@@ -309,6 +320,10 @@ class ComboController extends Controller
             && ! str_starts_with($combo->imagen, 'images/')
             && ! filter_var($combo->imagen, FILTER_VALIDATE_URL)) {
             Storage::disk('public')->delete($combo->imagen);
+        }
+
+        if ($combo->imagen_movil && ! str_starts_with($combo->imagen_movil, 'images/')) {
+            Storage::disk('public')->delete($combo->imagen_movil);
         }
 
         $combo->delete();

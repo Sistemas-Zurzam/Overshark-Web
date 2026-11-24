@@ -145,8 +145,26 @@
     <label class="block">
         <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Imagen {{ $combo ? '(sube una nueva para reemplazarla)' : 'estándar o personalizada' }}</span>
         <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" class="block w-full rounded-sm border border-admin-border-strong bg-admin-surface p-2 text-sm text-admin-text file:mr-3 file:border-0 file:bg-admin-navy file:px-3 file:py-2 file:text-xs file:font-extrabold file:uppercase file:text-white">
-        <span class="mt-1 block text-xs text-admin-text-muted">PNG, JPG, JPEG o WEBP; máximo 8 MB.</span>
+        <span class="mt-1 block text-xs text-admin-text-muted">PNG, JPG, JPEG o WEBP; máximo 8 MB. Un banner horizontal (p. ej. 1400 × 467) se muestra a todo el ancho en la tienda.</span>
     </label>
+</div>
+
+<div class="grid gap-4 md:grid-cols-2">
+    <div class="block">
+        <label for="combo-image-mobile" class="mb-1.5 block text-xs font-extrabold uppercase tracking-[1px] text-admin-text-secondary">Imagen para celular <span class="font-medium normal-case text-admin-text-muted">(opcional)</span></label>
+        <input id="combo-image-mobile" type="file" name="image_mobile" accept=".png,.jpg,.jpeg,.webp" class="block w-full rounded-sm border border-admin-border-strong bg-admin-surface p-2 text-sm text-admin-text file:mr-3 file:border-0 file:bg-admin-navy file:px-3 file:py-2 file:text-xs file:font-extrabold file:uppercase file:text-white">
+        <span class="mt-1 block text-xs text-admin-text-muted">Se usa en pantallas de menos de 768 px en lugar de la imagen de arriba (recomendado vertical o cuadrada, p. ej. 1080 × 1080). Sin ella, el celular muestra la misma imagen.</span>
+    </div>
+    @if ($combo?->mobileImageUrl())
+        <div class="flex items-start gap-3">
+            <img src="{{ $combo->mobileImageUrl() }}" alt="Imagen para celular actual" class="h-24 w-24 shrink-0 rounded-sm bg-admin-subtle object-contain">
+            <label class="flex items-start gap-2 pt-1 text-sm font-bold text-admin-text">
+                <input type="hidden" name="remove_image_mobile" value="0">
+                <input type="checkbox" name="remove_image_mobile" value="1" class="mt-0.5 size-4 rounded border-admin-border-strong text-admin-accent">
+                Quitar la imagen para celular
+            </label>
+        </div>
+    @endif
 </div>
 
 <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-6">

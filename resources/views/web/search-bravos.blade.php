@@ -90,9 +90,18 @@
                         </div>
                         <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             @foreach ($bravosCombos as $combo)
-                                <li>
+                                @php($wide = ($combo['flyer_wide'] ?? false) && $combo['flyer'])
+                                <li @class(['sm:col-span-2 xl:col-span-3' => $wide])>
                                     <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col border-2 border-[#ffdb00] bg-[#f6f6f4]">
-                                        @if (! empty($combo['images']))
+                                        @if ($wide)
+                                            {{-- Flyer horizontal: a todo el ancho, con la versión para celular si el panel la tiene. --}}
+                                            <picture class="block bg-[#0a0a0a]">
+                                                @if ($combo['flyer_mobile'])
+                                                    <source media="(max-width: 767px)" srcset="{{ $combo['flyer_mobile'] }}">
+                                                @endif
+                                                <img src="{{ $combo['flyer'] }}" alt="" loading="lazy" class="block h-auto w-full">
+                                            </picture>
+                                        @elseif (! empty($combo['images']))
                                             <span class="block aspect-[4/3] overflow-hidden bg-[#e9e9e9]">
                                                 <img src="{{ $combo['images'][0] }}" alt="" loading="lazy" @class(['h-full w-full', 'object-contain' => $combo['flyer'], 'object-cover transition duration-500 group-hover:scale-105' => ! $combo['flyer']])>
                                             </span>

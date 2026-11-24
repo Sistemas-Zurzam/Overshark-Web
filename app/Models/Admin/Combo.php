@@ -19,6 +19,7 @@ class Combo extends Model
         'price',
         'compare_at_price',
         'imagen',
+        'imagen_movil',
         'items',
         'selection_mode',
         'selection_limit',
@@ -84,6 +85,37 @@ class Combo extends Model
         }
 
         return '/storage/'.ltrim($this->imagen, '/');
+    }
+
+    /** Imagen para celular (Admin → Combos), o null si el combo usa la misma en todos los tamaños. */
+    public function mobileImageUrl(): ?string
+    {
+        if (! $this->imagen_movil) {
+            return null;
+        }
+
+        return str_starts_with($this->imagen_movil, 'images/') ? asset($this->imagen_movil) : '/storage/'.ltrim($this->imagen_movil, '/');
+    }
+
+    /**
+     * ¿La imagen del combo es un banner horizontal (al menos 1.6 veces más ancha que alta)? Así la tienda lo muestra a lo
+     * ancho en vez de encajonarlo en una tarjeta angosta. Se mide una vez por archivo (cada subida tiene nombre nuevo).
+     */
+    public function hasWideImage(): bool
+    {
+        $path = (string) $this->imagen;
+
+        if ($path === '' || filter_var($path, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $file = str_starts_with($path, 'images/') ? public_path($path) : \Illuminate\Support\Facades\Storage::disk('public')->path($path);
+
+        return Cache::rememberForever('combo-image-wide:'.md5($file), function () use ($file): bool {
+            $size = is_file($file) ? @getimagesize($file) : false;
+
+            return $size !== false && $size[1] > 0 && $size[0] / $size[1] >= 1.6;
+        });
     }
 
     public function displayItems(): \Illuminate\Support\Collection

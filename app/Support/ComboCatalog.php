@@ -92,6 +92,9 @@ class ComboCatalog
             'id' => $combo->id,
             // Flyer propio del combo (Admin → Combos): la tarjeta lo muestra completo, como el diseño "Elige tu combo".
             'flyer' => $custom,
+            // Versión para celular (Admin → Combos) y si el flyer es un banner horizontal (se muestra a todo el ancho).
+            'flyer_mobile' => $custom ? $combo->mobileImageUrl() : null,
+            'flyer_wide' => $custom !== null && $combo->hasWideImage(),
             'brand' => mb_strtoupper(trim((string) $combo->brand)),
             'url' => $combo->url ?: route('web.combos.show', $combo),
             'title' => $title,

@@ -139,12 +139,42 @@
 
                         <ul @class(['mt-6 grid gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8', 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' => ! $grouped[$kind]->contains('flyer', '!=', null), 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' => $grouped[$kind]->contains('flyer', '!=', null)])>
                             @foreach ($grouped[$kind] as $combo)
+                                @if ($combo['flyer'] && $combo['flyer_wide'])
+                                    @php($theme = $promoThemes[$combo['brand']] ?? $promoThemes['OVERSHARK'])
+                                    {{-- Flyer horizontal (banner 3:1): a todo el ancho de la fila, con la versión para celular si el panel la tiene. --}}
+                                    <li class="col-span-full">
+                                        <a href="{{ $combo['url'] }}" class="os-focus group flex flex-col overflow-hidden border transition hover:shadow-[0_8px_24px_rgb(0_0_0/12%)] {{ $theme['card'] }}">
+                                            <picture class="block">
+                                                @if ($combo['flyer_mobile'])
+                                                    <source media="(max-width: 767px)" srcset="{{ $combo['flyer_mobile'] }}">
+                                                @endif
+                                                <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="block h-auto w-full" loading="lazy" decoding="async">
+                                            </picture>
+                                            <span class="flex flex-col gap-4 px-4 pb-5 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-5">
+                                                <span class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                                                    <img src="{{ asset('images/combos/logo-'.$theme['logo'].'.svg') }}" alt="" class="shrink-0 {{ $theme['logoClass'] }}" width="120" height="28">
+                                                    <span class="flex flex-col gap-1">
+                                                        <span class="text-[20px] font-extrabold leading-[1.2] sm:text-[22px]">{{ $combo['title'] }}</span>
+                                                        <span class="text-[14px]"><b class="text-[18px] font-extrabold">{{ $combo['quantity'] }} × {{ $money($combo['price']) }}</b> · Elige color y talla de cada prenda.</span>
+                                                    </span>
+                                                </span>
+                                                <span class="flex shrink-0 items-center justify-center px-8 py-4 text-[14px] font-extrabold tracking-[.28px] transition group-hover:opacity-90 {{ $theme['button'] }}">ELEGIR ESTE COMBO</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                    @continue
+                                @endif
                                 @if ($combo['flyer'])
                                     @php($theme = $promoThemes[$combo['brand']] ?? $promoThemes['OVERSHARK'])
                                     <li>
                                         {{-- Tarjeta con flyer (diseño "Elige tu combo"): flyer completo, marca, "N × S/ precio" y botón. --}}
                                         <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col gap-4 border px-4 pb-5 pt-4 transition hover:shadow-[0_8px_24px_rgb(0_0_0/12%)] {{ $theme['card'] }}">
-                                            <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="h-auto w-full rounded-[10px]" loading="lazy" decoding="async">
+                                            <picture class="block">
+                                                @if ($combo['flyer_mobile'])
+                                                    <source media="(max-width: 767px)" srcset="{{ $combo['flyer_mobile'] }}">
+                                                @endif
+                                                <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="h-auto w-full rounded-[10px]" loading="lazy" decoding="async">
+                                            </picture>
                                             <img src="{{ asset('images/combos/logo-'.$theme['logo'].'.svg') }}" alt="" class="shrink-0 {{ $theme['logoClass'] }}" width="120" height="28">
                                             <h3 class="text-[21px] font-extrabold leading-[1.2]">{{ $combo['title'] }}</h3>
                                             <p class="text-[30px] font-extrabold leading-none">{{ $combo['quantity'] }} × {{ $money($combo['price']) }}</p>

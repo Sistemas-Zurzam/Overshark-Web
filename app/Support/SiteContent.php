@@ -175,6 +175,7 @@ class SiteContent
         'bravos_modelo' => ['images/bravos/modelo.webp', 'Modelo', 'Portada', 'bravos'],
         'bravos_boxy' => ['images/bravos/boxy-fit.webp', 'Boxy Fit', 'Fotos de la página', 'bravos'],
         'promo_bravos' => ['images/bravos/promo-combos.webp', 'Banner de combos (3:1, p. ej. 1400 × 467; lleva a Combos)', 'Fotos de la página', 'bravos'],
+        'promo_bravos_movil' => ['images/bravos/promo-combos-movil.webp', 'Banner de combos para celular (opcional; vertical o cuadrado, p. ej. 1080 × 1080). Sin ella, el celular muestra el de arriba', 'Fotos de la página', 'bravos'],
         'site_logo' => ['images/explorar/logo-overshark.png', 'Logo de la pantalla de elección Hombre/Mujer', 'Marca del sitio', null],
         'site_icon' => [null, 'Ícono de la pestaña del navegador (favicon de la tienda y del panel)', 'Marca del sitio', null],
         'explorar_mar' => ['images/explorar/mar.jpg', 'Fondo de mar', 'Pantalla de elección', null],

@@ -240,6 +240,41 @@ class ComboManagementTest extends TestCase
         $this->assertSame(2, $slots[0]['quantity']);
     }
 
+    public function test_a_wide_flyer_spans_the_row_and_uses_the_mobile_image_on_phones(): void
+    {
+        $this->withoutMiddleware(AuthenticateJwt::class);
+        $this->actingAs(User::factory()->create());
+        Storage::fake('public');
+        Producto::query()->create(['name' => 'CLASICO', 'default_code' => 'CL-M', 'talla' => 'M', 'color' => 'NEGRO', 'stock' => 20, 'price' => 30, 'zazu_company_id' => 1]);
+
+        $this->post('/admin/combos', [
+            'brand_id' => Brand::query()->where('slug', 'overshark')->firstOrFail()->id,
+            'name' => 'Polos clásicos',
+            'price' => 99,
+            'image' => UploadedFile::fake()->image('banner.png', 1200, 400),
+            'image_mobile' => UploadedFile::fake()->image('movil.png', 800, 800),
+            'status' => 1,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $combo = Combo::query()->firstOrFail();
+        $combo->update(['items' => [['zazu' => 'CLASICO', 'cantidad' => 3]]]);
+        Storage::disk('public')->assertExists($combo->imagen_movil);
+        $this->assertTrue($combo->hasWideImage());
+
+        $this->get(route('web.combos.index'))->assertOk()
+            ->assertSee('<li class="col-span-full">', false)
+            ->assertSee('<source media="(max-width: 767px)" srcset="'.$combo->mobileImageUrl().'">', false);
+
+        // Quitar la imagen para celular la borra y el celular vuelve a usar la de escritorio.
+        $mobile = $combo->imagen_movil;
+        $this->put(route('admin.combos.update', $combo), [
+            'brand_id' => $combo->brand_id, 'name' => $combo->name, 'price' => 99, 'status' => 1, 'remove_image_mobile' => 1,
+            'products' => [],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertNull($combo->fresh()->imagen_movil);
+        Storage::disk('public')->assertMissing($mobile);
+    }
+
     private function png(): string
     {
         return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
