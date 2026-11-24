@@ -20,7 +20,7 @@ class HomeHeroTest extends TestCase
             ->assertSee('Océano.')
             ->assertSee('Ver colección')
             ->assertSee('Arma tu outfit')
-            ->assertSee('Más vendido')
+            ->assertSee('Polo Clásico Jersey')
             ->assertSee('Camisas')
             ->assertSee('categoria=camisas', false)
             ->assertSee('categoria=polos', false);

@@ -1202,6 +1202,8 @@ Route::get('/', function (Request $request) {
         asset('images/default-hero-banner.png'),
     )->filter(fn (Producto $product) => $product->promo !== null)->values();
 
+    // Overshark Hombre: landing «Nacido del océano» (web/partials/landing-hombre.blade.php). Con banners activos
+    // (Admin → Banners) el carrusel de banners reemplaza al hero.
     return view('web.home', [
         'storeLine' => $storeLine,
         'banners' => BannerPortada::activeForHome($overshark?->id),

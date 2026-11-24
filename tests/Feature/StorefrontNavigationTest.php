@@ -36,7 +36,8 @@ class StorefrontNavigationTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('Nacido del')
-            ->assertSeeInOrder(['Los más vendidos', 'Waffle · Perla', '9 prendas × S/ 99', 'Categorías', 'Por qué elegir Overshark', 'No destiñe', 'Waffle', '¡Arma tu outfit!', 'Compra con confianza', 'Otras tiendas'], false)
+            // Landing «Nacido del océano»: cinta, más vendidos, combos, categorías, calidad, Promo Wafflera, telas y confianza.
+            ->assertSeeInOrder(['9 prendas × S/ 99', 'Más vendidos de la semana', 'Waffle · Perla', 'Básicos para todos los días', 'Por qué elegir Overshark', 'No destiñe', 'Arma tu combo →', 'Mismo océano', 'Waffle', 'Tu compra. Sin complicaciones.', 'Sigue explorando'], false)
             ->assertDontSee('Baby Ty');
     }
 
