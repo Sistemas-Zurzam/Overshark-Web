@@ -141,24 +141,24 @@
                             @foreach ($grouped[$kind] as $combo)
                                 @if ($combo['flyer'] && $combo['flyer_wide'])
                                     @php($theme = $promoThemes[$combo['brand']] ?? $promoThemes['OVERSHARK'])
-                                    {{-- Flyer horizontal (banner 3:1): a todo el ancho de la fila, con la versión para celular si el panel la tiene. --}}
-                                    <li class="col-span-full">
-                                        <a href="{{ $combo['url'] }}" class="os-focus group flex flex-col overflow-hidden border transition hover:shadow-[0_8px_24px_rgb(0_0_0/12%)] {{ $theme['card'] }}">
+                                    {{-- Flyer horizontal (banner 3:1): tarjeta de la grilla de 3 columnas con el banner de borde a borde
+                                         y, en celular, la imagen para celular si el panel la tiene. --}}
+                                    <li>
+                                        <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col overflow-hidden border transition hover:shadow-[0_8px_24px_rgb(0_0_0/12%)] {{ $theme['card'] }}">
                                             <picture class="block">
                                                 @if ($combo['flyer_mobile'])
                                                     <source media="(max-width: 767px)" srcset="{{ $combo['flyer_mobile'] }}">
                                                 @endif
-                                                <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="block h-auto w-full" loading="lazy" decoding="async">
+                                                <img src="{{ $combo['flyer'] }}" alt="Flyer del combo {{ $combo['title'] }}" class="block h-auto w-full transition duration-500 group-hover:scale-[1.02]" loading="lazy" decoding="async">
                                             </picture>
-                                            <span class="flex flex-col gap-4 px-4 pb-5 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-5">
-                                                <span class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
-                                                    <img src="{{ asset('images/combos/logo-'.$theme['logo'].'.svg') }}" alt="" class="shrink-0 {{ $theme['logoClass'] }}" width="120" height="28">
-                                                    <span class="flex flex-col gap-1">
-                                                        <span class="text-[20px] font-extrabold leading-[1.2] sm:text-[22px]">{{ $combo['title'] }}</span>
-                                                        <span class="text-[14px]"><b class="text-[18px] font-extrabold">{{ $combo['quantity'] }} × {{ $money($combo['price']) }}</b> · Elige color y talla de cada prenda.</span>
-                                                    </span>
+                                            {{-- Tarjeta compacta: el banner manda; abajo solo marca + nombre, precio y botón. --}}
+                                            <span class="flex flex-1 flex-col gap-2 px-3.5 pb-3.5 pt-3">
+                                                <span class="flex items-center justify-between gap-3">
+                                                    <span class="min-w-0 truncate text-[15px] font-extrabold leading-[1.25]">{{ $combo['title'] }}</span>
+                                                    <img src="{{ asset('images/combos/logo-'.$theme['logo'].'.svg') }}" alt="" class="h-4 w-auto shrink-0 opacity-80" width="70" height="16">
                                                 </span>
-                                                <span class="flex shrink-0 items-center justify-center px-8 py-4 text-[14px] font-extrabold tracking-[.28px] transition group-hover:opacity-90 {{ $theme['button'] }}">ELEGIR ESTE COMBO</span>
+                                                <span class="flex items-baseline gap-2 text-[12px]"><b class="text-[18px] font-extrabold leading-none">{{ $combo['quantity'] }} × {{ $money($combo['price']) }}</b><span class="truncate">Elige color y talla</span></span>
+                                                <span class="mt-auto flex items-center justify-center py-2.5 text-[12px] font-extrabold tracking-[.28px] transition group-hover:opacity-90 {{ $theme['button'] }}">ELEGIR ESTE COMBO</span>
                                             </span>
                                         </a>
                                     </li>

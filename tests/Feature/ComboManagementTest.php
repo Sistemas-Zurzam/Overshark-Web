@@ -240,7 +240,7 @@ class ComboManagementTest extends TestCase
         $this->assertSame(2, $slots[0]['quantity']);
     }
 
-    public function test_a_wide_flyer_spans_the_row_and_uses_the_mobile_image_on_phones(): void
+    public function test_a_wide_flyer_uses_the_mobile_image_on_phones_and_can_be_removed(): void
     {
         $this->withoutMiddleware(AuthenticateJwt::class);
         $this->actingAs(User::factory()->create());
@@ -262,7 +262,7 @@ class ComboManagementTest extends TestCase
         $this->assertTrue($combo->hasWideImage());
 
         $this->get(route('web.combos.index'))->assertOk()
-            ->assertSee('<li class="col-span-full">', false)
+            ->assertSee('Flyer del combo Polos clásicos')
             ->assertSee('<source media="(max-width: 767px)" srcset="'.$combo->mobileImageUrl().'">', false);
 
         // Quitar la imagen para celular la borra y el celular vuelve a usar la de escritorio.
@@ -273,6 +273,21 @@ class ComboManagementTest extends TestCase
         ])->assertSessionHasNoErrors()->assertRedirect();
         $this->assertNull($combo->fresh()->imagen_movil);
         Storage::disk('public')->assertMissing($mobile);
+    }
+
+    public function test_a_bravos_combo_page_keeps_the_bravos_header_and_links(): void
+    {
+        $bravos = Brand::query()->where('slug', 'bravos')->firstOrFail();
+        $combo = Combo::query()->create([
+            'name' => 'Neru + Boxy', 'brand' => 'Bravos', 'brand_id' => $bravos->id, 'price' => 119.6,
+            'imagen' => 'images/default-hero-banner.png', 'items' => [], 'status' => true,
+        ]);
+
+        $this->get(route('web.combos.show', $combo))->assertOk()
+            ->assertSee('theme-bravos', false)
+            ->assertSee('data-line="bravos"', false)
+            ->assertSee(route('web.combos.index', ['marca' => 'Bravos']), false)
+            ->assertSee(route('web.brands.show', $bravos), false);
     }
 
     private function png(): string

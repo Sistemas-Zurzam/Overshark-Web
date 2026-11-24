@@ -91,7 +91,7 @@
                         <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             @foreach ($bravosCombos as $combo)
                                 @php($wide = ($combo['flyer_wide'] ?? false) && $combo['flyer'])
-                                <li @class(['sm:col-span-2 xl:col-span-3' => $wide])>
+                                <li>
                                     <a href="{{ $combo['url'] }}" class="os-focus group flex h-full flex-col border-2 border-[#ffdb00] bg-[#f6f6f4]">
                                         @if ($wide)
                                             {{-- Flyer horizontal: a todo el ancho, con la versión para celular si el panel la tiene. --}}

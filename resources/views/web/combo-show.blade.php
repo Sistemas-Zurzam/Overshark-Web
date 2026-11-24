@@ -7,7 +7,10 @@
     Los textos y la paleta siguen la línea de la marca del combo (Overshark Girls usa .os-hh--girls).
 --}}
 
-@section('title', $combo->name.' · Overshark')
+@section('title', $combo->name.' · '.(mb_strtoupper(trim((string) $combo->brand)) === 'BRAVOS' ? 'Bravos' : 'Overshark'))
+@if (($brandPage ?? null)?->slug === 'bravos')
+    @section('body-class', 'theme-neon theme-bravos')
+@endif
 
 @push('head')
     @vite('resources/js/combo-builder.js')
@@ -16,6 +19,10 @@
 @php
     $title = fn ($text) => \App\Support\ProductName::title((string) $text);
     $girls = str_contains(mb_strtolower((string) $combo->brand), 'girl');
+    // Combo de Bravos: «Inicio» y «Combos» vuelven a las páginas de Bravos (la cabecera la pone el layout con $brandPage).
+    $bravos = ($brandPage ?? null)?->slug === 'bravos';
+    $comboHome = $bravos ? route('web.brands.show', $brandPage) : route('web.home');
+    $comboList = route('web.combos.index', match (true) { $bravos => ['marca' => 'Bravos'], $girls => ['marca' => 'Girls'], default => [] });
     $hasUnavailableSlot = $comboSlots->isEmpty() || $comboSlots->contains(fn (array $slot): bool => $slot['variants']->isEmpty());
     $units = max(1, (int) $comboSlots->sum(fn (array $slot) => max(1, (int) ($slot['quantity'] ?? 1))));
     $fallback = asset('images/default-hero-banner.png');
@@ -35,12 +42,12 @@
 @endphp
 
 @section('content')
-    <div @class(['os-hh os-combo', 'os-hh--girls' => $girls])>
+    <div @class(['os-hh os-combo', 'os-hh--girls' => $girls, 'os-hh--bravos' => $bravos])>
         <div class="os-hh-wrap pb-28 pt-8 lg:pb-[88px] lg:pt-12">
             <nav aria-label="Ruta" class="text-[13px] font-semibold text-[#65717c]">
-                <a href="{{ route('web.home') }}" class="hover:text-[#0b0f14]">Inicio</a>
+                <a href="{{ $comboHome }}" class="hover:text-[#0b0f14]">Inicio</a>
                 <span class="mx-1.5" aria-hidden="true">/</span>
-                <a href="{{ route('web.combos.index', $girls ? ['marca' => 'Girls'] : []) }}" class="hover:text-[#0b0f14]">Combos</a>
+                <a href="{{ $comboList }}" class="hover:text-[#0b0f14]">Combos</a>
                 <span class="mx-1.5" aria-hidden="true">/</span>
                 <span class="text-[#0b0f14]">{{ $combo->name }}</span>
             </nav>
@@ -70,7 +77,7 @@
                         <div class="flex flex-col items-start gap-4 bg-[var(--hh-soft)] p-6">
                             <p class="text-[18px] font-extrabold">Este combo está agotado por ahora</p>
                             <p class="text-[14px] font-medium text-[#545966]">Alguna de sus prendas no tiene stock. Mira otros combos o arma tu pedido en la tienda.</p>
-                            <a href="{{ route('web.combos.index') }}" class="os-hh-btn os-focus bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ver otros combos</a>
+                            <a href="{{ $comboList }}" class="os-hh-btn os-focus bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)]">Ver otros combos</a>
                         </div>
                     @else
                         <form id="combo-form" action="{{ route('web.combos.cart.store', $combo) }}" method="POST" data-combo-builder novalidate class="flex flex-col gap-6">
@@ -186,7 +193,7 @@
                         @unless ($hasUnavailableSlot)
                             <button type="submit" form="combo-form" class="os-hh-btn os-focus hidden w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] lg:inline-flex" data-combo-submit>Agregar combo al carrito</button>
                         @endunless
-                        <a href="{{ route('web.combos.index') }}" class="os-focus text-center text-[13px] font-bold text-[#545966] hover:text-[#0b0f14] hover:underline">Ver otros combos</a>
+                        <a href="{{ $comboList }}" class="os-focus text-center text-[13px] font-bold text-[#545966] hover:text-[#0b0f14] hover:underline">Ver otros combos</a>
                     </div>
                 </aside>
             </div>

@@ -45,9 +45,13 @@ Route::get('/carrito', fn () => view('web.checkout.cart', Checkout::summary()))-
 Route::get('/combos/{combo}', function (Combo $combo) {
     abort_unless($combo->status, 404);
 
+    // Un combo de Bravos se ve con la cabecera, el menú y la paleta de Bravos (no con los de Overshark).
+    $isBravos = mb_strtoupper(trim((string) $combo->brand)) === 'BRAVOS';
+
     return view('web.combo-show', [
         'combo' => $combo,
         'comboSlots' => app(ComboSelectionService::class)->slots($combo),
+        'brandPage' => $isBravos ? Brand::query()->active()->where('slug', 'bravos')->first() : null,
     ]);
 })->name('web.combos.show');
 
