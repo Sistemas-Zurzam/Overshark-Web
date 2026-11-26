@@ -70,7 +70,7 @@
                     </header>
 
                     @if ($errors->any())
-                        <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first('selections') }}</p>
+                        <p class="bg-[#fdecec] px-4 py-3 text-[14px] font-bold text-[#a3261c]" role="alert">{{ $errors->first() }}</p>
                     @endif
 
                     @if ($hasUnavailableSlot)
@@ -82,6 +82,11 @@
                     @else
                         <form id="combo-form" action="{{ route('web.combos.cart.store', $combo) }}" method="POST" data-combo-builder novalidate class="flex flex-col gap-6">
                             @csrf
+                            @if ($comboOffer ?? null)
+                                <input type="hidden" name="convert" value="1">
+                                <input type="hidden" name="convert_quote" value="{{ $comboOffer['quote'] }}">
+                                <p class="bg-[var(--hh-soft)] p-4 text-sm">Al aplicar el combo, {{ $comboOffer['have'] }} prendas individuales de tu carrito pasarán al combo. Puedes cambiar sus tallas y colores aquí.</p>
+                            @endif
                             <div class="flex flex-col gap-1 border-b-2 border-[#0b0f14] pb-3">
                                 <h2 class="text-[20px] font-extrabold">Elige talla y color</h2>
                                 <p class="text-[14px] font-medium text-[#545966]">Elige el color y la talla de cada prenda. Las prendas repetidas pueden ir en colores distintos.</p>
@@ -118,13 +123,13 @@
                                             @php
                                                 $selectionIndex = $selectionOffset + $unit;
                                                 // Sin elección previa, arranca en talla M (la más pedida) si existe.
-                                                $initial = $slot['variants']->firstWhere('id', (int) old("selections.{$selectionIndex}")) ?? $slot['variants']->firstWhere('talla', 'M') ?? $slot['variants']->first();
+                                                $initial = $slot['variants']->firstWhere('id', (int) old("selections.{$selectionIndex}", $comboOffer['prefill'][$selectionIndex] ?? 0)) ?? $slot['variants']->firstWhere('talla', 'M') ?? $slot['variants']->first();
                                             @endphp
                                             <li class="grid grid-cols-[72px_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[96px_minmax(0,1fr)] sm:p-5" data-combo-unit data-variants='@json($variantData)'>
                                                 <img src="{{ $photo($initial) }}" alt="" class="aspect-[4/5] w-full bg-[#f5f7f9] object-cover" data-combo-photo>
                                                 <div class="flex min-w-0 flex-col gap-3">
                                                     <p class="flex flex-wrap items-baseline justify-between gap-x-3 text-[14px]">
-                                                        <span class="font-extrabold">Unidad {{ $unit + 1 }}</span>
+                                                        <span class="font-extrabold">Unidad {{ $unit + 1 }}{{ isset($comboOffer['included'][$selectionIndex]) ? ' · En tu carrito' : '' }}</span>
                                                         <span class="font-semibold text-[#545966]" data-combo-choice>{{ $title($initial->color) }} · Talla {{ $initial->talla }}</span>
                                                     </p>
                                                     @if ($slot['allow_product_choice'])
@@ -189,9 +194,15 @@
                             <span class="text-[16px]">Total del combo</span>
                             <span class="text-[24px]">S/ {{ number_format((float) $combo->price, 2) }}</span>
                         </p>
+                        @if ($comboOffer ?? null)
+                            <p class="flex justify-between gap-2 text-sm font-bold">
+                                <span>{{ $comboOffer['delta'] < 0 ? 'Ahorro sobre tu carrito' : 'Adicional sobre tu carrito' }}</span>
+                                <span>S/ {{ number_format(abs($comboOffer['delta']), 2) }}</span>
+                            </p>
+                        @endif
                         <p class="-mt-2 text-[12px] font-medium text-[#65717c]">{{ \App\Support\SiteContent::t('Envío desde {desde} a todo el Perú.') }} Pago contraentrega o Yape / Plin.</p>
                         @unless ($hasUnavailableSlot)
-                            <button type="submit" form="combo-form" class="os-hh-btn os-focus hidden w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] lg:inline-flex" data-combo-submit>Agregar combo al carrito</button>
+                            <button type="submit" form="combo-form" class="os-hh-btn os-focus hidden w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] lg:inline-flex" data-combo-submit>{{ ($comboOffer ?? null) ? 'Aplicar combo al carrito' : 'Agregar combo al carrito' }}</button>
                         @endunless
                         <a href="{{ $comboList }}" class="os-focus text-center text-[13px] font-bold text-[#545966] hover:text-[#0b0f14] hover:underline">Ver otros combos</a>
                     </div>
@@ -206,7 +217,7 @@
                     <span class="text-[12px] font-bold text-[#65717c]">{{ $units }} prendas</span>
                     <span class="text-[20px] font-extrabold">S/ {{ number_format((float) $combo->price, 2) }}</span>
                 </p>
-                <button type="submit" form="combo-form" class="os-hh-btn os-focus bg-[#0b0f14] px-5 text-white hover:bg-[var(--hh-accent)]" data-combo-submit>Agregar al carrito</button>
+                <button type="submit" form="combo-form" class="os-hh-btn os-focus bg-[#0b0f14] px-5 text-white hover:bg-[var(--hh-accent)]" data-combo-submit>{{ ($comboOffer ?? null) ? 'Aplicar combo' : 'Agregar al carrito' }}</button>
             </div>
         @endunless
     </div>

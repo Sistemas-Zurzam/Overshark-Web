@@ -174,8 +174,34 @@
                 @endif
             </section>
 
+            @if ($productCombos->isNotEmpty())
+                <section class="grid gap-4 pt-4">
+                    <h2 class="text-[26px] font-extrabold">Arma un combo con esta prenda</h2>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($productCombos as $combo)
+                            <a href="{{ route('web.combos.show', $combo) }}" class="os-focus grid gap-1 border border-[var(--shop-line)] p-4 hover:bg-[var(--hh-soft)]">
+                                <strong>{{ $combo->name }}</strong>
+                                <span>S/ {{ number_format((float) $combo->price, 2) }}</span>
+                                <span class="font-bold underline">Armar combo</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            @if ($productSuggestions->isNotEmpty())
+                <section class="grid gap-4 pt-4">
+                    <h2 class="text-[26px] font-extrabold">Completa tu look</h2>
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                        @foreach ($productSuggestions as $card)
+                            @include('web.partials.suggestion-card', ['card' => $card, 'quiet' => false])
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             {{-- Completa tu look --}}
-            @if ($recommendedProducts->isNotEmpty())
+            @if ($productSuggestions->isEmpty() && $recommendedProducts->isNotEmpty())
                 <section class="flex flex-col gap-8 pt-4" aria-labelledby="bpdp-look">
                     <h2 id="bpdp-look" class="text-[26px] font-extrabold leading-[1.45] text-[#0b1015]">COMPLETA TU LOOK</h2>
                     <ul class="os-m-grid md:hidden">

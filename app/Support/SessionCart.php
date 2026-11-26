@@ -17,12 +17,13 @@ class SessionCart
     public static function addVariant(Producto $variant, int $qty, ?Producto $product = null): int
     {
         $product ??= $variant;
-        $maxQty = (int) $variant->stock;
         $items = session('cart.items', []);
         $key = (string) $variant->id;
         $currentQty = (int) ($items[$key]['qty'] ?? 0);
+        $alreadyReserved = ComboOffers::quantities($items)[$variant->id] ?? 0;
+        $maxQty = (int) $variant->stock - $alreadyReserved + $currentQty;
 
-        if ($maxQty <= 0 || (float) $variant->price <= 0) {
+        if ($maxQty <= $currentQty || (float) $variant->price <= 0) {
             return $currentQty;
         }
         

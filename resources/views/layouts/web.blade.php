@@ -15,7 +15,9 @@
     // Al agregar una prenda con sugerencias se abre el modal "Te puede interesar"; sin ellas, el carrito lateral.
     $suggestAdded = session('cart_suggest') ? \App\Models\Admin\Producto::query()->find(session('cart_suggest')) : null;
     $suggestions = $suggestAdded ? \App\Support\CartSuggestions::forProduct($suggestAdded) : collect();
-    $cartOpen = session('cart_open') || ($suggestAdded && $suggestions->isEmpty());
+    $suggestCombos = $suggestAdded ? app(\App\Support\ComboOffers::class)->forCart($suggestAdded) : collect();
+    $hasSuggestions = $suggestions->isNotEmpty() || $suggestCombos->isNotEmpty();
+    $cartOpen = session('cart_open') || ($suggestAdded && ! $hasSuggestions);
     $otherLine = $storeLine === 'mujer' ? 'hombre' : 'mujer';
     $selectedLine = in_array(session('storefront.line'), ['hombre', 'mujer'], true) ? session('storefront.line') : null;
     $homeUrl = route('web.home');
@@ -418,8 +420,8 @@
         @endif
     </aside>
 
-    @if ($suggestAdded && $suggestions->isNotEmpty())
-        @include('web.partials.cart-suggestions-modal', ['added' => $suggestAdded, 'suggestions' => $suggestions, 'suggestionTitle' => $suggestionTitle ?? null])
+    @if ($suggestAdded && $hasSuggestions)
+        @include('web.partials.cart-suggestions-modal', ['added' => $suggestAdded, 'suggestions' => $suggestions, 'comboOffers' => $suggestCombos, 'suggestionTitle' => $suggestionTitle ?? null])
     @endif
 
     {{-- Una página puede traer su propio footer (p. ej. la home de Overshark Girls). --}}

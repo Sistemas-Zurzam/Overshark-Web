@@ -86,15 +86,33 @@
         </div>
 
         {{-- Te puede interesar: reglas del panel (Sugerencias). Se suma sin recargar el flujo (quiet=1). --}}
-        @php($suggestions = \App\Support\CartSuggestions::forCart())
-        @if ($suggestions->isNotEmpty())
-            <section class="os-hh border-t border-[#dae0e5] pt-8" aria-labelledby="cart-suggest">
-                <h2 id="cart-suggest" class="text-[20px] font-extrabold text-[#0b1015]">Te puede interesar</h2>
-                <div class="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    @foreach ($suggestions as $card)
-                        @include('web.partials.suggestion-card', ['card' => $card, 'quiet' => true])
+        @php($offers = app(\App\Support\ComboOffers::class)->forCart())
+        @if ($offers->isNotEmpty())
+            <section class="os-hh grid gap-4 border-l-4 border-[var(--hh-accent)] bg-[var(--hh-soft)] p-5 sm:p-7" aria-labelledby="cart-combos">
+                <h2 id="cart-combos" class="text-[24px] font-extrabold leading-tight sm:text-[30px]">Convierte tu compra en combo</h2>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    @foreach ($offers as $offer)
+                        @include('web.partials.combo-offer', ['offer' => $offer])
                     @endforeach
                 </div>
+            </section>
+        @endif
+        @php($suggestions = \App\Support\CartSuggestions::forCartByBrand())
+        @if ($suggestions->isNotEmpty())
+            <section class="os-hh border-t border-[#dae0e5] pt-8" aria-labelledby="cart-suggest">
+                <h2 id="cart-suggest" class="text-[24px] font-extrabold leading-tight text-[#0b1015] sm:text-[28px]">Combina tu pedido</h2>
+                @foreach ($suggestions as $brand => $cards)
+                    <div class="mt-4">
+                        @if ($brand !== '')
+                            <h3 class="mb-2 text-sm font-extrabold">{{ $brand }}</h3>
+                        @endif
+                        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                            @foreach ($cards as $card)
+                                @include('web.partials.suggestion-card', ['card' => $card, 'quiet' => true])
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
             </section>
         @endif
     @endif

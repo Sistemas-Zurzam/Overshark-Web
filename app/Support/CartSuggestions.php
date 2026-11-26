@@ -26,18 +26,28 @@ class CartSuggestions
     /** Sugerencias para todo el carrito (página del carrito). */
     public static function forCart(int $limit = self::LIMIT): Collection
     {
-        $ids = collect(session('cart.items', []))
-            ->filter(fn (array $item) => ($item['kind'] ?? null) !== 'combo')
-            ->pluck('producto_id')
-            ->filter()
-            ->unique()
-            ->values();
+        return self::suggest(self::cartProducts(), $limit);
+    }
 
-        if ($ids->isEmpty()) {
-            return collect();
-        }
+    public static function forCartByBrand(): Collection
+    {
+        $shown = [];
 
-        return self::suggest(Producto::query()->whereIn('id', $ids)->get(), $limit);
+        return self::cartProducts()->groupBy(fn (Producto $product) => self::brandOf($product))
+            ->map(function (Collection $products) use (&$shown): Collection {
+                $cards = self::suggest($products, self::LIMIT)
+                    ->reject(fn (array $card) => in_array($card['id'], $shown, true))->values();
+                $shown = array_merge($shown, $cards->pluck('id')->all());
+
+                return $cards;
+            })->filter(fn (Collection $cards) => $cards->isNotEmpty());
+    }
+
+    private static function cartProducts(): Collection
+    {
+        $ids = array_keys(ComboOffers::quantities(session('cart.items', [])));
+
+        return $ids === [] ? collect() : Producto::query()->whereIn('id', $ids)->get();
     }
 
     public static function brandOf(Producto $product): string
@@ -48,6 +58,10 @@ class CartSuggestions
     /** @param  Collection<int, Producto>  $anchors */
     private static function suggest(Collection $anchors, int $limit): Collection
     {
+        if ($anchors->isEmpty()) {
+            return collect();
+        }
+
         $excluded = self::cartNames()->merge($anchors->pluck('name'))->map(fn ($name) => mb_strtolower(trim((string) $name)))->all();
         $rules = CartSuggestion::query()->running()->orderBy('sort')->orderBy('id')->get();
 
@@ -99,8 +113,9 @@ class CartSuggestions
     private static function cartNames(): Collection
     {
         return collect(session('cart.items', []))
-            ->filter(fn (array $item) => ($item['kind'] ?? null) !== 'combo')
-            ->pluck('producto');
+            ->flatMap(fn (array $item) => ($item['kind'] ?? null) === 'combo'
+                ? array_column($item['selections'] ?? [], 'producto')
+                : [$item['producto'] ?? '']);
     }
 
     /**

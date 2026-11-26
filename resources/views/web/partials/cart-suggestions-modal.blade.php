@@ -8,7 +8,7 @@
                 <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--hh-soft)] text-[var(--hh-accent)]">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
                 </span>
-                <div class="min-w-0">
+                <div class="min-w-0" id="suggest-title">
                     <p class="text-[15px] font-extrabold">Agregado a tu carrito</p>
                     <p class="truncate text-[13px] font-medium text-[#545966]">{{ \App\Support\ProductName::title($added->name) }}</p>
                 </div>
@@ -24,14 +24,27 @@
             <p class="bg-[#fff6e0] px-5 py-3 text-[14px] font-bold text-[#8a5a00] sm:px-6" role="status">{{ session('cart_notice') }}</p>
         @endif
 
+        @if ($comboOffers->isNotEmpty())
+            <div class="grid gap-3 border-l-4 border-[var(--hh-accent)] bg-[var(--hh-soft)] px-5 py-5 sm:px-6">
+                <h2 class="text-[24px] font-extrabold leading-tight">Convierte tu compra en combo</h2>
+                @foreach ($comboOffers as $offer)
+                    @include('web.partials.combo-offer', ['offer' => $offer])
+                @endforeach
+            </div>
+        @endif
+        @if ($suggestions->isNotEmpty())
         <div class="px-5 py-5 sm:px-6">
-            <h2 id="suggest-title" class="text-[18px] font-extrabold">{{ $suggestionTitle ?? 'Completa tu look' }}</h2>
+            <h2 class="text-[22px] font-extrabold leading-tight">Combina tu pedido</h2>
+            @if (filled($suggestionTitle) && $suggestionTitle !== 'Combina tu pedido')
+                <p class="mt-1 text-sm text-[#545966]">{{ $suggestionTitle }}</p>
+            @endif
             <div class="mt-4 grid grid-cols-2 gap-4 {{ [2 => 'sm:grid-cols-2', 3 => 'sm:grid-cols-3'][$suggestions->count()] ?? 'sm:grid-cols-4' }}">
                 @foreach ($suggestions as $card)
                     @include('web.partials.suggestion-card', ['card' => $card])
                 @endforeach
             </div>
         </div>
+        @endif
 
         <div class="sticky bottom-0 flex flex-col gap-2 border-t border-[var(--shop-line)] bg-white px-5 py-4 sm:flex-row-reverse sm:px-6">
             <button type="button" data-cart-open data-suggest-close class="os-hh-btn os-focus w-full bg-[#0b0f14] text-white hover:bg-[var(--hh-accent)] sm:w-auto sm:flex-1">Ver carrito</button>

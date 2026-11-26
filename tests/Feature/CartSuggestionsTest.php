@@ -140,7 +140,7 @@ class CartSuggestionsTest extends TestCase
         $this->rule();
         $this->add($this->polo);
 
-        $this->get(route('web.cart.index'))->assertOk()->assertSee('Te puede interesar')->assertSee('Baby Tee');
+        $this->get(route('web.cart.index'))->assertOk()->assertSee('Combina tu pedido')->assertSee('Baby Tee');
     }
 
     public function test_the_admin_can_create_edit_disable_and_delete_a_rule(): void

@@ -61,7 +61,7 @@ class ComboSelectionService
         return $groups->map(fn (array $group): array => [
             'label' => $group['name'],
             'product' => $group['name'],
-            'allow_product_choice' => false,
+            'allow_product_choice' => $group['variants']->pluck('name')->unique()->count() > 1,
             'quantity' => $group['quantity'],
             'variants' => $group['variants'],
         ])->values();

@@ -21,6 +21,7 @@ use App\Http\Controllers\LibroReclamacionController;
 use App\Support\AccountCheckout;
 use App\Support\CartSuggestions;
 use App\Support\Checkout;
+use App\Support\ComboOffers;
 use App\Support\GirlsHome;
 use App\Support\PixelEvents;
 use App\Support\ProductCards;
@@ -42,20 +43,27 @@ Route::get('/shop/{slug?}', [\App\Http\Controllers\SeoController::class, 'legacy
 // Checkout (Figma "04 · Compra compartida"): Carrito → Datos y entrega → Pago → Estado del pedido.
 Route::get('/carrito', fn () => view('web.checkout.cart', Checkout::summary()))->name('web.cart.index');
 
-Route::get('/combos/{combo}', function (Combo $combo) {
+Route::get('/combos/{combo}', function (Request $request, Combo $combo, ComboSelectionService $selector, ComboOffers $offers) {
     abort_unless($combo->status, 404);
 
     // Un combo de Bravos se ve con la cabecera, el menú y la paleta de Bravos (no con los de Overshark).
     $isBravos = mb_strtoupper(trim((string) $combo->brand)) === 'BRAVOS';
 
+    $slots = $selector->slots($combo);
+    $offer = $request->boolean('convert') ? $offers->plan($combo, session('cart.items', []), $slots) : null;
+    if ($request->boolean('convert') && (! $offer || ! $offer['have'])) {
+        return redirect()->route('web.cart.index')->withErrors(['cart' => 'El carrito cambió. Revisa los combos disponibles.']);
+    }
+
     return view('web.combo-show', [
         'combo' => $combo,
-        'comboSlots' => app(ComboSelectionService::class)->slots($combo),
+        'comboSlots' => $slots,
+        'comboOffer' => $offer,
         'brandPage' => $isBravos ? Brand::query()->active()->where('slug', 'bravos')->first() : null,
     ]);
 })->name('web.combos.show');
 
-Route::post('/combos/{combo}/carrito', function (Request $request, Combo $combo, ComboSelectionService $selector) {
+Route::post('/combos/{combo}/carrito', function (Request $request, Combo $combo, ComboSelectionService $selector, ComboOffers $offers) {
     abort_unless($combo->status, 404);
 
     if ($combo->price === null) {
@@ -65,17 +73,32 @@ Route::post('/combos/{combo}/carrito', function (Request $request, Combo $combo,
     $validated = $request->validate([
         'selections' => ['required', 'array'],
         'selections.*' => ['required', 'integer', 'exists:productos,id'],
+        'convert_quote' => ['required_if:convert,1', 'nullable', 'string', 'size:64'],
     ]);
     $selectedVariants = $selector->resolveSelections($combo, $validated['selections']);
     $items = session('cart.items', []);
+    $convert = $request->boolean('convert');
+    if ($convert) {
+        $offer = $offers->plan($combo, $items);
+        if (! $offer || ! $offer['have'] || ! hash_equals($offer['quote'], $validated['convert_quote'] ?? '')) {
+            return redirect()->route('web.cart.index')->withErrors(['cart' => 'El carrito cambió. Revisa los combos disponibles.']);
+        }
+
+        foreach ($offer['consume'] as $variantId => $quantity) {
+            $items[$variantId]['qty'] -= $quantity;
+            if ($items[$variantId]['qty'] === 0) {
+                unset($items[$variantId]);
+            }
+        }
+    }
+
     $selectionIds = $selectedVariants->pluck('id')->implode('-');
     $key = 'combo-'.$combo->id.'-'.substr(hash('sha256', $selectionIds), 0, 16);
 
-    $existingItem = $items[$key] ?? null;
-    $existingQuantities = collect($existingItem['selections'] ?? [])->countBy('variant_id');
+    $existingQuantities = ComboOffers::quantities($items);
     foreach ($selectedVariants->countBy(fn (Producto $variant): int => $variant->id) as $variantId => $quantity) {
         $variant = $selectedVariants->firstWhere('id', (int) $variantId);
-        $requestedQuantity = (int) ($existingQuantities->get($variantId, 0)) + (int) $quantity;
+        $requestedQuantity = ($existingQuantities[$variantId] ?? 0) + (int) $quantity;
 
         if ($requestedQuantity > (int) $variant->stock) {
             return back()->withErrors([
@@ -107,7 +130,7 @@ Route::post('/combos/{combo}/carrito', function (Request $request, Combo $combo,
 
     session(['cart.items' => $items]);
 
-    return redirect()->route('web.cart.index')->with('status', 'Combo agregado al carrito.');
+    return redirect()->route('web.cart.index')->with('status', $convert ? 'Combo aplicado al carrito.' : 'Combo agregado al carrito.');
 })->name('web.combos.cart.store');
 
 Route::post('/carrito', function (Request $request) {
@@ -170,8 +193,8 @@ Route::post('/carrito', function (Request $request) {
         return back()->with('status', 'Producto agregado al carrito.')->with('cart_notice', $notice);
     }
 
-    // Con sugerencias disponibles se muestra primero el modal "Agregado"; si no hay, se abre el carrito lateral.
-    $hasSuggestions = CartSuggestions::forProduct($producto)->isNotEmpty();
+    $hasSuggestions = CartSuggestions::forProduct($producto)->isNotEmpty()
+        || app(ComboOffers::class)->forCart($producto)->isNotEmpty();
 
     return back()
         ->with('status', 'Producto agregado al carrito.')
@@ -225,7 +248,7 @@ Route::patch('/carrito/{variantId}', function (Request $request, int $variantId)
     abort_if(! isset($items[$key]), 404);
 
     // No se puede pedir más de lo que hay en stock.
-    if ($validated['action'] === 'increment' && $items[$key]['qty'] >= (int) (Producto::query()->find($variantId)?->stock ?? 0)) {
+    if ($validated['action'] === 'increment' && (ComboOffers::quantities($items)[$variantId] ?? 0) >= (int) (Producto::query()->find($variantId)?->stock ?? 0)) {
         return back()->withErrors(['cart' => 'No hay más unidades disponibles de esa prenda.'])->with('cart_open', ! $request->boolean('stay'));
     }
 
@@ -1012,6 +1035,8 @@ Route::get('/productos/{producto}', function (Producto $producto) {
         'promo' => $variants->map(fn (Producto $variant) => Promotions::forVariant($variant))->filter()->sortBy('price')->first(),
         'paymentMethods' => MetodoPago::active(),
         'recommendedProducts' => $recommendedProducts,
+        'productCombos' => app(ComboOffers::class)->forProduct($producto),
+        'productSuggestions' => CartSuggestions::forProduct($producto),
     ]);
 })->name('web.products.show');
 
